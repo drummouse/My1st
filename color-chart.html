@@ -5,1001 +5,710 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IronWrap Exteriors — Metal Exterior Color Options</title>
   <style>
-    /* ── Material Precision ─────────────────────────────────────────────────
-       Industrial authenticity rendered with museum-grade reverence.
-       Space is an active material. Typography serves, never decorates.
-    ─────────────────────────────────────────────────────────────────────── */
-
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --field:   #F5F4F2;
+      --field:   #F4F3F1;
       --surface: #FFFFFF;
-      --rule:    #D8D5D0;
+      --rule:    #DEDAD4;
       --ink:     #1A1816;
       --ink-2:   #4A4744;
-      --ink-3:   #8A8784;
-      --accent:  #C8391A;  /* IronWrap orange — used sparingly */
+      --ink-3:   #9A9590;
+      --accent:  #C8391A;
+      --sans:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --mono:    'DM Mono', 'SFMono-Regular', Consolas, monospace;
-      --sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
     html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--field); color: var(--ink); -webkit-font-smoothing: antialiased; min-height: 100vh; }
 
-    body {
-      font-family: var(--sans);
-      background: var(--field);
-      color: var(--ink);
-      -webkit-font-smoothing: antialiased;
-      line-height: 1;
-    }
-
-    /* ── HEADER ─────────────────────────────────────────────────────────── */
+    /* ── HEADER ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--rule);
-      padding: 56px 80px 52px;
+      padding: 52px 80px 48px;
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: end;
       gap: 32px;
     }
-
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
     .brand-mark {
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--ink);
+      font-size: 20px; font-weight: 600; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink);
     }
-    .brand-mark em {
-      font-style: normal;
-      color: var(--accent);
-    }
+    .brand-mark em { font-style: normal; color: var(--accent); }
     .brand-sub {
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-top: 6px;
+      margin-top: 6px; font-size: 11px; font-weight: 400;
+      letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3);
     }
-
-    .header-right {
-      text-align: right;
-    }
+    .doc-meta { text-align: right; }
     .doc-title {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-3);
+      font-size: 11px; font-weight: 500; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ink-3);
     }
     .doc-date {
-      font-size: 11px;
-      color: var(--ink-3);
-      margin-top: 6px;
-      font-family: var(--mono);
-      font-weight: 300;
+      margin-top: 5px; font-size: 11px; font-weight: 300;
+      font-family: var(--mono); color: var(--ink-3);
     }
 
-    /* ── NAV / FILTER ────────────────────────────────────────────────────── */
+    /* ── NAV ── */
     nav {
       background: var(--surface);
       border-bottom: 1px solid var(--rule);
       padding: 0 80px;
-      display: flex;
-      align-items: center;
-      gap: 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      display: flex; align-items: center;
+      position: sticky; top: 0; z-index: 100;
     }
     .nav-tab {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      padding: 18px 24px;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      background: none;
-      border-top: none;
-      border-left: none;
-      border-right: none;
-      transition: color .15s, border-color .15s;
-      white-space: nowrap;
+      font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--ink-3); padding: 17px 22px;
+      border: none; border-bottom: 2px solid transparent;
+      background: none; cursor: pointer;
+      transition: color .15s, border-color .15s; white-space: nowrap;
     }
     .nav-tab:hover { color: var(--ink); }
     .nav-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
     .nav-spacer { flex: 1; }
-    .nav-actions { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
-    .btn-ghost {
+    .nav-tools { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+    .btn {
       font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
-      color: var(--ink-2); padding: 8px 16px;
-      border: 1px solid var(--rule); border-radius: 2px;
-      background: none; cursor: pointer; transition: all .15s;
-      font-family: var(--sans);
+      padding: 8px 16px; border-radius: 2px; cursor: pointer;
+      font-family: var(--sans); border: 1px solid var(--rule);
+      background: none; color: var(--ink-2); transition: all .15s;
     }
-    .btn-ghost:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
-    .btn-accent {
-      font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
-      color: #fff; padding: 8px 16px;
-      border: 1px solid var(--accent); border-radius: 2px;
-      background: var(--accent); cursor: pointer; transition: all .15s;
-      font-family: var(--sans);
+    .btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: #A82D12; border-color: #A82D12; }
+
+    /* download dropdown */
+    .dl-wrap { position: relative; }
+    .dl-menu {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--surface); border: 1px solid var(--rule);
+      box-shadow: 0 8px 32px rgba(0,0,0,.1); min-width: 230px; z-index: 200;
     }
-    .btn-accent:hover { background: #A82D12; border-color: #A82D12; }
+    .dl-menu.open { display: block; }
+    .dl-opt {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 14px 16px; background: none; border: none;
+      border-bottom: 1px solid var(--rule); cursor: pointer;
+      font-family: var(--sans); text-align: left; transition: background .1s;
+    }
+    .dl-opt:last-child { border-bottom: none; }
+    .dl-opt:hover { background: var(--field); }
+    .dl-opt-icon { font-size: 16px; flex-shrink: 0; }
+    .dl-opt strong { display: block; font-size: 12px; font-weight: 500; color: var(--ink); }
+    .dl-opt small { display: block; font-size: 10px; color: var(--ink-3); margin-top: 1px; }
 
-    /* ── MAIN ────────────────────────────────────────────────────────────── */
-    main { max-width: 1440px; margin: 0 auto; padding: 80px 80px 120px; }
+    /* ── MAIN ── */
+    main { max-width: 1400px; margin: 0 auto; padding: 80px 80px 120px; }
 
-    /* ── INTRO ───────────────────────────────────────────────────────────── */
+    /* ── INTRO ── */
     .intro {
+      display: grid; grid-template-columns: 1fr 380px;
+      gap: 80px; padding-bottom: 80px;
+      border-bottom: 1px solid var(--rule); margin-bottom: 88px;
+    }
+    .intro h1 {
+      font-size: 46px; font-weight: 300; letter-spacing: -.025em;
+      line-height: 1.12; color: var(--ink);
+    }
+    .intro h1 strong { font-weight: 600; }
+    .intro p {
+      margin-top: 24px; font-size: 15px; font-weight: 300;
+      line-height: 1.72; color: var(--ink-2); max-width: 480px;
+    }
+    .stats { display: flex; flex-direction: column; gap: 0; justify-content: center; }
+    .stat {
+      display: flex; align-items: baseline; gap: 20px;
+      padding: 24px 0; border-bottom: 1px solid var(--rule);
+    }
+    .stat:first-child { padding-top: 0; }
+    .stat:last-child { border-bottom: none; padding-bottom: 0; }
+    .stat-n {
+      font-size: 38px; font-weight: 300; letter-spacing: -.03em;
+      font-family: var(--mono); color: var(--ink); min-width: 68px;
+    }
+    .stat-l { font-size: 11px; font-weight: 500; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); line-height: 1.6; }
+
+    /* ── FINISH SECTION ── */
+    .finish { margin-bottom: 88px; }
+    .finish.hidden { display: none; }
+
+    .finish-header { margin-bottom: 44px; }
+    .finish-eyebrow {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
+    }
+    .finish-num {
+      font-family: var(--mono); font-size: 11px; font-weight: 300;
+      color: var(--ink-3); letter-spacing: .06em;
+    }
+    .finish-tag {
+      font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase;
+      color: rgba(255,255,255,.9); padding: 3px 10px; border-radius: 1px;
+    }
+    .finish-title {
+      font-size: 30px; font-weight: 300; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--ink); line-height: 1;
+    }
+    .finish-desc {
+      margin-top: 12px; font-size: 13px; font-weight: 300;
+      line-height: 1.7; color: var(--ink-3); max-width: 560px;
+    }
+
+    /* ── SWATCH GRIDS ── */
+
+    /* Crystal — 3 up, large */
+    .grid-crystal {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      margin-bottom: 96px;
-      padding-bottom: 80px;
-      border-bottom: 1px solid var(--rule);
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
     }
-    .intro-left h1 {
-      font-size: 42px;
-      font-weight: 300;
-      letter-spacing: -.02em;
-      line-height: 1.15;
-      color: var(--ink);
-    }
-    .intro-left h1 strong { font-weight: 600; }
-    .intro-left p {
-      margin-top: 24px;
-      font-size: 15px;
-      font-weight: 300;
-      line-height: 1.7;
-      color: var(--ink-2);
-      max-width: 420px;
-    }
-    .intro-stats {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 32px;
-    }
-    .stat-row {
-      display: flex;
-      align-items: baseline;
-      gap: 16px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--rule);
-    }
-    .stat-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .stat-num {
-      font-size: 36px;
-      font-weight: 300;
-      color: var(--ink);
-      letter-spacing: -.03em;
-      font-family: var(--mono);
-      min-width: 72px;
-    }
-    .stat-label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      line-height: 1.5;
-    }
+    .grid-crystal .sw-body { height: 300px; }
 
-    /* ── SECTION ─────────────────────────────────────────────────────────── */
-    .finish-section {
-      margin-bottom: 96px;
-    }
-    .finish-section.hidden { display: none; }
-
-    .section-header {
+    /* Woodgrain — 3×2 */
+    .grid-wood {
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      align-items: baseline;
-      gap: 24px;
-      margin-bottom: 48px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
     }
-    .section-index {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 300;
-      color: var(--ink-3);
-      letter-spacing: .08em;
-    }
-    .section-name {
-      font-size: 26px;
-      font-weight: 300;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      color: var(--ink);
-    }
-    .section-count {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 300;
-      color: var(--ink-3);
-    }
-    .section-desc {
-      grid-column: 2 / 4;
-      font-size: 13px;
-      font-weight: 300;
-      line-height: 1.65;
-      color: var(--ink-3);
-      max-width: 560px;
-      margin-top: -16px;
-    }
+    .grid-wood .sw-body { height: 240px; }
 
-    /* ── SWATCH GRID ─────────────────────────────────────────────────────── */
-    .swatch-grid {
+    /* Wrinkle — 4×2 */
+    .grid-wrinkle {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 2px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
     }
-    .swatch-grid.dense {
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    }
+    .grid-wrinkle .sw-body { height: 210px; }
 
-    .swatch {
+    /* ── SWATCH ── */
+    .sw {
       background: var(--surface);
-      display: flex;
-      flex-direction: column;
       cursor: pointer;
-      transition: transform .2s cubic-bezier(.16,1,.3,1);
+      transition: transform .22s cubic-bezier(.16,1,.3,1);
       position: relative;
-      outline: none;
     }
-    .swatch:hover { transform: translateY(-4px); z-index: 2; }
-    .swatch.selected .swatch-body::after {
-      content: '✓';
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 28px;
-      height: 28px;
-      background: rgba(255,255,255,.9);
-      color: var(--ink);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 600;
+    .sw:hover { transform: translateY(-6px); z-index: 2; }
+    .sw.selected::after {
+      content: '✓'; position: absolute; top: 14px; right: 14px;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(255,255,255,.92); color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
     }
 
-    .swatch-body {
-      height: 240px;
+    .sw-body {
       position: relative;
-      display: flex;
-      align-items: flex-end;
-    }
-    .swatch.large .swatch-body { height: 320px; }
-    .swatch.small .swatch-body { height: 180px; }
-
-    .swatch-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0);
-      transition: background .2s;
-    }
-    .swatch:hover .swatch-overlay { background: rgba(0,0,0,.06); }
-
-    .swatch-info {
-      padding: 20px 20px 18px;
-      background: var(--surface);
-      border-top: 1px solid var(--field);
-    }
-    .swatch-name {
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      color: var(--ink);
-      line-height: 1.3;
-    }
-    .swatch-code {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 300;
-      color: var(--ink-3);
-      margin-top: 6px;
-      letter-spacing: .06em;
-    }
-    .swatch-hex {
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 300;
-      color: var(--ink-3);
-      margin-top: 3px;
-      opacity: 0;
-      transition: opacity .15s;
-    }
-    .swatch:hover .swatch-hex { opacity: 1; }
-    .swatch-texture {
-      font-size: 10px;
-      font-weight: 400;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-top: 10px;
-      opacity: 0;
-      transition: opacity .15s;
-    }
-    .swatch:hover .swatch-texture { opacity: 1; }
-
-    /* copy flash */
-    .swatch-flash {
-      position: absolute;
-      inset: 0;
-      background: rgba(255,255,255,.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--ink);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .1s;
-    }
-
-    /* ── DIVIDER ─────────────────────────────────────────────────────────── */
-    .divider {
-      height: 1px;
-      background: var(--rule);
-      margin: 0 0 96px;
-    }
-
-    /* ── SELECTION TRAY ──────────────────────────────────────────────────── */
-    #selectionTray {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--ink);
-      color: #fff;
-      padding: 20px 80px;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      transform: translateY(100%);
-      transition: transform .3s cubic-bezier(.16,1,.3,1);
-      z-index: 200;
-    }
-    #selectionTray.visible { transform: translateY(0); }
-    .tray-label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.5);
-      white-space: nowrap;
-    }
-    .tray-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      flex: 1;
-    }
-    .tray-chip {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 2px;
-      padding: 6px 12px;
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: .06em;
-      color: rgba(255,255,255,.85);
-    }
-    .tray-chip-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,.3);
-      flex-shrink: 0;
-    }
-    .tray-chip-remove {
-      background: none;
-      border: none;
-      color: rgba(255,255,255,.4);
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0;
-      transition: color .1s;
-    }
-    .tray-chip-remove:hover { color: rgba(255,255,255,.9); }
-    .tray-actions { display: flex; gap: 12px; }
-    .tray-btn {
-      font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
-      padding: 10px 20px; border-radius: 2px; cursor: pointer;
-      font-family: var(--sans); white-space: nowrap; transition: all .15s;
-    }
-    .tray-btn-clear { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); color: rgba(255,255,255,.7); }
-    .tray-btn-clear:hover { background: rgba(255,255,255,.2); }
-    .tray-btn-quote { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
-    .tray-btn-quote:hover { background: #A82D12; }
-
-    /* ── TOAST ───────────────────────────────────────────────────────────── */
-    #toast {
-      position: fixed;
-      bottom: 96px;
-      left: 50%;
-      transform: translateX(-50%) translateY(8px);
-      background: var(--ink);
-      color: rgba(255,255,255,.85);
-      padding: 10px 20px;
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      font-family: var(--mono);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s, transform .2s;
-      z-index: 9999;
-      white-space: nowrap;
-    }
-    #toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ── FOOTER ──────────────────────────────────────────────────────────── */
-    footer {
-      background: var(--surface);
-      border-top: 1px solid var(--rule);
-      padding: 48px 80px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 48px;
-    }
-    footer h4 {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-bottom: 16px;
-    }
-    footer p, footer address {
-      font-size: 13px;
-      font-weight: 300;
-      line-height: 1.7;
-      color: var(--ink-2);
-      font-style: normal;
-    }
-    footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); transition: border-color .15s; }
-    footer a:hover { border-bottom-color: var(--ink); }
-    .supplier-list { display: flex; flex-direction: column; gap: 10px; margin-top: 0; }
-    .supplier-item {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      font-size: 12px;
-      font-weight: 300;
-      color: var(--ink-2);
-    }
-    .supplier-item::before {
-      content: '';
-      display: block;
-      width: 16px;
-      height: 1px;
-      background: var(--rule);
-      flex-shrink: 0;
-      transform: translateY(-3px);
-    }
-
-    /* ── DOWNLOAD MENU ───────────────────────────────────────────────────── */
-    .download-menu { position: relative; }
-    .download-dropdown {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: 4px;
-      box-shadow: 0 8px 32px rgba(0,0,0,.12);
-      min-width: 240px;
-      z-index: 300;
       overflow: hidden;
     }
-    .download-dropdown.open { display: block; }
-    .download-option {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      width: 100%;
-      padding: 16px 18px;
-      background: none;
-      border: none;
-      border-bottom: 1px solid var(--rule);
-      cursor: pointer;
-      text-align: left;
-      transition: background .1s;
-      font-family: var(--sans);
+    .sw-shimmer {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background .2s;
     }
-    .download-option:last-child { border-bottom: none; }
-    .download-option:hover { background: var(--field); }
-    .download-option .dl-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
-    .download-option strong { display: block; font-size: 13px; font-weight: 500; color: var(--ink); }
-    .download-option small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+    .sw:hover .sw-shimmer { background: rgba(255,255,255,.05); }
+    .sw-copy-hint {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(255,255,255,.9);
+      background: rgba(0,0,0,.2);
+      opacity: 0; transition: opacity .15s;
+    }
+    .sw:hover .sw-copy-hint { opacity: 1; }
+    .sw-copy-hint.dark { color: rgba(0,0,0,.6); background: rgba(255,255,255,.25); }
 
-    /* ── PRINT ───────────────────────────────────────────────────────────── */
+    .sw-info {
+      padding: 18px 18px 16px;
+      border-top: 1px solid var(--field);
+    }
+    .sw-name {
+      font-size: 12px; font-weight: 500; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--ink); line-height: 1.2;
+    }
+    .sw-code {
+      margin-top: 5px; font-size: 11px; font-weight: 300;
+      font-family: var(--mono); color: var(--ink-3); letter-spacing: .05em;
+    }
+    .sw-hex {
+      margin-top: 2px; font-size: 10px; font-weight: 300;
+      font-family: var(--mono); color: var(--ink-3);
+      opacity: 0; transition: opacity .15s; letter-spacing: .04em;
+    }
+    .sw:hover .sw-hex { opacity: 1; }
+
+    /* ── DIVIDER ── */
+    .div { height: 1px; background: var(--rule); margin: 0 0 88px; }
+
+    /* ── SELECTION TRAY ── */
+    #tray {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--ink); color: #fff;
+      padding: 18px 80px;
+      display: flex; align-items: center; gap: 20px;
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.16,1,.3,1);
+      z-index: 300;
+    }
+    #tray.up { transform: translateY(0); }
+    .tray-lbl {
+      font-size: 10px; font-weight: 500; letter-spacing: .16em;
+      text-transform: uppercase; color: rgba(255,255,255,.45); white-space: nowrap;
+    }
+    .tray-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+    .tray-chip {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12);
+      padding: 5px 10px; font-size: 11px; color: rgba(255,255,255,.8);
+    }
+    .chip-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); flex-shrink: 0; }
+    .chip-x {
+      background: none; border: none; color: rgba(255,255,255,.35);
+      cursor: pointer; font-size: 14px; padding: 0; line-height: 1;
+    }
+    .chip-x:hover { color: #fff; }
+    .tray-btns { display: flex; gap: 8px; }
+    .tbtn {
+      font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      padding: 9px 18px; cursor: pointer; font-family: var(--sans);
+    }
+    .tbtn-clear { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.65); }
+    .tbtn-quote { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+    .tbtn-quote:hover { background: #A82D12; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: var(--ink); color: rgba(255,255,255,.8);
+      padding: 9px 18px; font-size: 10px; font-weight: 400;
+      letter-spacing: .1em; text-transform: uppercase;
+      font-family: var(--mono); opacity: 0; pointer-events: none;
+      transition: opacity .2s, transform .2s; z-index: 9999;
+      white-space: nowrap;
+    }
+    #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── SPEC NOTE ── */
+    .spec-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 48px; padding-top: 8px;
+    }
+    .spec-label {
+      font-size: 10px; font-weight: 500; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px;
+    }
+    .spec-body {
+      font-size: 13px; font-weight: 300; line-height: 1.72; color: var(--ink-2);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--surface); border-top: 1px solid var(--rule);
+      padding: 44px 80px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px;
+    }
+    footer h4 {
+      font-size: 10px; font-weight: 500; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px;
+    }
+    footer address, footer p {
+      font-size: 12px; font-weight: 300; line-height: 1.8;
+      color: var(--ink-2); font-style: normal;
+    }
+    footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+    footer a:hover { border-bottom-color: var(--ink); }
+    .sup-list { display: flex; flex-direction: column; gap: 9px; }
+    .sup-item {
+      display: flex; align-items: baseline; gap: 10px;
+      font-size: 12px; font-weight: 300; color: var(--ink-2);
+    }
+    .sup-item::before { content: ''; display: block; width: 14px; height: 1px; background: var(--rule); flex-shrink: 0; transform: translateY(-3px); }
+
+    /* ── PRINT ── */
     @media print {
-      @page { size: A4; margin: 18mm 18mm 20mm; }
-      nav, #selectionTray, #toast, .nav-actions, .download-menu { display: none !important; }
-      header { padding: 32px 48px 28px; page-break-after: avoid; }
-      main { padding: 40px 48px 60px; }
-      footer { padding: 28px 48px; }
-      .intro { margin-bottom: 48px; padding-bottom: 40px; }
-      .intro-left h1 { font-size: 28px; }
-      .finish-section { page-break-inside: avoid; margin-bottom: 48px; }
-      .swatch { break-inside: avoid; }
-      .swatch-body { height: 140px !important; }
-      .swatch:hover { transform: none; }
-      .swatch-hex, .swatch-texture { opacity: 1 !important; }
-      .swatch-overlay { display: none; }
-      .swatch-flash { display: none; }
-      .divider { margin-bottom: 48px; }
-      body { background: white; -webkit-print-color-adjust: exact; color-adjust: exact; print-color-adjust: exact; }
-      .swatch-grid { grid-template-columns: repeat(4, 1fr); }
-      .swatch-grid.dense { grid-template-columns: repeat(5, 1fr); }
-      footer { grid-template-columns: 1fr 1fr 1fr; }
-      .hero-swatch { break-inside: avoid; }
+      @page { size: A4; margin: 16mm 16mm 18mm; }
+      nav, #tray, #toast, .nav-tools, .dl-wrap { display: none !important; }
+      header { padding: 28px 40px; }
+      main { padding: 36px 40px 48px; }
+      footer { padding: 24px 40px; }
+      .intro { margin-bottom: 48px; padding-bottom: 48px; }
+      .finish { margin-bottom: 48px; }
+      .div { margin-bottom: 48px; }
+      .sw-body { height: 130px !important; }
+      .sw:hover { transform: none; }
+      .sw-hex, .sw-copy-hint { opacity: 1 !important; display: none; }
+      .sw-shimmer { display: none; }
+      body { background: #fff; }
+      .grid-crystal, .grid-wood { grid-template-columns: repeat(3, 1fr); }
+      .grid-wrinkle { grid-template-columns: repeat(4, 1fr); }
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
 
-    /* ── RESPONSIVE ──────────────────────────────────────────────────────── */
+    /* ── RESPONSIVE ── */
     @media (max-width: 1100px) {
       header, nav, main, footer { padding-left: 40px; padding-right: 40px; }
-      #selectionTray { padding-left: 40px; padding-right: 40px; }
-      .intro { grid-template-columns: 1fr; gap: 48px; }
-      footer { grid-template-columns: 1fr 1fr; }
+      #tray { padding-left: 40px; padding-right: 40px; }
+      .intro { grid-template-columns: 1fr; gap: 40px; }
+      .grid-wrinkle { grid-template-columns: repeat(2, 1fr); }
     }
-    @media (max-width: 680px) {
-      header, nav, main, footer { padding-left: 24px; padding-right: 24px; }
-      #selectionTray { padding-left: 24px; padding-right: 24px; }
-      .section-header { grid-template-columns: auto 1fr; }
-      .section-count { display: none; }
-      .swatch-grid { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 700px) {
+      header, nav, main, footer { padding-left: 20px; padding-right: 20px; }
+      #tray { padding-left: 20px; padding-right: 20px; }
+      .grid-crystal, .grid-wood { grid-template-columns: repeat(2, 1fr); }
+      .grid-wrinkle { grid-template-columns: repeat(2, 1fr); }
       footer { grid-template-columns: 1fr; }
-      .nav-tab { padding: 14px 12px; font-size: 10px; }
+      .spec-grid { grid-template-columns: 1fr; }
+      .nav-tab { font-size: 10px; padding: 14px 10px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<!-- HEADER -->
 <header>
-  <div class="brand">
+  <div>
     <div class="brand-mark">Iron<em>Wrap</em> Exteriors</div>
     <div class="brand-sub">I Roof Alberta &nbsp;·&nbsp; Metal Exterior Specialists</div>
   </div>
-  <div class="header-right">
+  <div class="doc-meta">
     <div class="doc-title">Color Options — Metal Exterior Finishes</div>
     <div class="doc-date">Rev. June 2026 &nbsp;·&nbsp; Edmonton, AB</div>
   </div>
 </header>
 
-<!-- ══ NAV ═════════════════════════════════════════════════════════════════ -->
+<!-- NAV -->
 <nav>
-  <button class="nav-tab active" data-section="all">All Finishes</button>
-  <button class="nav-tab" data-section="glacial-relief">Glacial Relief</button>
-  <button class="nav-tab" data-section="wrinkle-coating">Wrinkle Coating</button>
-  <button class="nav-tab" data-section="weathered-bark">Weathered Bark</button>
-  <button class="nav-tab" data-section="printech">Printech Wood</button>
-  <button class="nav-tab" data-section="driftwood">Driftwood</button>
-  <button class="nav-tab" data-section="icecrystal">Icecrystal</button>
+  <button class="nav-tab active" data-sec="all">All</button>
+  <button class="nav-tab" data-sec="crystal">Crystal</button>
+  <button class="nav-tab" data-sec="woodgrain">Woodgrain</button>
+  <button class="nav-tab" data-sec="wrinkle">Wrinkle</button>
   <div class="nav-spacer"></div>
-  <div class="nav-actions">
-    <div class="download-menu" id="downloadMenu">
-      <button class="btn-ghost" onclick="toggleDownloadMenu(event)">
-        Download ▾
-      </button>
-      <div class="download-dropdown" id="downloadDropdown">
-        <button class="download-option" onclick="downloadHTML()">
-          <span class="dl-icon">⬇</span>
-          <span>
-            <strong>Download HTML</strong>
-            <small>Offline file — works without internet</small>
-          </span>
+  <div class="nav-tools">
+    <div class="dl-wrap">
+      <button class="btn" onclick="toggleDL(event)">Download ▾</button>
+      <div class="dl-menu" id="dlMenu">
+        <button class="dl-opt" onclick="dlHTML()">
+          <span class="dl-opt-icon">⬇</span>
+          <span><strong>Download HTML</strong><small>Offline · works without internet</small></span>
         </button>
-        <button class="download-option" onclick="savePDF()">
-          <span class="dl-icon">🖨</span>
-          <span>
-            <strong>Save as PDF</strong>
-            <small>Opens print dialog — choose Save as PDF</small>
-          </span>
+        <button class="dl-opt" onclick="dlPDF()">
+          <span class="dl-opt-icon">🖨</span>
+          <span><strong>Save as PDF</strong><small>Print dialog → Save as PDF</small></span>
         </button>
       </div>
     </div>
-    <button class="btn-accent" onclick="openQuote()">Request Quote</button>
+    <button class="btn btn-primary" onclick="requestQuote()">Request Quote</button>
   </div>
 </nav>
 
-<!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
+<!-- MAIN -->
 <main>
 
-  <!-- Intro -->
+  <!-- INTRO -->
   <div class="intro">
-    <div class="intro-left">
+    <div>
       <h1>Metal Exterior<br><strong>Color Options</strong></h1>
-      <p>Every finish is produced on certified Thyssen-Krupp and DaiDong Steel coil stock. Colors are photographed and calibrated against physical samples — digital renderings are indicative only. Request a physical sample pack to confirm selection before ordering.</p>
+      <p>Three distinct finish technologies — Icecrystal Relief, Printech Woodgrain, and Wrinkle Coating — each produced on certified steel coil stock. Digital swatches are calibrated against physical samples. Request a sample pack before final selection.</p>
     </div>
-    <div class="intro-stats">
-      <div class="stat-row">
-        <div class="stat-num">5</div>
-        <div class="stat-label">Finish Series<br>Glacial · Wrinkle · Bark · Printech · Driftwood</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-num">21</div>
-        <div class="stat-label">Color Options<br>RAL-coded steel coil + wood grain composites</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-num">Class 4</div>
-        <div class="stat-label">Impact Rating<br>Thyssen-Krupp steel — qualifies for insurance discounts</div>
-      </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">3</div><div class="stat-l">Finish Technologies<br>Icecrystal Relief · Printech Woodgrain · Wrinkle</div></div>
+      <div class="stat"><div class="stat-n">17</div><div class="stat-l">Color Options<br>Photographed from physical samples</div></div>
+      <div class="stat"><div class="stat-n">Class 4</div><div class="stat-l">Impact Rating<br>Qualifies for insurance premium reduction</div></div>
     </div>
   </div>
 
-  <!-- ── 01 · GLACIAL RELIEF ─────────────────────────────────────────────── -->
-  <div class="finish-section" data-section="glacial-relief" id="sec-glacial-relief">
-    <div class="section-header">
-      <span class="section-index">01</span>
-      <span class="section-name">Glacial Relief</span>
-      <span class="section-count">2 Colors</span>
-      <div class="section-desc">Deep-embossed texture with a matte, mineral-powder finish. High-performance factory-applied coating on Thyssen-Krupp cold-rolled steel. Excellent UV resistance for Alberta's high-altitude solar exposure.</div>
-    </div>
-    <div class="swatch-grid">
-      <div class="swatch large" data-id="gr-01" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#44322D" data-series="Glacial Relief" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#44322D;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Dark Chocolate</div>
-          <div class="swatch-code">RAL 8017</div>
-          <div class="swatch-hex">#44322D</div>
-          <div class="swatch-texture">Glacial Relief · Thyssen-Krupp</div>
-        </div>
+  <!-- ══ 01 · ICECRYSTAL ══ -->
+  <div class="finish" data-sec="crystal" id="sec-crystal">
+    <div class="finish-header">
+      <div class="finish-eyebrow">
+        <span class="finish-num">01</span>
+        <span class="finish-tag" style="background:#2A3A3C;">Icecrystal Relief</span>
       </div>
-      <div class="swatch large" data-id="gr-02" data-name="Midnight Black" data-code="RAL 9005" data-hex="#0D0D0D" data-series="Glacial Relief" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#0D0D0D;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Midnight Black</div>
-          <div class="swatch-code">RAL 9005</div>
-          <div class="swatch-hex">#0D0D0D</div>
-          <div class="swatch-texture">Glacial Relief · Thyssen-Krupp</div>
-        </div>
-      </div>
+      <div class="finish-title">Icecrystal Relief</div>
+      <div class="finish-desc">Glacial-relief emboss with a mineral-crystalline surface texture — no two panels identical. The frost pattern catches light differently at every angle, giving the material a living quality on the facade. Factory-applied on Thyssen-Krupp Pladur cold-rolled steel coil.</div>
     </div>
-  </div>
+    <div class="grid-crystal">
 
-  <div class="divider"></div>
+      <!-- Dark Chocolate -->
+      <div class="sw" data-id="cr-01" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#45322E" data-series="Icecrystal Relief" onclick="pick(this)">
+        <div class="sw-body" style="background: radial-gradient(ellipse at 30% 40%, #52382E 0%, #45322E 40%, #33231E 100%);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Dark Chocolate</div>
+          <div class="sw-code">RAL 8017 &nbsp;·&nbsp; Icecrystal Relief</div>
+          <div class="sw-hex">#45322E</div>
+        </div>
+      </div>
 
-  <!-- ── 02 · WRINKLE COATING ────────────────────────────────────────────── -->
-  <div class="finish-section" data-section="wrinkle-coating" id="sec-wrinkle-coating">
-    <div class="section-header">
-      <span class="section-index">02</span>
-      <span class="section-name">Wrinkle Coating</span>
-      <span class="section-count">4 Colors</span>
-      <div class="section-desc">Distinctive organic wrinkle texture created by a controlled bake process. Conceals minor surface imperfections and provides superior paint adhesion. Each batch produces subtle natural variation — no two panels are identical.</div>
-    </div>
-    <div class="swatch-grid">
-      <div class="swatch" data-id="wc-01" data-name="Jet Black" data-code="RAL 9005" data-hex="#0D0D0D" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#0D0D0D;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+      <!-- Glacial Teal -->
+      <div class="sw" data-id="cr-02" data-name="Glacial Teal" data-code="RAL 7016" data-hex="#293133" data-series="Icecrystal Relief" onclick="pick(this)">
+        <div class="sw-body" style="background: radial-gradient(ellipse at 60% 35%, #303D40 0%, #293133 45%, #1C2426 100%);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.85);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Jet Black</div>
-          <div class="swatch-code">RAL 9005</div>
-          <div class="swatch-hex">#0D0D0D</div>
-          <div class="swatch-texture">Wrinkle Coating</div>
+        <div class="sw-info">
+          <div class="sw-name">Glacial Teal</div>
+          <div class="sw-code">RAL 7016 &nbsp;·&nbsp; Icecrystal Relief</div>
+          <div class="sw-hex">#293133</div>
         </div>
       </div>
-      <div class="swatch" data-id="wc-02" data-name="Glacial Teal" data-code="RAL 7016" data-hex="#293133" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#293133;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+
+      <!-- Midnight Black -->
+      <div class="sw" data-id="cr-03" data-name="Midnight Black" data-code="RAL 9005" data-hex="#16181A" data-series="Icecrystal Relief" onclick="pick(this)">
+        <div class="sw-body" style="background: radial-gradient(ellipse at 40% 40%, #222426 0%, #16181A 50%, #0A0C0E 100%);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.7);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Glacial Teal</div>
-          <div class="swatch-code">RAL 7016</div>
-          <div class="swatch-hex">#293133</div>
-          <div class="swatch-texture">Wrinkle Coating</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="wc-03" data-name="Graphite Grey" data-code="RAL 7024" data-hex="#474A51" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#474A51;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Graphite Grey</div>
-          <div class="swatch-code">RAL 7024</div>
-          <div class="swatch-hex">#474A51</div>
-          <div class="swatch-texture">Wrinkle Coating</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="wc-04" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#44322D" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#44322D;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Dark Chocolate</div>
-          <div class="swatch-code">RAL 8017</div>
-          <div class="swatch-hex">#44322D</div>
-          <div class="swatch-texture">Wrinkle Coating</div>
+        <div class="sw-info">
+          <div class="sw-name">Midnight Black</div>
+          <div class="sw-code">RAL 9005 &nbsp;·&nbsp; Icecrystal Relief</div>
+          <div class="sw-hex">#16181A</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="divider"></div>
+  <div class="div"></div>
 
-  <!-- ── 03 · WEATHERED BARK ─────────────────────────────────────────────── -->
-  <div class="finish-section" data-section="weathered-bark" id="sec-weathered-bark">
-    <div class="section-header">
-      <span class="section-index">03</span>
-      <span class="section-name">Weathered Bark</span>
-      <span class="section-count">3 Colors</span>
-      <div class="section-desc">Earthy tones inspired by Alberta's boreal forest floor. The textured surface mimics weathered organic material while maintaining the structural performance of formed steel. Blends with natural landscapes without disappearing.</div>
+  <!-- ══ 02 · WOODGRAIN ══ -->
+  <div class="finish" data-sec="woodgrain" id="sec-woodgrain">
+    <div class="finish-header">
+      <div class="finish-eyebrow">
+        <span class="finish-num">02</span>
+        <span class="finish-tag" style="background:#7A5020;">Printech Woodgrain</span>
+      </div>
+      <div class="finish-title">Printech Woodgrain</div>
+      <div class="finish-desc">High-resolution photographic wood-grain print bonded to formed steel — DaiDong Printech technology. 3D-embossed variants add a dimensional texture layer that reads as real grain under raking light. Six profiles across 2D flat and 3D emboss constructions.</div>
     </div>
-    <div class="swatch-grid">
-      <div class="swatch" data-id="wb-01" data-name="Anthracite" data-code="RAL 8019" data-hex="#403A3A" data-series="Weathered Bark" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#403A3A;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Anthracite</div>
-          <div class="swatch-code">RAL 8019</div>
-          <div class="swatch-hex">#403A3A</div>
-          <div class="swatch-texture">Weathered Bark</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="wb-02" data-name="Slate Bark" data-code="RAL 7016" data-hex="#293133" data-series="Weathered Bark" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#293133;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Slate Bark</div>
-          <div class="swatch-code">RAL 7016</div>
-          <div class="swatch-hex">#293133</div>
-          <div class="swatch-texture">Weathered Bark</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="wb-03" data-name="Terra-Cotta" data-code="RAL 8004" data-hex="#8E402A" data-series="Weathered Bark" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#8E402A;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Terra-Cotta</div>
-          <div class="swatch-code">RAL 8004</div>
-          <div class="swatch-hex">#8E402A</div>
-          <div class="swatch-texture">Weathered Bark</div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <div class="grid-wood">
 
-  <div class="divider"></div>
+      <!-- Amber Oak -->
+      <div class="sw" data-id="wg-01" data-name="Amber Oak" data-code="Wood 18 (2D)" data-hex="#A07438" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(180deg, #A87C40 0px, #98682E 18px, #AC7E44 36px, #9A6C32 54px, #A87C40 72px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Amber Oak</div>
+          <div class="sw-code">Wood 18 (2D) &nbsp;·&nbsp; 2D Print</div>
+          <div class="sw-hex">#A07438</div>
+        </div>
+      </div>
 
-  <!-- ── 04 · PRINTECH WOOD GRAIN ────────────────────────────────────────── -->
-  <div class="finish-section" data-section="printech" id="sec-printech">
-    <div class="section-header">
-      <span class="section-index">04</span>
-      <span class="section-name">Printech Wood Grain</span>
-      <span class="section-count">6 Colors</span>
-      <div class="section-desc">High-resolution photographic wood-grain print bonded to formed steel. 2D profiles offer clean reproduction; 3D variants include an embossed texture layer that reads as dimensional grain under raking light. DaiDong Steel substrate.</div>
-    </div>
-    <div class="swatch-grid dense">
-      <div class="swatch" data-id="pw-01" data-name="Amber Oak" data-code="Wood 18 (2D)" data-hex="#B07D3A" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #B07D3A 0%, #8A5F22 40%, #C49048 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
+      <!-- Driftwood -->
+      <div class="sw" data-id="wg-02" data-name="Driftwood" data-code="Wood 3703 (3D)" data-hex="#BEB4A0" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(180deg, #C6BC9A 0px, #B2A88E 14px, #CAC0A6 28px, #B8AE94 42px, #C6BC9A 56px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint dark">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Amber Oak</div>
-          <div class="swatch-code">Wood 18 — 2D</div>
-          <div class="swatch-hex">#B07D3A</div>
-          <div class="swatch-texture">Printech Wood · DaiDong</div>
+        <div class="sw-info">
+          <div class="sw-name">Driftwood</div>
+          <div class="sw-code">Wood 3703 (3D) &nbsp;·&nbsp; 3D Emboss</div>
+          <div class="sw-hex">#BEB4A0</div>
         </div>
       </div>
-      <div class="swatch" data-id="pw-02" data-name="Oxide Red" data-code="RAL 3009" data-hex="#6B2A23" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#6B2A23;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+
+      <!-- Golden Walnut -->
+      <div class="sw" data-id="wg-03" data-name="Golden Walnut" data-code="Wood 18 (3D)" data-hex="#9A7030" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(180deg, #A47A38 0px, #8C6228 16px, #A87E3C 32px, #906630 48px, #A47A38 64px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.9);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Oxide Red</div>
-          <div class="swatch-code">RAL 3009</div>
-          <div class="swatch-hex">#6B2A23</div>
-          <div class="swatch-texture">Printech Wood · DaiDong</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="pw-03" data-name="Velvet Green" data-code="RAL 3009 / 6020" data-hex="#3D6B4F" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:#3D6B4F;">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Velvet Green</div>
-          <div class="swatch-code">RAL 6020</div>
-          <div class="swatch-hex">#3D6B4F</div>
-          <div class="swatch-texture">Printech Wood · DaiDong</div>
+        <div class="sw-info">
+          <div class="sw-name">Golden Walnut</div>
+          <div class="sw-code">Wood 18 (3D) &nbsp;·&nbsp; 3D Emboss</div>
+          <div class="sw-hex">#9A7030</div>
         </div>
       </div>
-      <div class="swatch" data-id="pw-04" data-name="Rustic Wenge" data-code="Wood 0202 (3D)" data-hex="#2C1E14" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #2C1E14 0%, #1E1208 50%, #3A2A1C 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+
+      <!-- Rustic Wenge -->
+      <div class="sw" data-id="wg-04" data-name="Rustic Wenge" data-code="Wood 0202 (3D)" data-hex="#3C1E0C" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(175deg, #3C1E0C 0px, #1E0E04 8px, #4A2610 16px, #241206 24px, #3E2010 32px, #1E0E04 40px, #4A2610 48px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.8);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Rustic Wenge</div>
-          <div class="swatch-code">Wood 0202 — 3D</div>
-          <div class="swatch-hex">#2C1E14</div>
-          <div class="swatch-texture">Printech Wood · DaiDong · 3D Emboss</div>
+        <div class="sw-info">
+          <div class="sw-name">Rustic Wenge</div>
+          <div class="sw-code">Wood 0202 (3D) &nbsp;·&nbsp; 3D Emboss</div>
+          <div class="sw-hex">#3C1E0C</div>
         </div>
       </div>
-      <div class="swatch" data-id="pw-05" data-name="Honey Oak" data-code="Wood 3701 (3D)" data-hex="#C4922A" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #C4922A 0%, #A87418 50%, #D4AA44 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
+
+      <!-- Honey Oak -->
+      <div class="sw" data-id="wg-05" data-name="Honey Oak" data-code="Wood 3701 (3D)" data-hex="#B08840" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(180deg, #B89048 0px, #A07C34 16px, #BC9450 32px, #A48038 48px, #B89048 64px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Honey Oak</div>
-          <div class="swatch-code">Wood 3701 — 3D</div>
-          <div class="swatch-hex">#C4922A</div>
-          <div class="swatch-texture">Printech Wood · DaiDong · 3D Emboss</div>
+        <div class="sw-info">
+          <div class="sw-name">Honey Oak</div>
+          <div class="sw-code">Wood 3701 (3D) &nbsp;·&nbsp; 3D Emboss</div>
+          <div class="sw-hex">#B08840</div>
+        </div>
+      </div>
+
+      <!-- Charcoal Timber -->
+      <div class="sw" data-id="wg-06" data-name="Charcoal Timber" data-code="RYM-01 (3D)" data-hex="#242422" data-series="Printech Woodgrain" onclick="pick(this)">
+        <div class="sw-body" style="background: repeating-linear-gradient(180deg, #2A2A28 0px, #1C1C1A 12px, #2E2E2C 24px, #1E1E1C 36px, #2A2A28 48px);">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.7);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Charcoal Timber</div>
+          <div class="sw-code">RYM-01 (3D) &nbsp;·&nbsp; 3D Emboss</div>
+          <div class="sw-hex">#242422</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="divider"></div>
+  <div class="div"></div>
 
-  <!-- ── 05 · DRIFTWOOD ──────────────────────────────────────────────────── -->
-  <div class="finish-section" data-section="driftwood" id="sec-driftwood">
-    <div class="section-header">
-      <span class="section-index">05</span>
-      <span class="section-name">Driftwood</span>
-      <span class="section-count">3 Colors</span>
-      <div class="section-desc">Silver-bleached and smoke-seasoned tones referencing timber after prolonged weathering. The 3D emboss on these profiles adds dimensional shadow lines visible from street level, giving the impression of real wood siding at distance.</div>
+  <!-- ══ 03 · WRINKLE COATING ══ -->
+  <div class="finish" data-sec="wrinkle" id="sec-wrinkle">
+    <div class="finish-header">
+      <div class="finish-eyebrow">
+        <span class="finish-num">03</span>
+        <span class="finish-tag" style="background:#3A2E2E;">Wrinkle Coating</span>
+      </div>
+      <div class="finish-title">Wrinkle Coating</div>
+      <div class="finish-desc">Organic wrinkle texture created by a controlled bake process — each panel develops its own subtle variation. Available across 8 colour options spanning warm terracottas through deep architectural greys. No two batches are identical.</div>
     </div>
-    <div class="swatch-grid">
-      <div class="swatch large" data-id="dw-01" data-name="Golden Walnut" data-code="Wood 3703 (3D)" data-hex="#8B6333" data-series="Driftwood" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #8B6333 0%, #6B4C22 50%, #A07844 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
+    <div class="grid-wrinkle">
+
+      <!-- Jet Black -->
+      <div class="sw" data-id="wk-01" data-name="Jet Black" data-code="RAL 9005" data-hex="#1A1616" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#1A1616;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.7);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Golden Walnut</div>
-          <div class="swatch-code">Wood 3703 — 3D</div>
-          <div class="swatch-hex">#8B6333</div>
-          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
-        </div>
-      </div>
-      <div class="swatch large" data-id="dw-02" data-name="Natural Driftwood" data-code="Wood 18 (3D)" data-hex="#9B7B3E" data-series="Driftwood" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #9B7B3E 0%, #7A5E2A 50%, #B09050 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Natural Driftwood</div>
-          <div class="swatch-code">Wood 18 — 3D</div>
-          <div class="swatch-hex">#9B7B3E</div>
-          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
+        <div class="sw-info">
+          <div class="sw-name">Jet Black</div>
+          <div class="sw-code">RAL 9005 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#1A1616</div>
         </div>
       </div>
-      <div class="swatch large" data-id="dw-03" data-name="Charcoal Timber" data-code="RYM-01 (3D)" data-hex="#2E2E2E" data-series="Driftwood" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #2E2E2E 0%, #1A1A1A 50%, #3E3E3E 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+
+      <!-- Weathered Bark -->
+      <div class="sw" data-id="wk-02" data-name="Weathered Bark" data-code="RAL 8019" data-hex="#3E3535" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#3E3535;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.8);">Select</div>
         </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Charcoal Timber</div>
-          <div class="swatch-code">RYM-01 — 3D</div>
-          <div class="swatch-hex">#2E2E2E</div>
-          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
+        <div class="sw-info">
+          <div class="sw-name">Weathered Bark</div>
+          <div class="sw-code">RAL 8019 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#3E3535</div>
+        </div>
+      </div>
+
+      <!-- Anthracite -->
+      <div class="sw" data-id="wk-03" data-name="Anthracite" data-code="RAL 7016" data-hex="#293133" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#293133;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.8);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Anthracite</div>
+          <div class="sw-code">RAL 7016 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#293133</div>
+        </div>
+      </div>
+
+      <!-- Graphite Grey -->
+      <div class="sw" data-id="wk-04" data-name="Graphite Grey" data-code="RAL 7024" data-hex="#474A52" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#474A52;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.85);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Graphite Grey</div>
+          <div class="sw-code">RAL 7024 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#474A52</div>
+        </div>
+      </div>
+
+      <!-- Dark Chocolate -->
+      <div class="sw" data-id="wk-05" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#45322E" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#45322E;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.8);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Dark Chocolate</div>
+          <div class="sw-code">RAL 8017 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#45322E</div>
+        </div>
+      </div>
+
+      <!-- Oxide Red -->
+      <div class="sw" data-id="wk-06" data-name="Oxide Red" data-code="RAL 3009" data-hex="#6C2A28" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#6C2A28;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.85);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Oxide Red</div>
+          <div class="sw-code">RAL 3009 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#6C2A28</div>
+        </div>
+      </div>
+
+      <!-- Velvet Green -->
+      <div class="sw" data-id="wk-07" data-name="Velvet Green" data-code="RAL 6020" data-hex="#31382A" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#31382A;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.85);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Velvet Green</div>
+          <div class="sw-code">RAL 6020 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#31382A</div>
+        </div>
+      </div>
+
+      <!-- Terracotta -->
+      <div class="sw" data-id="wk-08" data-name="Terracotta" data-code="RAL 8004" data-hex="#8E402A" data-series="Wrinkle Coating" onclick="pick(this)">
+        <div class="sw-body" style="background:#8E402A;">
+          <div class="sw-shimmer"></div>
+          <div class="sw-copy-hint" style="color:rgba(255,255,255,.9);">Select</div>
+        </div>
+        <div class="sw-info">
+          <div class="sw-name">Terracotta</div>
+          <div class="sw-code">RAL 8004 &nbsp;·&nbsp; Wrinkle</div>
+          <div class="sw-hex">#8E402A</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="divider"></div>
+  <div class="div"></div>
 
-  <!-- ── 06 · ICECRYSTAL ─────────────────────────────────────────────────── -->
-  <div class="finish-section" data-section="icecrystal" id="sec-icecrystal">
-    <div class="section-header">
-      <span class="section-index">06</span>
-      <span class="section-name">Icecrystal</span>
-      <span class="section-count">3 Colors</span>
-      <div class="section-desc">Pearlescent mineral-powder coating that shifts subtly under changing light conditions. Developed for the Renoworks 3D visualization library — these profiles allow clients to preview the material digitally before committing to order. Available September 2026.</div>
-    </div>
-    <div class="swatch-grid">
-      <div class="swatch" data-id="ic-01" data-name="Polar White" data-code="Icecrystal 01" data-hex="#E8EDF2" data-series="Icecrystal" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #E8EDF2 0%, #D8E4EC 50%, #EDF1F5 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Polar White</div>
-          <div class="swatch-code">Icecrystal 01</div>
-          <div class="swatch-hex">#E8EDF2</div>
-          <div class="swatch-texture">Icecrystal · Sept 2026</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="ic-02" data-name="Silver Mist" data-code="Icecrystal 02" data-hex="#B8C4D0" data-series="Icecrystal" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #B8C4D0 0%, #9DAEC0 50%, #C8D4DE 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Silver Mist</div>
-          <div class="swatch-code">Icecrystal 02</div>
-          <div class="swatch-hex">#B8C4D0</div>
-          <div class="swatch-texture">Icecrystal · Sept 2026</div>
-        </div>
-      </div>
-      <div class="swatch" data-id="ic-03" data-name="Warm Birch" data-code="Icecrystal 03" data-hex="#E5DED4" data-series="Icecrystal" onclick="toggleSelect(this)">
-        <div class="swatch-body" style="background:linear-gradient(160deg, #E5DED4 0%, #D5CCBe 50%, #EDE8E0 100%);">
-          <div class="swatch-overlay"></div>
-          <div class="swatch-flash">Copied</div>
-        </div>
-        <div class="swatch-info">
-          <div class="swatch-name">Warm Birch</div>
-          <div class="swatch-code">Icecrystal 03</div>
-          <div class="swatch-hex">#E5DED4</div>
-          <div class="swatch-texture">Icecrystal · Sept 2026</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- ── SPECIFICATION NOTE ───────────────────────────────────────────────── -->
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:48px; padding:0 0 40px;">
+  <!-- SPEC NOTES -->
+  <div class="spec-grid">
     <div>
-      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Material Note</div>
-      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">All steel finishes are factory-applied. Field painting voids warranty. RAL codes are the definitive color reference — on-screen renderings are calibrated but not binding. Request physical samples before specifying.</p>
+      <div class="spec-label">Material Note</div>
+      <div class="spec-body">All finishes are factory-applied to steel coil — field painting voids warranty. RAL codes are the definitive colour reference. On-screen swatches are calibrated against physical samples but are not binding. Order a sample pack before specifying.</div>
     </div>
     <div>
-      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Warranty</div>
-      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">25-year manufacturer's paint warranty on Thyssen-Krupp substrate finishes. IronWrap installation warranty provided separately at contract signing. Class 4 impact rating may qualify for homeowner insurance premium reduction.</p>
+      <div class="spec-label">Warranty & Rating</div>
+      <div class="spec-body">25-year manufacturer's paint warranty on Thyssen-Krupp substrate finishes. IronWrap labour warranty issued at contract signing. Class 4 impact rating may qualify your client for homeowner insurance premium reduction — confirm with insurer.</div>
     </div>
     <div>
-      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Lead Time</div>
-      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">Standard colors: stock held at 10743 180 St NW, Edmonton. Non-stocked RAL specials: 3–5 week mill run minimum. Wood-grain composite panels: 2–3 weeks from DaiDong. Contact shop directly for current inventory.</p>
+      <div class="spec-label">Lead Times</div>
+      <div class="spec-body">Stocked colours ship from Edmonton (10743 180 St NW). Non-stock RAL specials: 3–5 week mill run minimum. Printech Woodgrain composites: 2–3 weeks from DaiDong. All codes on this chart (RAL, Wood, RYM-01) are confirmed manufacturer references.</div>
     </div>
   </div>
 
 </main>
 
-<!-- ══ FOOTER ═══════════════════════════════════════════════════════════════ -->
+<!-- FOOTER -->
 <footer>
   <div>
     <h4>IronWrap Exteriors Ltd.</h4>
@@ -1012,216 +721,173 @@
     </address>
   </div>
   <div>
-    <h4>Steel Suppliers</h4>
-    <div class="supplier-list">
-      <div class="supplier-item">Thyssen-Krupp Steel — Cold-rolled coil substrate, Class 4 certified</div>
-      <div class="supplier-item">DaiDong Steel — Printech wood-grain composites and Driftwood profiles</div>
-      <div class="supplier-item">Renoworks Pro — 3D visualization library (library ready September 2026)</div>
+    <h4>Suppliers</h4>
+    <div class="sup-list">
+      <div class="sup-item">Thyssen-Krupp Steel — Cold-rolled coil substrate, Class 4</div>
+      <div class="sup-item">DaiDong Steel — Woodgrain composites, 2D &amp; 3D emboss</div>
+      <div class="sup-item">Renoworks Pro — 3D visualisation library (Sept 2026)</div>
     </div>
   </div>
   <div>
-    <h4>Related Documents</h4>
-    <div class="supplier-list">
-      <div class="supplier-item">IronWrap Installation Specifications v8.1</div>
-      <div class="supplier-item">Residential Contract &amp; E-Signature (JotForm)</div>
-      <div class="supplier-item">RoofRuler Measurement Report (per project)</div>
-      <div class="supplier-item">GST 78646 9460 RT0001 &nbsp;·&nbsp; Alberta — 5% GST only</div>
+    <h4>Reference</h4>
+    <div class="sup-list">
+      <div class="sup-item">IronWrap Installation Specifications v8.1</div>
+      <div class="sup-item">Residential Contract &amp; E-Signature — JotForm</div>
+      <div class="sup-item">RoofRuler Aerial Measurement — per project</div>
+      <div class="sup-item">GST 78646 9460 RT0001 &nbsp;·&nbsp; Alberta 5% only</div>
     </div>
   </div>
 </footer>
 
-<!-- Selection Tray -->
-<div id="selectionTray">
-  <div class="tray-label">Selected</div>
+<!-- SELECTION TRAY -->
+<div id="tray">
+  <div class="tray-lbl">Selected</div>
   <div class="tray-chips" id="trayChips"></div>
-  <div class="tray-actions">
-    <button class="tray-btn tray-btn-clear" onclick="clearAll()">Clear</button>
-    <button class="tray-btn tray-btn-quote" onclick="openQuote()">Request Samples</button>
+  <div class="tray-btns">
+    <button class="tbtn tbtn-clear" onclick="clearAll()">Clear</button>
+    <button class="tbtn tbtn-quote" onclick="requestQuote()">Request Samples</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-const selected = new Map(); // id → { name, code, hex, series }
+/* ── state ── */
+const sel = new Map();
 
-// ── Swatch toggle ──────────────────────────────────────────────────────────
-function toggleSelect(el) {
-  const id     = el.dataset.id;
-  const name   = el.dataset.name;
-  const code   = el.dataset.code;
-  const hex    = el.dataset.hex;
-  const series = el.dataset.series;
-
-  if (selected.has(id)) {
-    selected.delete(id);
+/* ── pick / deselect ── */
+function pick(el) {
+  const {id, name, code, hex, series} = el.dataset;
+  if (sel.has(id)) {
+    sel.delete(id);
     el.classList.remove('selected');
   } else {
-    selected.set(id, { name, code, hex, series });
+    sel.set(id, {name, code, hex, series});
     el.classList.add('selected');
-    // copy hex on select
-    copy(hex);
-    flashSwatch(el);
+    copyText(hex);
+    flash(el);
   }
   renderTray();
 }
 
-function flashSwatch(el) {
-  const flash = el.querySelector('.swatch-flash');
-  if (!flash) return;
-  flash.style.opacity = '1';
-  setTimeout(() => flash.style.opacity = '', 600);
+function flash(el) {
+  const hint = el.querySelector('.sw-copy-hint');
+  if (!hint) return;
+  const orig = hint.textContent;
+  hint.textContent = 'Copied ✓';
+  hint.style.opacity = '1';
+  setTimeout(() => { hint.textContent = orig; hint.style.opacity = ''; }, 800);
 }
 
-// ── Tray ──────────────────────────────────────────────────────────────────
+/* ── tray ── */
 function renderTray() {
-  const tray  = document.getElementById('selectionTray');
+  const tray  = document.getElementById('tray');
   const chips = document.getElementById('trayChips');
-
-  if (selected.size === 0) {
-    tray.classList.remove('visible');
-    chips.innerHTML = '';
-    return;
-  }
-
-  tray.classList.add('visible');
-  chips.innerHTML = [...selected.entries()].map(([id, c]) => `
-    <div class="tray-chip">
-      <div class="tray-chip-dot" style="background:${c.hex};"></div>
-      <span>${c.name} — ${c.code}</span>
-      <button class="tray-chip-remove" onclick="removeColor('${id}')">×</button>
-    </div>
-  `).join('');
+  if (!sel.size) { tray.classList.remove('up'); chips.innerHTML = ''; return; }
+  tray.classList.add('up');
+  chips.innerHTML = [...sel.entries()].map(([id, c]) =>
+    `<div class="tray-chip">
+       <div class="chip-dot" style="background:${c.hex};"></div>
+       <span>${c.name} — ${c.code}</span>
+       <button class="chip-x" onclick="desel('${id}')">×</button>
+     </div>`
+  ).join('');
 }
 
-function removeColor(id) {
-  selected.delete(id);
+function desel(id) {
+  sel.delete(id);
   const el = document.querySelector(`[data-id="${id}"]`);
   if (el) el.classList.remove('selected');
   renderTray();
 }
 
 function clearAll() {
-  selected.clear();
-  document.querySelectorAll('.swatch.selected').forEach(el => el.classList.remove('selected'));
+  sel.clear();
+  document.querySelectorAll('.sw.selected').forEach(el => el.classList.remove('selected'));
   renderTray();
 }
 
-function openQuote() {
-  const items = [...selected.values()];
-  const body  = items.length
-    ? 'I would like to request samples for the following colors:\n\n'
+/* ── quote ── */
+function requestQuote() {
+  const items = [...sel.values()];
+  const body = items.length
+    ? 'I would like to request samples for:\n\n'
       + items.map(c => `• ${c.name} (${c.code}) — ${c.series}`).join('\n')
-      + '\n\nPlease contact me to arrange delivery.'
-    : 'I would like to request a full sample pack of IronWrap metal exterior finishes.';
-
-  const subject = encodeURIComponent('IronWrap Color Sample Request');
-  const bodyEnc = encodeURIComponent(body);
-  window.open(`mailto:info@iroofalberta.ca?subject=${subject}&body=${bodyEnc}`);
-}
-
-// ── Download ──────────────────────────────────────────────────────────────
-function toggleDownloadMenu(e) {
-  e.stopPropagation();
-  document.getElementById('downloadDropdown').classList.toggle('open');
-}
-document.addEventListener('click', () => {
-  document.getElementById('downloadDropdown')?.classList.remove('open');
-});
-
-function savePDF() {
-  document.getElementById('downloadDropdown').classList.remove('open');
-  window.print();
-}
-
-function downloadHTML() {
-  document.getElementById('downloadDropdown').classList.remove('open');
-
-  // Clone the full document, strip Google Fonts (offline-safe), embed revision
-  let html = document.documentElement.outerHTML;
-
-  // Replace Google Fonts import with system fonts so the file works offline
-  html = html.replace(
-    /@import url\('https:\/\/fonts\.googleapis\.com[^']+'\);/g,
-    ''
+      + '\n\nPlease contact me to arrange.'
+    : 'I would like to request a full IronWrap colour sample pack.';
+  window.open(
+    `mailto:info@iroofalberta.ca?subject=${encodeURIComponent('IronWrap Colour Sample Request')}&body=${encodeURIComponent(body)}`
   );
-
-  // Ensure system font fallbacks are used cleanly in the downloaded copy
-  html = html.replace(
-    /'Inter',\s*-apple-system/g,
-    '-apple-system'
-  ).replace(
-    /'DM Mono',\s*'SFMono-Regular'/g,
-    "'SFMono-Regular'"
-  );
-
-  // Add a download-timestamp comment near the top
-  const ts = new Date().toISOString().slice(0,10);
-  html = html.replace(
-    '<!DOCTYPE html>',
-    `<!DOCTYPE html>\n<!-- IronWrap Exteriors — Color Chart — Downloaded ${ts} -->`
-  );
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `IronWrap_ColorChart_${ts}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-  showToast('IronWrap_ColorChart_' + ts + '.html');
 }
 
-// ── Nav filter ────────────────────────────────────────────────────────────
+/* ── nav filter ── */
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', function () {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     this.classList.add('active');
-
-    const filter = this.dataset.section;
-    document.querySelectorAll('.finish-section').forEach(sec => {
-      if (filter === 'all' || sec.dataset.section === filter) {
-        sec.classList.remove('hidden');
-      } else {
-        sec.classList.add('hidden');
-      }
-    });
-    document.querySelectorAll('.divider').forEach(d => {
-      d.style.display = filter === 'all' ? '' : 'none';
-    });
-
-    // scroll to section
-    if (filter !== 'all') {
-      const target = document.getElementById('sec-' + filter);
-      if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    const f = this.dataset.sec;
+    document.querySelectorAll('.finish').forEach(sec =>
+      sec.classList.toggle('hidden', f !== 'all' && sec.dataset.sec !== f)
+    );
+    document.querySelectorAll('.div').forEach(d =>
+      d.style.display = f === 'all' ? '' : 'none'
+    );
+    if (f !== 'all') {
+      const t = document.getElementById('sec-' + f);
+      if (t) setTimeout(() => t.scrollIntoView({behavior:'smooth', block:'start'}), 40);
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({top:0, behavior:'smooth'});
     }
   });
 });
 
-// ── Clipboard ─────────────────────────────────────────────────────────────
-function copy(text) {
-  navigator.clipboard?.writeText(text).catch(() => {
-    const el = document.createElement('textarea');
-    el.value = text;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-  });
-  showToast(text);
+/* ── download menu ── */
+function toggleDL(e) {
+  e.stopPropagation();
+  document.getElementById('dlMenu').classList.toggle('open');
+}
+document.addEventListener('click', () =>
+  document.getElementById('dlMenu')?.classList.remove('open')
+);
+
+function dlPDF() {
+  document.getElementById('dlMenu').classList.remove('open');
+  window.print();
 }
 
-function showToast(msg) {
+function dlHTML() {
+  document.getElementById('dlMenu').classList.remove('open');
+  let html = document.documentElement.outerHTML;
+  html = html.replace(/@import url\('https:\/\/fonts\.googleapis\.com[^']+'\);/g, '');
+  html = html.replace(/'Inter',\s*-apple-system/g, '-apple-system');
+  html = html.replace(/'DM Mono',\s*'SFMono-Regular'/g, "'SFMono-Regular'");
+  const ts = new Date().toISOString().slice(0,10);
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `IronWrap_ColorChart_${ts}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast(`IronWrap_ColorChart_${ts}.html downloaded`);
+}
+
+/* ── clipboard ── */
+function copyText(text) {
+  navigator.clipboard?.writeText(text).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = text; document.body.appendChild(el);
+    el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+  });
+  toast(text);
+}
+
+function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg + ' copied';
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+  t.textContent = msg + '  ·  copied';
+  t.classList.add('on');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('on'), 2000);
 }
 </script>
 </body>
