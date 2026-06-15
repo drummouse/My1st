@@ -3,329 +3,532 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>iRoof Alberta — Corporate Color System</title>
+  <title>IronWrap Exteriors — Metal Exterior Color Options</title>
   <style>
-    /* ── Reset & Base ── */
+    /* ── Material Precision ─────────────────────────────────────────────────
+       Industrial authenticity rendered with museum-grade reverence.
+       Space is an active material. Typography serves, never decorates.
+    ─────────────────────────────────────────────────────────────────────── */
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap');
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      /* Brand primitives */
-      --navy-900: #0D1B2E;
-      --navy-800: #1A2B4A;
-      --navy-700: #243B61;
-      --navy-600: #2E4C78;
-      --navy-500: #375E8F;
-      --navy-400: #5A7FAD;
-      --navy-300: #7DA0C9;
-      --navy-200: #A8C1DE;
-      --navy-100: #D3E0EF;
-      --navy-50:  #EAF0F7;
-
-      --orange-900: #6B2000;
-      --orange-800: #A83200;
-      --orange-700: #C83E00;
-      --orange-600: #E8541A;
-      --orange-500: #F0682E;
-      --orange-400: #F47F4A;
-      --orange-300: #F8A07A;
-      --orange-200: #FBC3A8;
-      --orange-100: #FDE1D3;
-      --orange-50:  #FEF3EE;
-
-      --steel-900: #1A1F2E;
-      --steel-800: #2D3345;
-      --steel-700: #3E4860;
-      --steel-600: #4A5568;
-      --steel-500: #637184;
-      --steel-400: #7D8EA3;
-      --steel-300: #9AAABB;
-      --steel-200: #BAC5D1;
-      --steel-100: #D9E0E8;
-      --steel-50:  #EDF0F4;
-
-      --green-900: #0D3324;
-      --green-800: #1A5238;
-      --green-700: #256B49;
-      --green-600: #2D6A4F;
-      --green-500: #3A8563;
-      --green-400: #52A07A;
-      --green-300: #75BA97;
-      --green-200: #A3D0B8;
-      --green-100: #D0E9DC;
-      --green-50:  #E8F4ED;
-
-      --amber-900: #5C3500;
-      --amber-800: #8A5100;
-      --amber-700: #B86D00;
-      --amber-600: #D4861A;
-      --amber-500: #E89C2F;
-      --amber-400: #F0B04F;
-      --amber-300: #F5C47A;
-      --amber-200: #FAD9A8;
-      --amber-100: #FDEDD4;
-      --amber-50:  #FEF7EC;
-
-      --neutral-900: #111827;
-      --neutral-800: #1F2937;
-      --neutral-700: #374151;
-      --neutral-600: #4B5563;
-      --neutral-500: #6B7280;
-      --neutral-400: #9CA3AF;
-      --neutral-300: #D1D5DB;
-      --neutral-200: #E5E7EB;
-      --neutral-100: #F3F4F6;
-      --neutral-50:  #F9FAFB;
-
-      /* System */
-      --bg: #F4F6F9;
+      --field:   #F5F4F2;
       --surface: #FFFFFF;
-      --border: #E2E8F0;
-      --text-primary: #1A2B4A;
-      --text-secondary: #637184;
-      --text-muted: #9AAABB;
-      --radius: 12px;
-      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
-      --shadow-hover: 0 4px 12px rgba(0,0,0,.12), 0 8px 32px rgba(0,0,0,.08);
+      --rule:    #D8D5D0;
+      --ink:     #1A1816;
+      --ink-2:   #4A4744;
+      --ink-3:   #8A8784;
+      --accent:  #C8391A;  /* IronWrap orange — used sparingly */
+      --mono:    'DM Mono', 'SFMono-Regular', Consolas, monospace;
+      --sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text-primary);
-      min-height: 100vh;
+      font-family: var(--sans);
+      background: var(--field);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1;
     }
 
-    /* ── Header ── */
+    /* ── HEADER ─────────────────────────────────────────────────────────── */
     header {
-      background: linear-gradient(135deg, var(--navy-800) 0%, var(--navy-900) 60%, #0A1520 100%);
-      color: #fff;
-      padding: 56px 48px 64px;
-      position: relative;
-      overflow: hidden;
-    }
-    header::before {
-      content: '';
-      position: absolute;
-      top: -80px; right: -80px;
-      width: 380px; height: 380px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(232,84,26,.35) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    header::after {
-      content: '';
-      position: absolute;
-      bottom: -60px; left: 20%;
-      width: 260px; height: 260px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(55,94,143,.4) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .header-inner { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; }
-    .header-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-size: 12px; font-weight: 600;
-      letter-spacing: .08em; text-transform: uppercase;
-      color: rgba(255,255,255,.85);
-      margin-bottom: 20px;
-    }
-    .header-badge span { width: 6px; height: 6px; border-radius: 50%; background: #E8541A; display: inline-block; }
-    header h1 { font-size: clamp(28px, 5vw, 48px); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
-    header h1 em { font-style: normal; color: #E8541A; }
-    header p { margin-top: 12px; font-size: 16px; color: rgba(255,255,255,.65); max-width: 540px; line-height: 1.6; }
-    .header-meta {
-      display: flex; gap: 32px; margin-top: 32px; flex-wrap: wrap;
-    }
-    .header-stat { display: flex; flex-direction: column; gap: 2px; }
-    .header-stat b { font-size: 22px; font-weight: 800; color: #fff; }
-    .header-stat small { font-size: 12px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .05em; }
-
-    /* ── Controls Bar ── */
-    .controls {
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 48px;
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      position: sticky; top: 0; z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      border-bottom: 1px solid var(--rule);
+      padding: 56px 80px 52px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 32px;
     }
-    .controls-inner { max-width: 1200px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .search-wrap {
-      position: relative; flex: 1; min-width: 220px;
-    }
-    .search-wrap svg {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      color: var(--text-muted); pointer-events: none;
-    }
-    .search-wrap input {
-      width: 100%; padding: 10px 14px 10px 42px;
-      border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 14px; color: var(--text-primary); background: var(--bg);
-      outline: none; transition: border-color .15s;
-    }
-    .search-wrap input:focus { border-color: var(--navy-500); }
-    .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-    .filter-tab {
-      padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--border);
-      font-size: 13px; font-weight: 500; cursor: pointer; background: transparent;
-      color: var(--text-secondary); transition: all .15s; white-space: nowrap;
-    }
-    .filter-tab.active, .filter-tab:hover { background: var(--navy-800); color: #fff; border-color: var(--navy-800); }
-    .view-toggle { display: flex; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; }
-    .view-btn { padding: 8px 12px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); transition: all .15s; }
-    .view-btn.active { background: var(--navy-800); color: #fff; }
 
-    /* ── Main ── */
-    main { max-width: 1200px; margin: 0 auto; padding: 40px 48px 80px; }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-mark {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .brand-mark em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-top: 6px;
+    }
 
-    /* ── Section ── */
-    .section { margin-bottom: 56px; }
-    .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
-    .section-title { font-size: 20px; font-weight: 700; color: var(--text-primary); }
-    .section-count { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-    .section-desc { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+    .header-right {
+      text-align: right;
+    }
+    .doc-title {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .doc-date {
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-weight: 300;
+    }
 
-    /* ── Featured palette (primary hero) ── */
-    .hero-palette {
-      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-      border-radius: var(--radius); overflow: hidden;
-      height: 200px; box-shadow: var(--shadow);
+    /* ── NAV / FILTER ────────────────────────────────────────────────────── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--rule);
+      padding: 0 80px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-tab {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      padding: 18px 24px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .nav-tab:hover { color: var(--ink); }
+    .nav-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+    .nav-spacer { flex: 1; }
+    .nav-actions { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+    .btn-ghost {
+      font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--ink-2); padding: 8px 16px;
+      border: 1px solid var(--rule); border-radius: 2px;
+      background: none; cursor: pointer; transition: all .15s;
+      font-family: var(--sans);
+    }
+    .btn-ghost:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .btn-accent {
+      font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: #fff; padding: 8px 16px;
+      border: 1px solid var(--accent); border-radius: 2px;
+      background: var(--accent); cursor: pointer; transition: all .15s;
+      font-family: var(--sans);
+    }
+    .btn-accent:hover { background: #A82D12; border-color: #A82D12; }
+
+    /* ── MAIN ────────────────────────────────────────────────────────────── */
+    main { max-width: 1440px; margin: 0 auto; padding: 80px 80px 120px; }
+
+    /* ── INTRO ───────────────────────────────────────────────────────────── */
+    .intro {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      margin-bottom: 96px;
+      padding-bottom: 80px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .intro-left h1 {
+      font-size: 42px;
+      font-weight: 300;
+      letter-spacing: -.02em;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+    .intro-left h1 strong { font-weight: 600; }
+    .intro-left p {
+      margin-top: 24px;
+      font-size: 15px;
+      font-weight: 300;
+      line-height: 1.7;
+      color: var(--ink-2);
+      max-width: 420px;
+    }
+    .intro-stats {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 32px;
+    }
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .stat-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .stat-num {
+      font-size: 36px;
+      font-weight: 300;
+      color: var(--ink);
+      letter-spacing: -.03em;
+      font-family: var(--mono);
+      min-width: 72px;
+    }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      line-height: 1.5;
+    }
+
+    /* ── SECTION ─────────────────────────────────────────────────────────── */
+    .finish-section {
+      margin-bottom: 96px;
+    }
+    .finish-section.hidden { display: none; }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: baseline;
+      gap: 24px;
       margin-bottom: 48px;
     }
-    .hero-swatch {
-      display: flex; flex-direction: column; justify-content: flex-end;
-      padding: 16px; cursor: pointer; transition: transform .2s;
+    .section-index {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--ink-3);
+      letter-spacing: .08em;
+    }
+    .section-name {
+      font-size: 26px;
+      font-weight: 300;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .section-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--ink-3);
+    }
+    .section-desc {
+      grid-column: 2 / 4;
+      font-size: 13px;
+      font-weight: 300;
+      line-height: 1.65;
+      color: var(--ink-3);
+      max-width: 560px;
+      margin-top: -16px;
+    }
+
+    /* ── SWATCH GRID ─────────────────────────────────────────────────────── */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 2px;
+    }
+    .swatch-grid.dense {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+
+    .swatch {
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: transform .2s cubic-bezier(.16,1,.3,1);
       position: relative;
+      outline: none;
     }
-    .hero-swatch:hover { transform: scaleY(1.03); }
-    .hero-swatch .swatch-name { font-size: 13px; font-weight: 700; }
-    .hero-swatch .swatch-hex { font-size: 11px; opacity: .8; margin-top: 2px; font-family: 'SFMono-Regular', Consolas, monospace; }
+    .swatch:hover { transform: translateY(-4px); z-index: 2; }
+    .swatch.selected .swatch-body::after {
+      content: '✓';
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      background: rgba(255,255,255,.9);
+      color: var(--ink);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
 
-    /* ── Scale grid ── */
-    .scale-grid { display: flex; flex-direction: column; gap: 16px; }
-    .scale-row { display: grid; grid-template-columns: 120px repeat(10, 1fr); gap: 8px; align-items: center; }
-    .scale-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-    .swatch-cell {
-      border-radius: 8px; overflow: hidden; box-shadow: var(--shadow);
-      transition: transform .15s, box-shadow .15s;
-    }
-    .swatch-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
-    .swatch-top {
-      height: 56px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; position: relative;
-    }
-    .copy-hint {
-      opacity: 0; position: absolute; inset: 0; display: flex; align-items: center;
-      justify-content: center; font-size: 11px; font-weight: 700;
-      letter-spacing: .04em; text-transform: uppercase;
-      background: rgba(0,0,0,.25); color: #fff; transition: opacity .15s;
-    }
-    .swatch-top:hover .copy-hint { opacity: 1; }
-    .swatch-bottom {
-      background: var(--surface); padding: 6px 8px;
-    }
-    .swatch-step { font-size: 10px; font-weight: 700; color: var(--text-muted); }
-    .swatch-val { font-size: 10px; color: var(--text-secondary); font-family: 'SFMono-Regular', Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    /* ── Card grid (for individual colors) ── */
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-    .color-card {
-      border-radius: var(--radius); overflow: hidden; background: var(--surface);
-      box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s;
-    }
-    .color-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-    .card-swatch {
-      height: 120px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    .swatch-body {
+      height: 240px;
       position: relative;
+      display: flex;
+      align-items: flex-end;
     }
-    .card-info { padding: 14px; }
-    .card-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-    .card-hex { font-size: 12px; color: var(--text-muted); font-family: 'SFMono-Regular', Consolas, monospace; margin-top: 2px; }
-    .card-codes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .code-chip {
-      font-size: 10px; padding: 3px 8px; border-radius: 100px;
-      background: var(--bg); color: var(--text-secondary);
-      font-family: 'SFMono-Regular', Consolas, monospace;
-      cursor: pointer; transition: background .15s;
-      border: 1px solid var(--border);
-    }
-    .code-chip:hover { background: var(--navy-50); }
-    .contrast-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 10px; font-weight: 700; padding: 3px 8px;
-      border-radius: 100px; margin-top: 8px;
-    }
-    .aa { background: #d1fae5; color: #065f46; }
-    .aaa { background: #a7f3d0; color: #064e3b; }
-    .fail { background: #fee2e2; color: #991b1b; }
+    .swatch.large .swatch-body { height: 320px; }
+    .swatch.small .swatch-body { height: 180px; }
 
-    /* ── Typography palette ── */
-    .type-sample {
-      padding: 24px; border-radius: var(--radius); margin-bottom: 12px;
-      background: var(--surface); box-shadow: var(--shadow);
+    .swatch-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      transition: background .2s;
     }
-    .type-sample h2 { font-size: 28px; font-weight: 800; }
-    .type-sample p { margin-top: 8px; font-size: 15px; line-height: 1.6; }
+    .swatch:hover .swatch-overlay { background: rgba(0,0,0,.06); }
 
-    /* ── Gradient showcase ── */
-    .gradient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-    .gradient-card {
-      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
-      transition: transform .15s, box-shadow .15s; cursor: pointer;
+    .swatch-info {
+      padding: 20px 20px 18px;
+      background: var(--surface);
+      border-top: 1px solid var(--field);
     }
-    .gradient-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-    .gradient-swatch { height: 140px; }
-    .gradient-info { background: var(--surface); padding: 14px; }
-    .gradient-name { font-size: 13px; font-weight: 700; }
-    .gradient-css { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: 'SFMono-Regular', Consolas, monospace; }
+    .swatch-name {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+    .swatch-code {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--ink-3);
+      margin-top: 6px;
+      letter-spacing: .06em;
+    }
+    .swatch-hex {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 300;
+      color: var(--ink-3);
+      margin-top: 3px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .swatch:hover .swatch-hex { opacity: 1; }
+    .swatch-texture {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-top: 10px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .swatch:hover .swatch-texture { opacity: 1; }
 
-    /* ── Toast ── */
+    /* copy flash */
+    .swatch-flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .1s;
+    }
+
+    /* ── DIVIDER ─────────────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--rule);
+      margin: 0 0 96px;
+    }
+
+    /* ── SELECTION TRAY ──────────────────────────────────────────────────── */
+    #selectionTray {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--ink);
+      color: #fff;
+      padding: 20px 80px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.16,1,.3,1);
+      z-index: 200;
+    }
+    #selectionTray.visible { transform: translateY(0); }
+    .tray-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.5);
+      white-space: nowrap;
+    }
+    .tray-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      flex: 1;
+    }
+    .tray-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 2px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: .06em;
+      color: rgba(255,255,255,.85);
+    }
+    .tray-chip-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.3);
+      flex-shrink: 0;
+    }
+    .tray-chip-remove {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,.4);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+      transition: color .1s;
+    }
+    .tray-chip-remove:hover { color: rgba(255,255,255,.9); }
+    .tray-actions { display: flex; gap: 12px; }
+    .tray-btn {
+      font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      padding: 10px 20px; border-radius: 2px; cursor: pointer;
+      font-family: var(--sans); white-space: nowrap; transition: all .15s;
+    }
+    .tray-btn-clear { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); color: rgba(255,255,255,.7); }
+    .tray-btn-clear:hover { background: rgba(255,255,255,.2); }
+    .tray-btn-quote { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+    .tray-btn-quote:hover { background: #A82D12; }
+
+    /* ── TOAST ───────────────────────────────────────────────────────────── */
     #toast {
-      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: var(--neutral-900); color: #fff;
-      padding: 12px 24px; border-radius: 100px;
-      font-size: 13px; font-weight: 600;
-      pointer-events: none; opacity: 0;
+      position: fixed;
+      bottom: 96px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--ink);
+      color: rgba(255,255,255,.85);
+      padding: 10px 20px;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-family: var(--mono);
+      opacity: 0;
+      pointer-events: none;
       transition: opacity .2s, transform .2s;
-      z-index: 9999; white-space: nowrap;
-      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      z-index: 9999;
+      white-space: nowrap;
     }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
 
-    /* ── Usage guide ── */
-    .usage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-    .usage-card {
-      border-radius: var(--radius); padding: 24px; background: var(--surface);
-      box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
+    /* ── FOOTER ──────────────────────────────────────────────────────────── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--rule);
+      padding: 48px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 48px;
     }
-    .usage-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .usage-title { font-size: 15px; font-weight: 700; }
-    .usage-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
-    .usage-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .usage-chip {
-      width: 28px; height: 28px; border-radius: 6px;
-      border: 2px solid rgba(255,255,255,.5);
-      cursor: pointer; transition: transform .15s;
+    footer h4 {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 16px;
     }
-    .usage-chip:hover { transform: scale(1.15); }
+    footer p, footer address {
+      font-size: 13px;
+      font-weight: 300;
+      line-height: 1.7;
+      color: var(--ink-2);
+      font-style: normal;
+    }
+    footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); transition: border-color .15s; }
+    footer a:hover { border-bottom-color: var(--ink); }
+    .supplier-list { display: flex; flex-direction: column; gap: 10px; margin-top: 0; }
+    .supplier-item {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--ink-2);
+    }
+    .supplier-item::before {
+      content: '';
+      display: block;
+      width: 16px;
+      height: 1px;
+      background: var(--rule);
+      flex-shrink: 0;
+      transform: translateY(-3px);
+    }
 
-    /* ── Divider ── */
-    .divider { height: 1px; background: var(--border); margin: 0 0 56px; }
-
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      header, .controls, main { padding-left: 20px; padding-right: 20px; }
-      .hero-palette { grid-template-columns: repeat(5, 1fr); height: 140px; }
-      .scale-row { grid-template-columns: 80px repeat(10, 1fr); }
+    /* ── PRINT ───────────────────────────────────────────────────────────── */
+    @media print {
+      nav, #selectionTray, #toast, .nav-actions { display: none !important; }
+      header { position: relative; }
+      .swatch-body { height: 160px !important; }
+      .swatch:hover { transform: none; }
+      body { background: white; }
+      footer { grid-template-columns: 1fr 1fr 1fr; }
     }
-    @media (max-width: 640px) {
-      .hero-palette { display: none; }
-      .scale-row { grid-template-columns: 60px repeat(5, 1fr); }
-      .scale-row .swatch-cell:nth-child(n+7) { display: none; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      header, nav, main, footer { padding-left: 40px; padding-right: 40px; }
+      #selectionTray { padding-left: 40px; padding-right: 40px; }
+      .intro { grid-template-columns: 1fr; gap: 48px; }
+      footer { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 680px) {
+      header, nav, main, footer { padding-left: 24px; padding-right: 24px; }
+      #selectionTray { padding-left: 24px; padding-right: 24px; }
+      .section-header { grid-template-columns: auto 1fr; }
+      .section-count { display: none; }
+      .swatch-grid { grid-template-columns: 1fr 1fr; }
+      footer { grid-template-columns: 1fr; }
+      .nav-tab { padding: 14px 12px; font-size: 10px; }
     }
   </style>
 </head>
@@ -333,577 +536,569 @@
 
 <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
 <header>
-  <div class="header-inner">
-    <div class="header-badge"><span></span> iRoof Alberta — Brand Identity</div>
-    <h1>Corporate <em>Color System</em></h1>
-    <p>A unified visual language built for trust, durability, and clarity. Every color chosen to reflect Alberta's landscape and professional excellence.</p>
-    <div class="header-meta">
-      <div class="header-stat"><b>6</b><small>Color Families</small></div>
-      <div class="header-stat"><b>60</b><small>Palette Steps</small></div>
-      <div class="header-stat"><b>12</b><small>Gradients</small></div>
-      <div class="header-stat"><b>WCAG AA</b><small>Accessibility</small></div>
-    </div>
+  <div class="brand">
+    <div class="brand-mark">Iron<em>Wrap</em> Exteriors</div>
+    <div class="brand-sub">I Roof Alberta &nbsp;·&nbsp; Metal Exterior Specialists</div>
+  </div>
+  <div class="header-right">
+    <div class="doc-title">Color Options — Metal Exterior Finishes</div>
+    <div class="doc-date">Rev. June 2026 &nbsp;·&nbsp; Edmonton, AB</div>
   </div>
 </header>
 
-<!-- ══ CONTROLS ════════════════════════════════════════════════════════════ -->
-<div class="controls">
-  <div class="controls-inner">
-    <div class="search-wrap">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="searchInput" placeholder="Search color name or hex…" />
-    </div>
-    <div class="filter-tabs">
-      <button class="filter-tab active" data-filter="all">All</button>
-      <button class="filter-tab" data-filter="navy">Navy</button>
-      <button class="filter-tab" data-filter="orange">Orange</button>
-      <button class="filter-tab" data-filter="steel">Steel</button>
-      <button class="filter-tab" data-filter="green">Green</button>
-      <button class="filter-tab" data-filter="amber">Amber</button>
-      <button class="filter-tab" data-filter="neutral">Neutral</button>
-    </div>
-    <div class="view-toggle">
-      <button class="view-btn active" id="viewGrid" title="Grid view">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      </button>
-      <button class="view-btn" id="viewScale" title="Scale view">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
-      </button>
-    </div>
+<!-- ══ NAV ═════════════════════════════════════════════════════════════════ -->
+<nav>
+  <button class="nav-tab active" data-section="all">All Finishes</button>
+  <button class="nav-tab" data-section="glacial-relief">Glacial Relief</button>
+  <button class="nav-tab" data-section="wrinkle-coating">Wrinkle Coating</button>
+  <button class="nav-tab" data-section="weathered-bark">Weathered Bark</button>
+  <button class="nav-tab" data-section="printech">Printech Wood</button>
+  <button class="nav-tab" data-section="driftwood">Driftwood</button>
+  <button class="nav-tab" data-section="icecrystal">Icecrystal</button>
+  <div class="nav-spacer"></div>
+  <div class="nav-actions">
+    <button class="btn-ghost" onclick="window.print()">Print / PDF</button>
+    <button class="btn-accent" onclick="openQuote()">Request Quote</button>
   </div>
-</div>
+</nav>
 
-<!-- ══ MAIN ══════════════════════════════════════════════════════════════════ -->
+<!-- ══ MAIN ═════════════════════════════════════════════════════════════════ -->
 <main>
 
-  <!-- Hero Palette -->
-  <div class="hero-palette" id="heroPalette">
-    <div class="hero-swatch" style="background:#1A2B4A; color:#fff;" data-copy="#1A2B4A">
-      <div class="swatch-name">Navy — Primary</div>
-      <div class="swatch-hex">#1A2B4A</div>
+  <!-- Intro -->
+  <div class="intro">
+    <div class="intro-left">
+      <h1>Metal Exterior<br><strong>Color Options</strong></h1>
+      <p>Every finish is produced on certified Thyssen-Krupp and DaiDong Steel coil stock. Colors are photographed and calibrated against physical samples — digital renderings are indicative only. Request a physical sample pack to confirm selection before ordering.</p>
     </div>
-    <div class="hero-swatch" style="background:#E8541A; color:#fff;" data-copy="#E8541A">
-      <div class="swatch-name">Orange</div>
-      <div class="swatch-hex">#E8541A</div>
-    </div>
-    <div class="hero-swatch" style="background:#4A5568; color:#fff;" data-copy="#4A5568">
-      <div class="swatch-name">Steel</div>
-      <div class="swatch-hex">#4A5568</div>
-    </div>
-    <div class="hero-swatch" style="background:#2D6A4F; color:#fff;" data-copy="#2D6A4F">
-      <div class="swatch-name">Green</div>
-      <div class="swatch-hex">#2D6A4F</div>
-    </div>
-    <div class="hero-swatch" style="background:#D4861A; color:#fff;" data-copy="#D4861A">
-      <div class="swatch-name">Amber</div>
-      <div class="swatch-hex">#D4861A</div>
+    <div class="intro-stats">
+      <div class="stat-row">
+        <div class="stat-num">5</div>
+        <div class="stat-label">Finish Series<br>Glacial · Wrinkle · Bark · Printech · Driftwood</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-num">21</div>
+        <div class="stat-label">Color Options<br>RAL-coded steel coil + wood grain composites</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-num">Class 4</div>
+        <div class="stat-label">Impact Rating<br>Thyssen-Krupp steel — qualifies for insurance discounts</div>
+      </div>
     </div>
   </div>
 
-  <!-- ── Grid View ── -->
-  <div id="gridView">
-
-    <!-- Navy -->
-    <div class="section" data-family="navy">
-      <div class="section-header">
-        <h2 class="section-title">Navy Blue</h2>
-        <span class="section-count">Primary Brand Color</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Deep trust and professionalism. Used for primary backgrounds, text, and structural UI elements.</p>
-      <div class="card-grid" id="navyCards"></div>
+  <!-- ── 01 · GLACIAL RELIEF ─────────────────────────────────────────────── -->
+  <div class="finish-section" data-section="glacial-relief" id="sec-glacial-relief">
+    <div class="section-header">
+      <span class="section-index">01</span>
+      <span class="section-name">Glacial Relief</span>
+      <span class="section-count">2 Colors</span>
+      <div class="section-desc">Deep-embossed texture with a matte, mineral-powder finish. High-performance factory-applied coating on Thyssen-Krupp cold-rolled steel. Excellent UV resistance for Alberta's high-altitude solar exposure.</div>
     </div>
-
-    <div class="divider"></div>
-
-    <!-- Orange -->
-    <div class="section" data-family="orange">
-      <div class="section-header">
-        <h2 class="section-title">Signal Orange</h2>
-        <span class="section-count">Primary Action Color</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Energy, urgency, and craftsmanship. Used for CTAs, highlights, and brand emphasis.</p>
-      <div class="card-grid" id="orangeCards"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Steel -->
-    <div class="section" data-family="steel">
-      <div class="section-header">
-        <h2 class="section-title">Steel Gray</h2>
-        <span class="section-count">Secondary Neutral</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Industrial strength and modern professionalism. Used for body text, borders, and secondary UI.</p>
-      <div class="card-grid" id="steelCards"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Green -->
-    <div class="section" data-family="green">
-      <div class="section-header">
-        <h2 class="section-title">Alberta Forest Green</h2>
-        <span class="section-count">Success / Nature</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Inspired by Alberta's boreal landscape. Used for success states, eco badges, and seasonal accents.</p>
-      <div class="card-grid" id="greenCards"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Amber -->
-    <div class="section" data-family="amber">
-      <div class="section-header">
-        <h2 class="section-title">Prairie Amber</h2>
-        <span class="section-count">Warning / Warmth</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Alberta wheat fields and sunset tones. Used for warnings, star ratings, and warm accent elements.</p>
-      <div class="card-grid" id="amberCards"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Neutral -->
-    <div class="section" data-family="neutral">
-      <div class="section-header">
-        <h2 class="section-title">Neutral</h2>
-        <span class="section-count">Typography & Layout</span>
-      </div>
-      <p class="section-desc" style="margin-bottom:20px;">Clean achromatic scale for text hierarchy, backgrounds, and layout structure.</p>
-      <div class="card-grid" id="neutralCards"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Gradients -->
-    <div class="section">
-      <div class="section-header">
-        <h2 class="section-title">Brand Gradients</h2>
-        <span class="section-count">12 Gradients</span>
-      </div>
-      <div class="gradient-grid" id="gradientGrid"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Usage Guide -->
-    <div class="section">
-      <div class="section-header">
-        <h2 class="section-title">Usage Guidelines</h2>
-      </div>
-      <div class="usage-grid" id="usageGrid"></div>
-    </div>
-
-    <!-- Typography Sample -->
-    <div class="divider"></div>
-    <div class="section">
-      <div class="section-header">
-        <h2 class="section-title">Color in Context</h2>
-      </div>
-      <div class="type-sample" style="background:#1A2B4A; color:#fff;">
-        <h2 style="color:#fff;">Quality Roofing You Can Trust</h2>
-        <p style="color:rgba(255,255,255,.75);">Alberta's premier roofing contractor serving residential and commercial clients with certified professionals and premium materials.</p>
-        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-          <button style="background:#E8541A; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer;">Get Free Estimate</button>
-          <button style="background:transparent; color:#fff; border:2px solid rgba(255,255,255,.4); padding:12px 24px; border-radius:8px; font-weight:600; cursor:pointer;">Our Services</button>
+    <div class="swatch-grid">
+      <div class="swatch large" data-id="gr-01" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#44322D" data-series="Glacial Relief" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#44322D;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Dark Chocolate</div>
+          <div class="swatch-code">RAL 8017</div>
+          <div class="swatch-hex">#44322D</div>
+          <div class="swatch-texture">Glacial Relief · Thyssen-Krupp</div>
         </div>
       </div>
-      <div class="type-sample" style="background:#F4F6F9; color:#1A2B4A; margin-top: 16px;">
-        <h2>Premium Materials, Expert Installation</h2>
-        <p style="color:#637184;">From asphalt shingles to metal roofing, we bring decades of expertise to every project. Licensed, insured, and backed by Alberta's toughest warranty.</p>
-        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-          <div style="background:#E8541A; color:#fff; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:700;">⭐ 5-Star Rated</div>
-          <div style="background:#2D6A4F; color:#fff; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:700;">✓ WCB Certified</div>
-          <div style="background:#1A2B4A; color:#fff; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:700;">25yr Warranty</div>
+      <div class="swatch large" data-id="gr-02" data-name="Midnight Black" data-code="RAL 9005" data-hex="#0D0D0D" data-series="Glacial Relief" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#0D0D0D;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Midnight Black</div>
+          <div class="swatch-code">RAL 9005</div>
+          <div class="swatch-hex">#0D0D0D</div>
+          <div class="swatch-texture">Glacial Relief · Thyssen-Krupp</div>
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- /gridView -->
+  <div class="divider"></div>
 
-  <!-- ── Scale View ── -->
-  <div id="scaleView" style="display:none;">
-    <div class="section">
-      <div class="scale-grid" id="scaleGridContent"></div>
+  <!-- ── 02 · WRINKLE COATING ────────────────────────────────────────────── -->
+  <div class="finish-section" data-section="wrinkle-coating" id="sec-wrinkle-coating">
+    <div class="section-header">
+      <span class="section-index">02</span>
+      <span class="section-name">Wrinkle Coating</span>
+      <span class="section-count">4 Colors</span>
+      <div class="section-desc">Distinctive organic wrinkle texture created by a controlled bake process. Conceals minor surface imperfections and provides superior paint adhesion. Each batch produces subtle natural variation — no two panels are identical.</div>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch" data-id="wc-01" data-name="Jet Black" data-code="RAL 9005" data-hex="#0D0D0D" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#0D0D0D;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Jet Black</div>
+          <div class="swatch-code">RAL 9005</div>
+          <div class="swatch-hex">#0D0D0D</div>
+          <div class="swatch-texture">Wrinkle Coating</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="wc-02" data-name="Glacial Teal" data-code="RAL 7016" data-hex="#293133" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#293133;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Glacial Teal</div>
+          <div class="swatch-code">RAL 7016</div>
+          <div class="swatch-hex">#293133</div>
+          <div class="swatch-texture">Wrinkle Coating</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="wc-03" data-name="Graphite Grey" data-code="RAL 7024" data-hex="#474A51" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#474A51;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Graphite Grey</div>
+          <div class="swatch-code">RAL 7024</div>
+          <div class="swatch-hex">#474A51</div>
+          <div class="swatch-texture">Wrinkle Coating</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="wc-04" data-name="Dark Chocolate" data-code="RAL 8017" data-hex="#44322D" data-series="Wrinkle Coating" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#44322D;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Dark Chocolate</div>
+          <div class="swatch-code">RAL 8017</div>
+          <div class="swatch-hex">#44322D</div>
+          <div class="swatch-texture">Wrinkle Coating</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── 03 · WEATHERED BARK ─────────────────────────────────────────────── -->
+  <div class="finish-section" data-section="weathered-bark" id="sec-weathered-bark">
+    <div class="section-header">
+      <span class="section-index">03</span>
+      <span class="section-name">Weathered Bark</span>
+      <span class="section-count">3 Colors</span>
+      <div class="section-desc">Earthy tones inspired by Alberta's boreal forest floor. The textured surface mimics weathered organic material while maintaining the structural performance of formed steel. Blends with natural landscapes without disappearing.</div>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch" data-id="wb-01" data-name="Anthracite" data-code="RAL 8019" data-hex="#403A3A" data-series="Weathered Bark" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#403A3A;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Anthracite</div>
+          <div class="swatch-code">RAL 8019</div>
+          <div class="swatch-hex">#403A3A</div>
+          <div class="swatch-texture">Weathered Bark</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="wb-02" data-name="Slate Bark" data-code="RAL 7016" data-hex="#293133" data-series="Weathered Bark" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#293133;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Slate Bark</div>
+          <div class="swatch-code">RAL 7016</div>
+          <div class="swatch-hex">#293133</div>
+          <div class="swatch-texture">Weathered Bark</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="wb-03" data-name="Terra-Cotta" data-code="RAL 8004" data-hex="#8E402A" data-series="Weathered Bark" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#8E402A;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Terra-Cotta</div>
+          <div class="swatch-code">RAL 8004</div>
+          <div class="swatch-hex">#8E402A</div>
+          <div class="swatch-texture">Weathered Bark</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── 04 · PRINTECH WOOD GRAIN ────────────────────────────────────────── -->
+  <div class="finish-section" data-section="printech" id="sec-printech">
+    <div class="section-header">
+      <span class="section-index">04</span>
+      <span class="section-name">Printech Wood Grain</span>
+      <span class="section-count">6 Colors</span>
+      <div class="section-desc">High-resolution photographic wood-grain print bonded to formed steel. 2D profiles offer clean reproduction; 3D variants include an embossed texture layer that reads as dimensional grain under raking light. DaiDong Steel substrate.</div>
+    </div>
+    <div class="swatch-grid dense">
+      <div class="swatch" data-id="pw-01" data-name="Amber Oak" data-code="Wood 18 (2D)" data-hex="#B07D3A" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #B07D3A 0%, #8A5F22 40%, #C49048 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Amber Oak</div>
+          <div class="swatch-code">Wood 18 — 2D</div>
+          <div class="swatch-hex">#B07D3A</div>
+          <div class="swatch-texture">Printech Wood · DaiDong</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="pw-02" data-name="Oxide Red" data-code="RAL 3009" data-hex="#6B2A23" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#6B2A23;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Oxide Red</div>
+          <div class="swatch-code">RAL 3009</div>
+          <div class="swatch-hex">#6B2A23</div>
+          <div class="swatch-texture">Printech Wood · DaiDong</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="pw-03" data-name="Velvet Green" data-code="RAL 3009 / 6020" data-hex="#3D6B4F" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:#3D6B4F;">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Velvet Green</div>
+          <div class="swatch-code">RAL 6020</div>
+          <div class="swatch-hex">#3D6B4F</div>
+          <div class="swatch-texture">Printech Wood · DaiDong</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="pw-04" data-name="Rustic Wenge" data-code="Wood 0202 (3D)" data-hex="#2C1E14" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #2C1E14 0%, #1E1208 50%, #3A2A1C 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Rustic Wenge</div>
+          <div class="swatch-code">Wood 0202 — 3D</div>
+          <div class="swatch-hex">#2C1E14</div>
+          <div class="swatch-texture">Printech Wood · DaiDong · 3D Emboss</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="pw-05" data-name="Honey Oak" data-code="Wood 3701 (3D)" data-hex="#C4922A" data-series="Printech Wood Grain" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #C4922A 0%, #A87418 50%, #D4AA44 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Honey Oak</div>
+          <div class="swatch-code">Wood 3701 — 3D</div>
+          <div class="swatch-hex">#C4922A</div>
+          <div class="swatch-texture">Printech Wood · DaiDong · 3D Emboss</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── 05 · DRIFTWOOD ──────────────────────────────────────────────────── -->
+  <div class="finish-section" data-section="driftwood" id="sec-driftwood">
+    <div class="section-header">
+      <span class="section-index">05</span>
+      <span class="section-name">Driftwood</span>
+      <span class="section-count">3 Colors</span>
+      <div class="section-desc">Silver-bleached and smoke-seasoned tones referencing timber after prolonged weathering. The 3D emboss on these profiles adds dimensional shadow lines visible from street level, giving the impression of real wood siding at distance.</div>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch large" data-id="dw-01" data-name="Golden Walnut" data-code="Wood 3703 (3D)" data-hex="#8B6333" data-series="Driftwood" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #8B6333 0%, #6B4C22 50%, #A07844 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Golden Walnut</div>
+          <div class="swatch-code">Wood 3703 — 3D</div>
+          <div class="swatch-hex">#8B6333</div>
+          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
+        </div>
+      </div>
+      <div class="swatch large" data-id="dw-02" data-name="Natural Driftwood" data-code="Wood 18 (3D)" data-hex="#9B7B3E" data-series="Driftwood" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #9B7B3E 0%, #7A5E2A 50%, #B09050 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Natural Driftwood</div>
+          <div class="swatch-code">Wood 18 — 3D</div>
+          <div class="swatch-hex">#9B7B3E</div>
+          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
+        </div>
+      </div>
+      <div class="swatch large" data-id="dw-03" data-name="Charcoal Timber" data-code="RYM-01 (3D)" data-hex="#2E2E2E" data-series="Driftwood" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #2E2E2E 0%, #1A1A1A 50%, #3E3E3E 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash" style="color:#fff; background:rgba(0,0,0,.3);">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Charcoal Timber</div>
+          <div class="swatch-code">RYM-01 — 3D</div>
+          <div class="swatch-hex">#2E2E2E</div>
+          <div class="swatch-texture">Driftwood · DaiDong · 3D Emboss</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── 06 · ICECRYSTAL ─────────────────────────────────────────────────── -->
+  <div class="finish-section" data-section="icecrystal" id="sec-icecrystal">
+    <div class="section-header">
+      <span class="section-index">06</span>
+      <span class="section-name">Icecrystal</span>
+      <span class="section-count">3 Colors</span>
+      <div class="section-desc">Pearlescent mineral-powder coating that shifts subtly under changing light conditions. Developed for the Renoworks 3D visualization library — these profiles allow clients to preview the material digitally before committing to order. Available September 2026.</div>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch" data-id="ic-01" data-name="Polar White" data-code="Icecrystal 01" data-hex="#E8EDF2" data-series="Icecrystal" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #E8EDF2 0%, #D8E4EC 50%, #EDF1F5 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Polar White</div>
+          <div class="swatch-code">Icecrystal 01</div>
+          <div class="swatch-hex">#E8EDF2</div>
+          <div class="swatch-texture">Icecrystal · Sept 2026</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="ic-02" data-name="Silver Mist" data-code="Icecrystal 02" data-hex="#B8C4D0" data-series="Icecrystal" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #B8C4D0 0%, #9DAEC0 50%, #C8D4DE 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Silver Mist</div>
+          <div class="swatch-code">Icecrystal 02</div>
+          <div class="swatch-hex">#B8C4D0</div>
+          <div class="swatch-texture">Icecrystal · Sept 2026</div>
+        </div>
+      </div>
+      <div class="swatch" data-id="ic-03" data-name="Warm Birch" data-code="Icecrystal 03" data-hex="#E5DED4" data-series="Icecrystal" onclick="toggleSelect(this)">
+        <div class="swatch-body" style="background:linear-gradient(160deg, #E5DED4 0%, #D5CCBe 50%, #EDE8E0 100%);">
+          <div class="swatch-overlay"></div>
+          <div class="swatch-flash">Copied</div>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Warm Birch</div>
+          <div class="swatch-code">Icecrystal 03</div>
+          <div class="swatch-hex">#E5DED4</div>
+          <div class="swatch-texture">Icecrystal · Sept 2026</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SPECIFICATION NOTE ───────────────────────────────────────────────── -->
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:48px; padding:0 0 40px;">
+    <div>
+      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Material Note</div>
+      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">All steel finishes are factory-applied. Field painting voids warranty. RAL codes are the definitive color reference — on-screen renderings are calibrated but not binding. Request physical samples before specifying.</p>
+    </div>
+    <div>
+      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Warranty</div>
+      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">25-year manufacturer's paint warranty on Thyssen-Krupp substrate finishes. IronWrap installation warranty provided separately at contract signing. Class 4 impact rating may qualify for homeowner insurance premium reduction.</p>
+    </div>
+    <div>
+      <div style="font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin-bottom:16px;">Lead Time</div>
+      <p style="font-size:13px; font-weight:300; line-height:1.7; color:var(--ink-2);">Standard colors: stock held at 10743 180 St NW, Edmonton. Non-stocked RAL specials: 3–5 week mill run minimum. Wood-grain composite panels: 2–3 weeks from DaiDong. Contact shop directly for current inventory.</p>
     </div>
   </div>
 
 </main>
 
-<!-- Toast -->
+<!-- ══ FOOTER ═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div>
+    <h4>IronWrap Exteriors Ltd.</h4>
+    <address>
+      10743 180 St NW #100<br>
+      Edmonton, AB &nbsp;T5S 1G6<br><br>
+      587 377 7663<br>
+      <a href="mailto:info@iroofalberta.ca">info@iroofalberta.ca</a><br>
+      <a href="https://ironwrapexteriors.com" target="_blank">ironwrapexteriors.com</a>
+    </address>
+  </div>
+  <div>
+    <h4>Steel Suppliers</h4>
+    <div class="supplier-list">
+      <div class="supplier-item">Thyssen-Krupp Steel — Cold-rolled coil substrate, Class 4 certified</div>
+      <div class="supplier-item">DaiDong Steel — Printech wood-grain composites and Driftwood profiles</div>
+      <div class="supplier-item">Renoworks Pro — 3D visualization library (library ready September 2026)</div>
+    </div>
+  </div>
+  <div>
+    <h4>Related Documents</h4>
+    <div class="supplier-list">
+      <div class="supplier-item">IronWrap Installation Specifications v8.1</div>
+      <div class="supplier-item">Residential Contract &amp; E-Signature (JotForm)</div>
+      <div class="supplier-item">RoofRuler Measurement Report (per project)</div>
+      <div class="supplier-item">GST 78646 9460 RT0001 &nbsp;·&nbsp; Alberta — 5% GST only</div>
+    </div>
+  </div>
+</footer>
+
+<!-- Selection Tray -->
+<div id="selectionTray">
+  <div class="tray-label">Selected</div>
+  <div class="tray-chips" id="trayChips"></div>
+  <div class="tray-actions">
+    <button class="tray-btn tray-btn-clear" onclick="clearAll()">Clear</button>
+    <button class="tray-btn tray-btn-quote" onclick="openQuote()">Request Samples</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-// ── Color Data ────────────────────────────────────────────────────────────
-const PALETTES = {
-  navy: {
-    label: 'Navy Blue',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#EAF0F7', name:'Navy 50' },
-      100: { hex:'#D3E0EF', name:'Navy 100' },
-      200: { hex:'#A8C1DE', name:'Navy 200' },
-      300: { hex:'#7DA0C9', name:'Navy 300' },
-      400: { hex:'#5A7FAD', name:'Navy 400' },
-      500: { hex:'#375E8F', name:'Navy 500' },
-      600: { hex:'#2E4C78', name:'Navy 600' },
-      700: { hex:'#243B61', name:'Navy 700' },
-      800: { hex:'#1A2B4A', name:'Navy 800 — Primary' },
-      900: { hex:'#0D1B2E', name:'Navy 900' },
-    }
-  },
-  orange: {
-    label: 'Signal Orange',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#FEF3EE', name:'Orange 50' },
-      100: { hex:'#FDE1D3', name:'Orange 100' },
-      200: { hex:'#FBC3A8', name:'Orange 200' },
-      300: { hex:'#F8A07A', name:'Orange 300' },
-      400: { hex:'#F47F4A', name:'Orange 400' },
-      500: { hex:'#F0682E', name:'Orange 500' },
-      600: { hex:'#E8541A', name:'Orange 600 — Primary' },
-      700: { hex:'#C83E00', name:'Orange 700' },
-      800: { hex:'#A83200', name:'Orange 800' },
-      900: { hex:'#6B2000', name:'Orange 900' },
-    }
-  },
-  steel: {
-    label: 'Steel Gray',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#EDF0F4', name:'Steel 50' },
-      100: { hex:'#D9E0E8', name:'Steel 100' },
-      200: { hex:'#BAC5D1', name:'Steel 200' },
-      300: { hex:'#9AAABB', name:'Steel 300' },
-      400: { hex:'#7D8EA3', name:'Steel 400' },
-      500: { hex:'#637184', name:'Steel 500' },
-      600: { hex:'#4A5568', name:'Steel 600 — Primary' },
-      700: { hex:'#3E4860', name:'Steel 700' },
-      800: { hex:'#2D3345', name:'Steel 800' },
-      900: { hex:'#1A1F2E', name:'Steel 900' },
-    }
-  },
-  green: {
-    label: 'Alberta Forest Green',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#E8F4ED', name:'Green 50' },
-      100: { hex:'#D0E9DC', name:'Green 100' },
-      200: { hex:'#A3D0B8', name:'Green 200' },
-      300: { hex:'#75BA97', name:'Green 300' },
-      400: { hex:'#52A07A', name:'Green 400' },
-      500: { hex:'#3A8563', name:'Green 500' },
-      600: { hex:'#2D6A4F', name:'Green 600 — Primary' },
-      700: { hex:'#256B49', name:'Green 700' },
-      800: { hex:'#1A5238', name:'Green 800' },
-      900: { hex:'#0D3324', name:'Green 900' },
-    }
-  },
-  amber: {
-    label: 'Prairie Amber',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#FEF7EC', name:'Amber 50' },
-      100: { hex:'#FDEDD4', name:'Amber 100' },
-      200: { hex:'#FAD9A8', name:'Amber 200' },
-      300: { hex:'#F5C47A', name:'Amber 300' },
-      400: { hex:'#F0B04F', name:'Amber 400' },
-      500: { hex:'#E89C2F', name:'Amber 500' },
-      600: { hex:'#D4861A', name:'Amber 600 — Primary' },
-      700: { hex:'#B86D00', name:'Amber 700' },
-      800: { hex:'#8A5100', name:'Amber 800' },
-      900: { hex:'#5C3500', name:'Amber 900' },
-    }
-  },
-  neutral: {
-    label: 'Neutral',
-    steps: [50,100,200,300,400,500,600,700,800,900],
-    colors: {
-      50: { hex:'#F9FAFB', name:'Neutral 50' },
-      100: { hex:'#F3F4F6', name:'Neutral 100' },
-      200: { hex:'#E5E7EB', name:'Neutral 200' },
-      300: { hex:'#D1D5DB', name:'Neutral 300' },
-      400: { hex:'#9CA3AF', name:'Neutral 400' },
-      500: { hex:'#6B7280', name:'Neutral 500' },
-      600: { hex:'#4B5563', name:'Neutral 600' },
-      700: { hex:'#374151', name:'Neutral 700' },
-      800: { hex:'#1F2937', name:'Neutral 800' },
-      900: { hex:'#111827', name:'Neutral 900' },
-    }
+// ── State ──────────────────────────────────────────────────────────────────
+const selected = new Map(); // id → { name, code, hex, series }
+
+// ── Swatch toggle ──────────────────────────────────────────────────────────
+function toggleSelect(el) {
+  const id     = el.dataset.id;
+  const name   = el.dataset.name;
+  const code   = el.dataset.code;
+  const hex    = el.dataset.hex;
+  const series = el.dataset.series;
+
+  if (selected.has(id)) {
+    selected.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selected.set(id, { name, code, hex, series });
+    el.classList.add('selected');
+    // copy hex on select
+    copy(hex);
+    flashSwatch(el);
   }
-};
-
-const GRADIENTS = [
-  { name:'Night Roof',       css:'linear-gradient(135deg, #0D1B2E 0%, #1A2B4A 50%, #2E4C78 100%)', tag:'Primary Dark' },
-  { name:'Alberta Sunset',   css:'linear-gradient(135deg, #E8541A 0%, #D4861A 100%)', tag:'Brand Energy' },
-  { name:'Steel Sky',        css:'linear-gradient(180deg, #4A5568 0%, #2D3345 100%)', tag:'Industrial' },
-  { name:'Northern Light',   css:'linear-gradient(120deg, #1A2B4A 0%, #2D6A4F 100%)', tag:'Trust + Nature' },
-  { name:'Ember Glow',       css:'linear-gradient(135deg, #A83200 0%, #E8541A 50%, #F0B04F 100%)', tag:'Bold Action' },
-  { name:'Prairie Dawn',     css:'linear-gradient(135deg, #1A2B4A 0%, #D4861A 100%)', tag:'Heritage' },
-  { name:'Forest Deep',      css:'linear-gradient(135deg, #0D3324 0%, #2D6A4F 60%, #52A07A 100%)', tag:'Eco / Nature' },
-  { name:'Blueprint',        css:'linear-gradient(135deg, #243B61 0%, #375E8F 60%, #5A7FAD 100%)', tag:'Corporate' },
-  { name:'Horizon',          css:'linear-gradient(90deg, #0D1B2E 0%, #375E8F 50%, #E8541A 100%)', tag:'Full Brand' },
-  { name:'Frost',            css:'linear-gradient(135deg, #EAF0F7 0%, #D3E0EF 100%)', tag:'Light Mode' },
-  { name:'Warm Ash',         css:'linear-gradient(135deg, #2D3345 0%, #4A5568 60%, #9AAABB 100%)', tag:'Subtle Steel' },
-  { name:'Solar Panel',      css:'linear-gradient(135deg, #1A2B4A 0%, #243B61 30%, #E8541A 100%)', tag:'Roofing Energy' },
-];
-
-const USAGE = [
-  {
-    icon:'🏠', title:'Primary Background',
-    desc:'Use Navy 800 (#1A2B4A) for hero sections, navigation bars, and footer backgrounds. Pair with white or Orange 600 for contrast.',
-    chips:['#1A2B4A','#0D1B2E','#243B61']
-  },
-  {
-    icon:'🔶', title:'Call-to-Action',
-    desc:'Orange 600 (#E8541A) for primary buttons and CTAs. Orange 700 on hover. Always ensure 4.5:1 contrast ratio on white text.',
-    chips:['#E8541A','#C83E00','#F0682E']
-  },
-  {
-    icon:'📝', title:'Body Text',
-    desc:'Steel 600 (#4A5568) for body copy on white. Neutral 700 (#374151) for headings. Never use anything lighter than Steel 400 on white.',
-    chips:['#4A5568','#374151','#1F2937']
-  },
-  {
-    icon:'✅', title:'Success States',
-    desc:'Forest Green 600 (#2D6A4F) for success messages, confirmation badges, eco certifications, and positive status indicators.',
-    chips:['#2D6A4F','#3A8563','#D0E9DC']
-  },
-  {
-    icon:'⚠️', title:'Warnings & Stars',
-    desc:'Prairie Amber 600 (#D4861A) for caution states, star ratings, pricing highlights, and promotional banners.',
-    chips:['#D4861A','#E89C2F','#FDEDD4']
-  },
-  {
-    icon:'🎨', title:'Backgrounds & Surfaces',
-    desc:'Neutral 50 (#F9FAFB) for page backgrounds. Neutral 100 for card backgrounds. White (#FFFFFF) for content surfaces.',
-    chips:['#F9FAFB','#F3F4F6','#FFFFFF']
-  },
-];
-
-// ── Utilities ──────────────────────────────────────────────────────────────
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return { r, g, b };
+  renderTray();
 }
-function hexToHsl(hex) {
-  let { r, g, b } = hexToRgb(hex);
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r,g,b), min = Math.min(r,g,b);
-  let h, s, l = (max+min)/2;
-  if (max === min) { h = s = 0; }
-  else {
-    const d = max - min;
-    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
-    switch(max) {
-      case r: h = ((g-b)/d + (g<b?6:0))/6; break;
-      case g: h = ((b-r)/d+2)/6; break;
-      case b: h = ((r-g)/d+4)/6; break;
-    }
+
+function flashSwatch(el) {
+  const flash = el.querySelector('.swatch-flash');
+  if (!flash) return;
+  flash.style.opacity = '1';
+  setTimeout(() => flash.style.opacity = '', 600);
+}
+
+// ── Tray ──────────────────────────────────────────────────────────────────
+function renderTray() {
+  const tray  = document.getElementById('selectionTray');
+  const chips = document.getElementById('trayChips');
+
+  if (selected.size === 0) {
+    tray.classList.remove('visible');
+    chips.innerHTML = '';
+    return;
   }
-  return `hsl(${Math.round(h*360)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)`;
+
+  tray.classList.add('visible');
+  chips.innerHTML = [...selected.entries()].map(([id, c]) => `
+    <div class="tray-chip">
+      <div class="tray-chip-dot" style="background:${c.hex};"></div>
+      <span>${c.name} — ${c.code}</span>
+      <button class="tray-chip-remove" onclick="removeColor('${id}')">×</button>
+    </div>
+  `).join('');
 }
-function hexToCmyk(hex) {
-  let { r, g, b } = hexToRgb(hex);
-  r/=255; g/=255; b/=255;
-  const k = 1-Math.max(r,g,b);
-  if (k===1) return 'cmyk(0,0,0,100)';
-  const c=Math.round((1-r-k)/(1-k)*100);
-  const m=Math.round((1-g-k)/(1-k)*100);
-  const y=Math.round((1-b-k)/(1-k)*100);
-  return `cmyk(${c},${m},${y},${Math.round(k*100)})`;
+
+function removeColor(id) {
+  selected.delete(id);
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) el.classList.remove('selected');
+  renderTray();
 }
-function luminance(hex) {
-  const { r,g,b } = hexToRgb(hex);
-  const sRGB = [r,g,b].map(v => {
-    v /= 255;
-    return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+
+function clearAll() {
+  selected.clear();
+  document.querySelectorAll('.swatch.selected').forEach(el => el.classList.remove('selected'));
+  renderTray();
+}
+
+function openQuote() {
+  const items = [...selected.values()];
+  const body  = items.length
+    ? 'I would like to request samples for the following colors:\n\n'
+      + items.map(c => `• ${c.name} (${c.code}) — ${c.series}`).join('\n')
+      + '\n\nPlease contact me to arrange delivery.'
+    : 'I would like to request a full sample pack of IronWrap metal exterior finishes.';
+
+  const subject = encodeURIComponent('IronWrap Color Sample Request');
+  const bodyEnc = encodeURIComponent(body);
+  window.open(`mailto:info@iroofalberta.ca?subject=${subject}&body=${bodyEnc}`);
+}
+
+// ── Nav filter ────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+
+    const filter = this.dataset.section;
+    document.querySelectorAll('.finish-section').forEach(sec => {
+      if (filter === 'all' || sec.dataset.section === filter) {
+        sec.classList.remove('hidden');
+      } else {
+        sec.classList.add('hidden');
+      }
+    });
+    document.querySelectorAll('.divider').forEach(d => {
+      d.style.display = filter === 'all' ? '' : 'none';
+    });
+
+    // scroll to section
+    if (filter !== 'all') {
+      const target = document.getElementById('sec-' + filter);
+      if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   });
-  return 0.2126*sRGB[0] + 0.7152*sRGB[1] + 0.0722*sRGB[2];
-}
-function contrastRatio(hex1, hex2='#ffffff') {
-  const l1 = luminance(hex1), l2 = luminance(hex2);
-  return (Math.max(l1,l2)+0.05) / (Math.min(l1,l2)+0.05);
-}
-function contrastBadge(hex) {
-  const ratio = contrastRatio(hex, '#ffffff');
-  if (ratio >= 7) return ['AAA', 'aaa'];
-  if (ratio >= 4.5) return ['AA', 'aa'];
-  if (ratio >= 3) return ['AA Large', 'aa'];
-  return ['Fail', 'fail'];
-}
-function isDark(hex) {
-  return luminance(hex) < 0.35;
-}
+});
 
-function copyText(text) {
-  navigator.clipboard?.writeText(text).catch(()=>{
+// ── Clipboard ─────────────────────────────────────────────────────────────
+function copy(text) {
+  navigator.clipboard?.writeText(text).catch(() => {
     const el = document.createElement('textarea');
-    el.value = text; document.body.appendChild(el);
-    el.select(); document.execCommand('copy');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
     document.body.removeChild(el);
   });
-  showToast(`Copied ${text}`);
+  showToast(text);
 }
+
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+  t.textContent = msg + ' copied';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
 }
-
-// ── Render cards ──────────────────────────────────────────────────────────
-function makeCard(hex, name, step) {
-  const textColor = isDark(hex) ? '#ffffff' : '#1A2B4A';
-  const [badge, cls] = contrastBadge(hex);
-  const rgb = hexToRgb(hex);
-  const rgbStr = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-  const hsl = hexToHsl(hex);
-  const cmyk = hexToCmyk(hex);
-  const ratio = contrastRatio(hex, '#ffffff').toFixed(1);
-  return `
-    <div class="color-card" data-name="${name.toLowerCase()}" data-hex="${hex.toLowerCase()}">
-      <div class="card-swatch" style="background:${hex};" onclick="copyText('${hex}')">
-        <div class="copy-hint" style="color:${textColor};">Click to copy</div>
-      </div>
-      <div class="card-info">
-        <div class="card-name">${name}</div>
-        <div class="card-hex">${hex}</div>
-        <div class="card-codes">
-          <span class="code-chip" onclick="copyText('${hex}')">${hex}</span>
-          <span class="code-chip" onclick="copyText('${rgbStr}')">${rgbStr}</span>
-          <span class="code-chip" onclick="copyText('${hsl}')">${hsl}</span>
-          <span class="code-chip" onclick="copyText('${cmyk}')">${cmyk}</span>
-        </div>
-        <span class="contrast-badge ${cls}">${badge} ${ratio}:1</span>
-      </div>
-    </div>`;
-}
-
-function renderCards() {
-  Object.entries(PALETTES).forEach(([key, pal]) => {
-    const el = document.getElementById(key + 'Cards');
-    if (!el) return;
-    el.innerHTML = pal.steps.map(step => {
-      const { hex, name } = pal.colors[step];
-      return makeCard(hex, name, step);
-    }).join('');
-  });
-}
-
-// ── Render scale ──────────────────────────────────────────────────────────
-function renderScale() {
-  const el = document.getElementById('scaleGridContent');
-  const steps = [50,100,200,300,400,500,600,700,800,900];
-  let html = `<div class="scale-row">
-    <div class="scale-label"></div>
-    ${steps.map(s=>`<div style="font-size:10px;color:#637184;font-weight:700;text-align:center;">${s}</div>`).join('')}
-  </div>`;
-  Object.entries(PALETTES).forEach(([key, pal]) => {
-    html += `<div class="scale-row" data-family="${key}">
-      <div class="scale-label">${pal.label}</div>
-      ${steps.map(step => {
-        const c = pal.colors[step];
-        const textColor = isDark(c.hex) ? '#fff' : '#1A2B4A';
-        return `<div class="swatch-cell">
-          <div class="swatch-top" style="background:${c.hex};" onclick="copyText('${c.hex}')">
-            <div class="copy-hint">Copy</div>
-          </div>
-          <div class="swatch-bottom">
-            <div class="swatch-step">${step}</div>
-            <div class="swatch-val">${c.hex}</div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  });
-  el.innerHTML = html;
-}
-
-// ── Render gradients ──────────────────────────────────────────────────────
-function renderGradients() {
-  const el = document.getElementById('gradientGrid');
-  el.innerHTML = GRADIENTS.map(g => `
-    <div class="gradient-card" onclick="copyText('${g.css}')">
-      <div class="gradient-swatch" style="background:${g.css};"></div>
-      <div class="gradient-info">
-        <div class="gradient-name">${g.name} <span style="font-weight:400;color:#9AAABB;">— ${g.tag}</span></div>
-        <div class="gradient-css">${g.css}</div>
-      </div>
-    </div>`).join('');
-}
-
-// ── Render usage ──────────────────────────────────────────────────────────
-function renderUsage() {
-  const el = document.getElementById('usageGrid');
-  el.innerHTML = USAGE.map(u => `
-    <div class="usage-card">
-      <div class="usage-icon" style="background:#EAF0F7;">${u.icon}</div>
-      <div class="usage-title">${u.title}</div>
-      <div class="usage-desc">${u.desc}</div>
-      <div class="usage-chips">
-        ${u.chips.map(c=>`<div class="usage-chip" style="background:${c};" title="${c}" onclick="copyText('${c}')"></div>`).join('')}
-      </div>
-    </div>`).join('');
-}
-
-// ── Hero swatch click ─────────────────────────────────────────────────────
-document.querySelectorAll('.hero-swatch').forEach(el => {
-  el.addEventListener('click', () => copyText(el.dataset.copy));
-});
-
-// ── View toggle ───────────────────────────────────────────────────────────
-document.getElementById('viewGrid').addEventListener('click', function() {
-  document.getElementById('gridView').style.display = '';
-  document.getElementById('scaleView').style.display = 'none';
-  this.classList.add('active');
-  document.getElementById('viewScale').classList.remove('active');
-});
-document.getElementById('viewScale').addEventListener('click', function() {
-  document.getElementById('gridView').style.display = 'none';
-  document.getElementById('scaleView').style.display = '';
-  this.classList.add('active');
-  document.getElementById('viewGrid').classList.remove('active');
-  renderScale();
-});
-
-// ── Filter tabs ───────────────────────────────────────────────────────────
-document.querySelectorAll('.filter-tab').forEach(btn => {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-    const f = this.dataset.filter;
-    document.querySelectorAll('.section[data-family]').forEach(sec => {
-      sec.style.display = (f==='all' || sec.dataset.family===f) ? '' : 'none';
-    });
-    document.querySelectorAll('.divider').forEach(d => d.style.display = f==='all' ? '' : 'none');
-    // scale view
-    document.querySelectorAll('.scale-row[data-family]').forEach(row => {
-      row.style.display = (f==='all' || row.dataset.family===f) ? '' : 'none';
-    });
-  });
-});
-
-// ── Search ────────────────────────────────────────────────────────────────
-document.getElementById('searchInput').addEventListener('input', function() {
-  const q = this.value.toLowerCase().trim();
-  document.querySelectorAll('.color-card').forEach(card => {
-    const match = !q || card.dataset.name.includes(q) || card.dataset.hex.includes(q);
-    card.style.display = match ? '' : 'none';
-  });
-  document.querySelectorAll('.swatch-cell').forEach(cell => {
-    const val = cell.querySelector('.swatch-val')?.textContent?.toLowerCase() || '';
-    const step = cell.querySelector('.swatch-step')?.textContent?.toLowerCase() || '';
-    cell.style.display = (!q || val.includes(q) || step.includes(q)) ? '' : 'none';
-  });
-});
-
-// ── Init ──────────────────────────────────────────────────────────────────
-renderCards();
-renderGradients();
-renderUsage();
 </script>
 </body>
 </html>
