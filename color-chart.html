@@ -504,14 +504,64 @@
       transform: translateY(-3px);
     }
 
+    /* ── DOWNLOAD MENU ───────────────────────────────────────────────────── */
+    .download-menu { position: relative; }
+    .download-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+      min-width: 240px;
+      z-index: 300;
+      overflow: hidden;
+    }
+    .download-dropdown.open { display: block; }
+    .download-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 16px 18px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--rule);
+      cursor: pointer;
+      text-align: left;
+      transition: background .1s;
+      font-family: var(--sans);
+    }
+    .download-option:last-child { border-bottom: none; }
+    .download-option:hover { background: var(--field); }
+    .download-option .dl-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+    .download-option strong { display: block; font-size: 13px; font-weight: 500; color: var(--ink); }
+    .download-option small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
     /* ── PRINT ───────────────────────────────────────────────────────────── */
     @media print {
-      nav, #selectionTray, #toast, .nav-actions { display: none !important; }
-      header { position: relative; }
-      .swatch-body { height: 160px !important; }
+      @page { size: A4; margin: 18mm 18mm 20mm; }
+      nav, #selectionTray, #toast, .nav-actions, .download-menu { display: none !important; }
+      header { padding: 32px 48px 28px; page-break-after: avoid; }
+      main { padding: 40px 48px 60px; }
+      footer { padding: 28px 48px; }
+      .intro { margin-bottom: 48px; padding-bottom: 40px; }
+      .intro-left h1 { font-size: 28px; }
+      .finish-section { page-break-inside: avoid; margin-bottom: 48px; }
+      .swatch { break-inside: avoid; }
+      .swatch-body { height: 140px !important; }
       .swatch:hover { transform: none; }
-      body { background: white; }
+      .swatch-hex, .swatch-texture { opacity: 1 !important; }
+      .swatch-overlay { display: none; }
+      .swatch-flash { display: none; }
+      .divider { margin-bottom: 48px; }
+      body { background: white; -webkit-print-color-adjust: exact; color-adjust: exact; print-color-adjust: exact; }
+      .swatch-grid { grid-template-columns: repeat(4, 1fr); }
+      .swatch-grid.dense { grid-template-columns: repeat(5, 1fr); }
       footer { grid-template-columns: 1fr 1fr 1fr; }
+      .hero-swatch { break-inside: avoid; }
     }
 
     /* ── RESPONSIVE ──────────────────────────────────────────────────────── */
@@ -557,7 +607,27 @@
   <button class="nav-tab" data-section="icecrystal">Icecrystal</button>
   <div class="nav-spacer"></div>
   <div class="nav-actions">
-    <button class="btn-ghost" onclick="window.print()">Print / PDF</button>
+    <div class="download-menu" id="downloadMenu">
+      <button class="btn-ghost" onclick="toggleDownloadMenu(event)">
+        Download ▾
+      </button>
+      <div class="download-dropdown" id="downloadDropdown">
+        <button class="download-option" onclick="downloadHTML()">
+          <span class="dl-icon">⬇</span>
+          <span>
+            <strong>Download HTML</strong>
+            <small>Offline file — works without internet</small>
+          </span>
+        </button>
+        <button class="download-option" onclick="savePDF()">
+          <span class="dl-icon">🖨</span>
+          <span>
+            <strong>Save as PDF</strong>
+            <small>Opens print dialog — choose Save as PDF</small>
+          </span>
+        </button>
+      </div>
+    </div>
     <button class="btn-accent" onclick="openQuote()">Request Quote</button>
   </div>
 </nav>
@@ -1049,6 +1119,60 @@ function openQuote() {
   const subject = encodeURIComponent('IronWrap Color Sample Request');
   const bodyEnc = encodeURIComponent(body);
   window.open(`mailto:info@iroofalberta.ca?subject=${subject}&body=${bodyEnc}`);
+}
+
+// ── Download ──────────────────────────────────────────────────────────────
+function toggleDownloadMenu(e) {
+  e.stopPropagation();
+  document.getElementById('downloadDropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('downloadDropdown')?.classList.remove('open');
+});
+
+function savePDF() {
+  document.getElementById('downloadDropdown').classList.remove('open');
+  window.print();
+}
+
+function downloadHTML() {
+  document.getElementById('downloadDropdown').classList.remove('open');
+
+  // Clone the full document, strip Google Fonts (offline-safe), embed revision
+  let html = document.documentElement.outerHTML;
+
+  // Replace Google Fonts import with system fonts so the file works offline
+  html = html.replace(
+    /@import url\('https:\/\/fonts\.googleapis\.com[^']+'\);/g,
+    ''
+  );
+
+  // Ensure system font fallbacks are used cleanly in the downloaded copy
+  html = html.replace(
+    /'Inter',\s*-apple-system/g,
+    '-apple-system'
+  ).replace(
+    /'DM Mono',\s*'SFMono-Regular'/g,
+    "'SFMono-Regular'"
+  );
+
+  // Add a download-timestamp comment near the top
+  const ts = new Date().toISOString().slice(0,10);
+  html = html.replace(
+    '<!DOCTYPE html>',
+    `<!DOCTYPE html>\n<!-- IronWrap Exteriors — Color Chart — Downloaded ${ts} -->`
+  );
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `IronWrap_ColorChart_${ts}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showToast('IronWrap_ColorChart_' + ts + '.html');
 }
 
 // ── Nav filter ────────────────────────────────────────────────────────────
