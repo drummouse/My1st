@@ -1,0 +1,118 @@
+﻿Product/Service Name,Type,Sales Description,Sales Price/Rate,Income Account
+Additional work specified in description,Service,,,Sales
+Administration,Service,Administration and project management fee ,2000.0,Sales
+Architectural chimney cap flashing,Service,Manufacturing of architectural chimney cap according to customer's specs. Color and materials to be specified,1500.0,Sales
+Bay roof,Service,,500.0,Sales
+Beam/Column cover or wrap,Service,Wrapping a column or beam with materials and style according to the customer's specs. ,50.0,Sales
+Cap flashings manufacturing,Service,Manufacturing of cap flashings up to the customer's specifications ,,Sales
+Chimney stack structure capping,Service,Capping of chimney stack structure,300.0,Sales
+Chimney/column cladding in standing seam,Service,Cladding of a chimney or a column in standing seam no exposed fasteners manner. Color and specs are to be specified.,1500.0,Sales
+Chimney/skylight flashing,Service,Customized installation of chimney or akylight flaahing. In a seamless manner. Applicable to current roofing system in place. ,400.0,Sales
+Contract balance,Service,Balance payment for contract in PO,0.0,Sales
+Contract deposit,Service,Deposit payment for the job in PO,0.0,Sales
+Conventional chimney cap,Service,"Chimney cap flashing
+
+(OPTIONAL)",700.0,Sales
+Custom sheet metal work,Service,Custom and/or architectural sheet metal work. Supply and installation of elements specified by the client,1000.0,Sales
+Customer Providing materials installation,Service,"Installation only services.
+Customer is responsible for accurate and in full materials present on site. Installation is to be performed in accordance of customer's specifications and standard industry practices. 
+
+Company is not liable for any miscalculation, damages, and shortage of materials.
+
+Materials list to be provided and confirmed with the company before the installation begins.
+
+It is customer's responsibility to arrange delivery and staging of the materials needed for successful on-time completion of the project",1.0,Sales
+Equipment and Machinery,Service,Supply of the job specific equipment and machinery in order to successfully complete the project,2000.0,Sales
+Equipment or tools sale,Service,"Equipment or tools sale
+
+",1.0,Sales
+Flat Stock sheets 18ga,Service,galvanized 18ga 4x8 ft flat stock sheet,75.0,Sales
+Garage door capping,Service,Price of installation per LF,5.0,Sales
+Garage door capping. Supply and installation,Service,"Supply and installation of garage door capping.
+
+Price per LF",12.0,Sales
+"Installation of 5"" K-Style eavethroughs",Service,"Installation of 5"" K-Style eavethroughs and all required components, corners, and terminations. ",3.0,Sales
+Installation of cap flashings,Service,Price per LF,7.0,Sales
+Installation of Double Bar snow retention system,Service,Installation of double bar snow retention system on specified location,5.0,Sales
+Installation of downspouts for eavesthroughs,Service,Installation of downspouts for eavesthroughs.  Including routing and elbows.,3.0,Sales
+Installation of European Tiles metal roofing system,Service,Installation of European Tiles metal roofing system and all required components. Including sub framing.,4.0,Sales
+Installation of fascias,Service,Installation of fascias,3.0,Sales
+Installation of floating insulation with strapping system,Service,Installation of customer supplied floating strapping over the insulation. Includes insulation Installation. Price per Sq ft,3.5,Sales
+Installation of Mechanical Standing Seam Metal roofing system,Service,Installation of Mechanical Standing Seam metal roofing system and all required components and accessories accessories. Up to the customer's and manufacturer's specs and practices. ,4.0,Sales
+Installation of metal roofing subframing/strapping,Service,"Installation of supplied double strapping/subframing for metal roofing application. According to customer's specs, site specific details and common installation practices ",0.75,Sales
+Installation of metal shingles,Service,Installation services of interlocking metal shingles roofing system. And all required components and accessories.,4.0,Sales
+Installation of metal siding,Service,Installation of job specific metal siding and all required components and accessories. Includes preparation and clean-up.,3.5,Sales
+Installation of roofing on tower,Service,Installation of roofing materials on tower. In format specified by the client,750.0,Sales
+Installation of SnapLock Metal Roofing system,Service,installation of mechanical standing seam metal roofing system. And all required parts and components.  In accordance with the manufacturer's specifications and common installation practices and technologies .,4.0,Sales
+Installation of soffits,Service,Installation of supplied soffits. Price per Sq ft,3.0,Sales
+Installations of Diamonf shape Metal shingles,Service,"Price per Sq Ft.
+Installation in accordance to job specified pattern",7.0,Sales
+Insulation installation,Service,"Price per number of layers 
+
+1$ per layers X sq ft",2.0,Sales
+Integrated Gooseneck vents installation,Service,On-site manufacturing and installation in a seamless integrated manner of gooseneck vents,50.0,Sales
+Mandoor flashing,Service,"Flashing mandoor during siding/cladding installation.
+
+Price per item",300.0,Sales
+Peel'n'stick installation,Service,Installation of peel'n'stick membrane according to manufacturer's specs,0.3,Sales
+Progress payment,Service,Progress payment for a job in PO. According to contract.,0.0,Sales
+Reimbursement,Service,Reimbursement according to receipt,0.0,Sales
+Removal and termination of old chimney or skylight,Service,Removal of old chimney or skylight. And termination of the opening in a roof deck.,100.0,Sales
+Roof pipe integrated in roof,Service,Flashing/integration of pipe into the roofing system in seamless manner.,50.0,Sales
+Roofing drain mat installation,Service,Installation of supplied roofing drain mat up to the manufacture specifications. Labor only. ,0.5,Sales
+Service,Service,Service according to the description in purchase order,2000.0,Sales
+Sheet metal shop work,Service,"Sheet metal shop work.
+Description and breakdown in comments",0.0,Sales
+Sheeting/decking,Service,Installation of sheeting/decking using supplied materials. Labor only,0.5,Sales
+Siding cladding penetration,Service,"Cutting out and flashings around penetrations in siding/cladding. Such as electrical boxes, vents, etc.
+
+Price per item ",25.0,Sales
+Stripping and disposal of old roofing or wall materials,Service,"Stripping and disposal of old roofing or cladding materials. Includes labor, clean up, transportation, and dump fees.",1.5,Sales
+Stripping of old roofing or wall materials,Service,"Stripping, clean up, and loading into supplied bin of old roofing, siding, or cladding materials. ",0.5,Sales
+"Supply and installation 3"" round downspouts",Service,"Supply and installation of round downspouts and all required parts and accessories. Such as elbows, transitions, tie downs.
+Routing is up to customer's specifications",10.0,Sales
+Supply and installation cladding system with floating insulation,Service,Supply and installation of customer's specified wall cladding system. Over customer specified insulation with strapping according to plans,30.0,Sales
+Supply and installation Diamond shape shingles,Service,"Supply and installation of custom diamond shape metal shingles/shakes.
+
+Size, shape and final design is up to customer's specifications.",25.0,Sales
+supply and installation double bar snow retention system,Service,"Price per LF. includes clamps, brackets, dounle bar system and installation",50.0,Sales
+"Supply and installation of 1"" Mechanical Standing Seam Metal roofing system",Service,Supply and installation of mechanical standing seam metal roofing system. And all required parts and components.  In accordance with the manufacturer's specifications and common installation practices and technologies .,12.0,Sales
+"Supply and installation of 1"" SnapLock Metal roofing system",Service,"Supply and installation of 1"" SnapLock Metal roofing system. And all required components",9.0,Sales
+Supply and installation of 3/8 plywood,Service,Supply and installation of 3/8 plywood on roof or walls,3.0,Sales
+Supply and installation of 3x3 downspouts,Service,"Supply and installation 3x3 downspouts and all required components, such as elbows. Routing is up to the customer's specs. Color is up to the customer's request. ",10.0,Sales
+"Supply and installation of 4"" round downspouts",Service,"Supply and installation of round downspouts and all required parts and accessories. Such as elbows, transitions, tie downs.
+Routing is up to customer's specifications",10.0,Sales
+"Supply and installation of 5"" K-Style eavethroughs",Service,"Supply and installation of 5"" K-Style eavethroughs and all required components",10.0,Sales
+Supply and installation of 5/8 plywood,Service,"Supply and installation of 5/8 plywood. Includes delivery, all neccessary accessories such as nail and separation clips.",4.0,Sales
+"Supply and installation of 6"" K-Style eavethroughs",Service,"Supply and installation 6"" K-Style eavethroughs and required components. Such as corners, termination, etc. Customer specified color and materials. ",10.0,Sales
+"Supply and installation of 7"" Commercual Eavethroughs",Service,"Supply and installation of commercial 7"" countinous eavethroughs and all required components. ",20.0,Sales
+Supply and installation of commercial subframing,Service,Supply and installation subframing for commercial roofingnor cladding applications,5.0,Sales
+"Supply and installation of downspouts for 5"" eavethroughs",Service,"Supply and installation of downspouts for 5"" K-Style eavethroughs and all required components and elbows. Including routing up to customer's request ",10.0,Sales
+"Supply and installation of downspouts for 7"" commercial eavethroughs",Service,"Supply and installation of downspouts for 7"" commercial eavethroughs. Includes all the required components, elbows, and routing up to the customer's request ",15.0,Sales
+Supply and installation of European Tiles,Service,"Supply and installation of European Tiles metal roofing system. As well as all required components and accessories. Metal roofing to be installed over double strapping done with 1x3's in a vertical and horizontal manner. The color and profile of the metal roof are up to the customer's request 
+
+Available in Monterey or Bond profiles",10.0,Sales
+Supply and installation of fascia,Service,"Supply and installation of fascia. Size, materials and style are specified by the customer. Price per Linear Foot",10.0,Sales
+Supply and installation of insulation,Service,"Supply, delivery and installation of insulation in thickness and layers according to customer's specifications. 
+
+1$/inch of thickness
+
+Inches X sq ft",5.0,Sales
+Supply and installation of interlocking Metal Shingles,Service,"Supply and installation of interlocking Metal shingles.
+Along with all necessary accessories and trims. 
+Can be done using VicWest or Superseamless profiles.  With customer specified color.",14.0,Sales
+"Supply and installation of Mechanical Standing Seam metal roofing system with 1 1/2"" Rib",Service,Supply and installation of mechanical standing seams metal roofing system. And all required components and accessories. According to the manufacturer specs and common installation practices,12.0,Sales
+Supply and installation of metal siding,Service,"Supply and installation of metal siding siding. Can be done in vertical or horizontal profile. Can be done in 6"", 8"", or 10"" profile. Profile, size, and color are up to customer specifications. 
+Price per Sq Ft. Includes all necessary accessories and preparing work.",14.0,Sales
+Supply and installation of parapet cap flashings,Service,Suplly and installation of parapet cap flashings. According to specific job measurements and/or customer requirements. ,20.0,Sales
+Supply and installation of parapet wall cladding,Service,Supply and installation of parapet wall cladding. In accordance with customer specifications and job specific measurements ,10.0,Sales
+Supply and installation of peel'n'stick underlayment,Service,Supply and installation of High Temp peel'n'stick roofing underlayment ,1.0,Sales
+Supply and installation of roofing drain mat carpet,Service,Supply and installation of roofing drain mate/carpet,1.5,Sales
+Supply and installation of soffit,Service,"Supply and installation of job specific soffits.
+Price per Sq Ft",10.0,Sales
+Supply and installation of standing seam cladding,Service,"Supply and installation of concealed fastener metal cladding system. Color, materials, width are specified by the client.",12.0,Sales
+Supply and installation roofing subframing/strapping,Service,"Supply and installation of sub framing/strapping for metal roofing application. To be installed with 1x3's with verticals over the rafters and horizontal boards across. 
+",2.0,Sales
+Travel,Service,One time travel fee,100.0,Sales
+Travel and out of town,Service,"Travel, LOA, lodging one time fee",100.0,Sales
+Warranty transfer registration fee,Service,Warranty transfer registration fee.,75.0,Sales
