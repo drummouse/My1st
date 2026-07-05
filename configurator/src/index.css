@@ -115,6 +115,8 @@ body {
 }
 .control-select-secondary { margin-top: 0.4rem; }
 
+.color-series { margin-bottom: 0.5rem; }
+.color-series-label { font-size: 0.68rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.3rem; }
 .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.35rem; }
 .color-swatch {
   width: 100%;

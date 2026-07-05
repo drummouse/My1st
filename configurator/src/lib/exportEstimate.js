@@ -2,9 +2,9 @@ import { colorById } from '../data/colors.js';
 
 const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
-export function buildEstimateText({ brand, house, roofProduct, roofColorCode, roofProfile, wallProduct, wallColorCode, wallProfile, estimate }) {
-  const roofColor = colorById(roofColorCode);
-  const wallColor = colorById(wallColorCode);
+export function buildEstimateText({ brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate }) {
+  const roofColor = colorById(roofColorId);
+  const wallColor = colorById(wallColorId);
   const lines = [];
   lines.push(`${brand.name} — Design & Estimate Summary`);
   lines.push(brand.tagline);

@@ -30,11 +30,11 @@ export default function App() {
 
   const [roofProductId, setRoofProductId] = useState(ROOF_PRODUCTS[0].id);
   const [roofProfile, setRoofProfile] = useState(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
-  const [roofColorCode, setRoofColorCode] = useState('RAL 7024');
+  const [roofColorId, setRoofColorId] = useState('wk-04'); // Graphite Grey (RAL 7024)
 
   const [wallProductId, setWallProductId] = useState(WALL_PRODUCTS[0].id);
   const [wallProfile, setWallProfile] = useState(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
-  const [wallColorCode, setWallColorCode] = useState('RAL 9005');
+  const [wallColorId, setWallColorId] = useState('wk-01'); // Jet Black (Wrinkle Coating)
 
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [gutterOptionId, setGutterOptionId] = useState(GUTTER_OPTIONS[0].id);
@@ -80,10 +80,10 @@ export default function App() {
       brand,
       house,
       roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
-      roofColorCode,
+      roofColorId,
       roofProfile,
       wallProduct: WALL_PRODUCTS.find((p) => p.id === wallProductId),
-      wallColorCode,
+      wallColorId,
       wallProfile,
       estimate,
     });
@@ -105,8 +105,8 @@ export default function App() {
           <Viewer3D
             roofParsed={roofParsed}
             wallParsed={wallParsed}
-            roofColor={colorById(roofColorCode).hex}
-            wallColor={colorById(wallColorCode).hex}
+            roofColor={colorById(roofColorId).hex}
+            wallColor={colorById(wallColorId).hex}
             photoOverlay={photoOverlay}
           />
         </section>
@@ -121,7 +121,7 @@ export default function App() {
             onProductChange={handleRoofProductChange}
             onProfileChange={setRoofProfile}
           />
-          <ColorPicker label="Roof Color" selectedCode={roofColorCode} onChange={setRoofColorCode} />
+          <ColorPicker label="Roof Color" selectedId={roofColorId} onChange={setRoofColorId} />
 
           <ProductSelector
             label="Siding Material"
@@ -132,7 +132,7 @@ export default function App() {
             onProductChange={handleWallProductChange}
             onProfileChange={setWallProfile}
           />
-          <ColorPicker label="Siding Color" selectedCode={wallColorCode} onChange={setWallColorCode} />
+          <ColorPicker label="Siding Color" selectedId={wallColorId} onChange={setWallColorId} />
 
           <ServicesPanel
             services={services}

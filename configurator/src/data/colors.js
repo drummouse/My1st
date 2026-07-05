@@ -1,21 +1,32 @@
-// Starter RAL Classic palette for roof/siding color pickers.
-// Hex values are common approximations of the RAL Classic swatches used in
-// metal roofing/siding — swap in exact supplier swatch hex codes when available.
+// Official IronWrap Exteriors / i Roof Alberta finish colors, sourced from
+// IronWrap_Colour_Chart.pdf via color-chart.html (PR #1, this repo).
+// `id` is the unique picker key; `code` is the real manufacturer color code
+// (the same RAL code can appear under more than one finish/coating system).
 export const RAL_COLORS = [
-  { code: 'RAL 9005', name: 'Jet Black', hex: '#0A0A0A' },
-  { code: 'RAL 7024', name: 'Graphite Grey', hex: '#4A4E51' },
-  { code: 'RAL 7016', name: 'Anthracite Grey', hex: '#383E42' },
-  { code: 'RAL 8019', name: 'Mocha Brown', hex: '#3B2F2A' },
-  { code: 'RAL 8017', name: 'Chocolate Brown', hex: '#442F29' },
-  { code: 'RAL 3009', name: 'Oxide Red', hex: '#642424' },
-  { code: 'RAL 6005', name: 'Moss Green', hex: '#0F4336' },
-  { code: 'RAL 5011', name: 'Steel Blue', hex: '#1E2B3C' },
-  { code: 'RAL 9002', name: 'Grey White', hex: '#E7EBDA' },
-  { code: 'RAL 9010', name: 'Pure White', hex: '#F5F3EA' },
-  { code: 'RAL 9006', name: 'White Aluminium', hex: '#A5A8A6' },
-  { code: 'RAL 8004', name: 'Copper Brown', hex: '#8D4931' },
+  // Icecrystal Relief (ThyssenKrupp Pladur)
+  { id: 'cr-01', code: 'RAL 8017', name: 'Dark Chocolate', hex: '#45322E', series: 'Icecrystal Relief' },
+  { id: 'cr-02', code: 'RAL 7016', name: 'Glacial Teal', hex: '#293133', series: 'Icecrystal Relief' },
+  { id: 'cr-03', code: 'RAL 9005', name: 'Midnight Black', hex: '#16181A', series: 'Icecrystal Relief' },
+
+  // Printech Woodgrain (DaiDong Steel)
+  { id: 'wg-01', code: 'Wood 18 (2D)', name: 'Amber Oak', hex: '#A07438', series: 'Printech Woodgrain' },
+  { id: 'wg-02', code: 'Wood 3703 (3D)', name: 'Driftwood', hex: '#BEB4A0', series: 'Printech Woodgrain' },
+  { id: 'wg-03', code: 'Wood 18 (3D)', name: 'Golden Walnut', hex: '#9A7030', series: 'Printech Woodgrain' },
+  { id: 'wg-04', code: 'Wood 0202 (3D)', name: 'Rustic Wenge', hex: '#3C1E0C', series: 'Printech Woodgrain' },
+  { id: 'wg-05', code: 'Wood 3701 (3D)', name: 'Honey Oak', hex: '#B08840', series: 'Printech Woodgrain' },
+  { id: 'wg-06', code: 'RYM-01 (3D)', name: 'Charcoal Timber', hex: '#242422', series: 'Printech Woodgrain' },
+
+  // Wrinkle Coating
+  { id: 'wk-01', code: 'RAL 9005', name: 'Jet Black', hex: '#1A1616', series: 'Wrinkle Coating' },
+  { id: 'wk-02', code: 'RAL 8019', name: 'Weathered Bark', hex: '#3E3535', series: 'Wrinkle Coating' },
+  { id: 'wk-03', code: 'RAL 7016', name: 'Anthracite', hex: '#293133', series: 'Wrinkle Coating' },
+  { id: 'wk-04', code: 'RAL 7024', name: 'Graphite Grey', hex: '#474A52', series: 'Wrinkle Coating' },
+  { id: 'wk-05', code: 'RAL 8017', name: 'Dark Chocolate', hex: '#45322E', series: 'Wrinkle Coating' },
+  { id: 'wk-06', code: 'RAL 3009', name: 'Oxide Red', hex: '#6C2A28', series: 'Wrinkle Coating' },
+  { id: 'wk-07', code: 'RAL 6020', name: 'Velvet Green', hex: '#31382A', series: 'Wrinkle Coating' },
+  { id: 'wk-08', code: 'RAL 8004', name: 'Terracotta', hex: '#8E402A', series: 'Wrinkle Coating' },
 ];
 
-export function colorById(code) {
-  return RAL_COLORS.find((c) => c.code === code) || RAL_COLORS[0];
+export function colorById(id) {
+  return RAL_COLORS.find((c) => c.id === id) || RAL_COLORS[0];
 }
