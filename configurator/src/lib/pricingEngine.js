@@ -1,12 +1,15 @@
 import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
 
+// Alberta has no PST — only federal GST applies.
+export const GST_RATE = 0.05;
+
 const findRoofProduct = (id) => ROOF_PRODUCTS.find((p) => p.id === id) || ROOF_PRODUCTS[0];
 const findWallProduct = (id) => WALL_PRODUCTS.find((p) => p.id === id) || WALL_PRODUCTS[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
 
 /**
  * @param {object} measurements - { roofSqft, wallSqft, soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
- * @param {object} selections - { roofProduct, wallProduct, services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption }
+ * @param {object} selections - { roofProduct, wallProduct, services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
  */
 export function calculateEstimate(measurements, selections) {
   const line = [];
@@ -82,7 +85,11 @@ export function calculateEstimate(measurements, selections) {
   // Full Wrap: roof + walls + soffit + fascia + gutters + downspouts, 7% off total.
   const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
   const fullWrapDiscount = fullWrap ? subtotal * 0.07 : 0;
-  const total = subtotal - fullWrapDiscount;
+
+  const manualDiscount = Math.max(0, Number(selections.manualDiscount) || 0);
+  const preTaxTotal = Math.max(0, subtotal - fullWrapDiscount - manualDiscount);
+  const gst = preTaxTotal * GST_RATE;
+  const total = preTaxTotal + gst;
 
   return {
     lineItems: line,
@@ -94,6 +101,10 @@ export function calculateEstimate(measurements, selections) {
       fullWrap,
       fullWrapDiscountAmount: fullWrapDiscount,
     },
+    manualDiscount,
+    preTaxTotal,
+    gstRate: GST_RATE,
+    gst,
     total,
   };
 }

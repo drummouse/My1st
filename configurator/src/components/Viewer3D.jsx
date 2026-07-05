@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { buildHouseScene, setMaterialColor } from '../lib/buildScene.js';
 
-export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor, photoOverlay }) {
+export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor, photoOverlay, roofOffset }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -30,7 +30,7 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
     sun.position.set(80, -120, 160);
     scene.add(sun);
 
-    const { root, wallMesh, roofMesh, boundingSphere } = buildHouseScene(roofParsed, wallParsed);
+    const { root, wallMesh, roofMesh, roofGroup, boundingSphere, roofBasePosition } = buildHouseScene(roofParsed, wallParsed);
     scene.add(root);
 
     const grid = new THREE.GridHelper(Math.max(boundingSphere.radius * 3, 100), 20, 0x8899aa, 0xaabbcc);
@@ -60,7 +60,14 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
     };
     window.addEventListener('resize', handleResize);
 
-    sceneRef.current = { wallMesh, roofMesh };
+    sceneRef.current = { wallMesh, roofMesh, roofGroup, roofBasePosition };
+    if (roofOffset) {
+      roofGroup.position.set(
+        roofBasePosition.x + (roofOffset.dx || 0),
+        roofBasePosition.y + (roofOffset.dy || 0),
+        roofBasePosition.z + (roofOffset.dz || 0)
+      );
+    }
 
     return () => {
       cancelAnimationFrame(raf);
@@ -82,6 +89,16 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
     if (!sceneRef.current) return;
     setMaterialColor(sceneRef.current.wallMesh, wallColor);
   }, [wallColor]);
+
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    s.roofGroup.position.set(
+      s.roofBasePosition.x + (roofOffset?.dx || 0),
+      s.roofBasePosition.y + (roofOffset?.dy || 0),
+      s.roofBasePosition.z + (roofOffset?.dz || 0)
+    );
+  }, [roofOffset]);
 
   return (
     <div className="viewer3d-wrap">

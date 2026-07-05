@@ -39,11 +39,15 @@ export function buildHouseScene(roofParsed, wallParsed) {
 
   const roofBox = boundingBox(roofParsed);
   const roofGroup = new THREE.Group();
-  roofGroup.position.set(
+  // Auto-computed base position: centers the roof footprint and stacks it at
+  // the wall structure's height. Exposed so the UI can add a manual nudge on
+  // top without recomputing it (see AssemblyAdjustment).
+  const roofBasePosition = new THREE.Vector3(
     -(roofBox.min[0] + roofBox.size[0] / 2),
     -(roofBox.min[1] + roofBox.size[1] / 2),
     wallBox.size[2] - roofBox.min[2]
   );
+  roofGroup.position.copy(roofBasePosition);
   root.add(roofGroup);
 
   const roofFaces = roofParsed.faces.filter((f) => f.type === 'Roof');
@@ -59,7 +63,7 @@ export function buildHouseScene(roofParsed, wallParsed) {
   const sphere = new THREE.Sphere();
   overallBox.getBoundingSphere(sphere);
 
-  return { root, wallGroup, roofGroup, wallMesh, roofMesh, boundingSphere: sphere };
+  return { root, wallGroup, roofGroup, wallMesh, roofMesh, boundingSphere: sphere, roofBasePosition };
 }
 
 export function setMaterialColor(mesh, hexColor) {

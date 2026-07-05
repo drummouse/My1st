@@ -6,6 +6,7 @@ import ProductSelector from './components/ProductSelector.jsx';
 import ServicesPanel from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
+import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import { parseAppliCadXML, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
@@ -40,6 +41,8 @@ export default function App() {
   const [gutterOptionId, setGutterOptionId] = useState(GUTTER_OPTIONS[0].id);
   const [measurements, setMeasurements] = useState(house.measurements);
   const [photoOverlay, setPhotoOverlay] = useState(null);
+  const [manualDiscount, setManualDiscount] = useState(0);
+  const [roofOffset, setRoofOffset] = useState({ dx: 0, dy: 0, dz: 0 });
 
   const brand = BRANDS[brandId];
 
@@ -62,8 +65,9 @@ export default function App() {
         wallProduct: wallProductId,
         services,
         gutterOption: gutterOptionId,
+        manualDiscount,
       }),
-    [liveMeasurements, roofProductId, wallProductId, services, gutterOptionId]
+    [liveMeasurements, roofProductId, wallProductId, services, gutterOptionId, manualDiscount]
   );
 
   const handleRoofProductChange = (id) => {
@@ -108,6 +112,7 @@ export default function App() {
             roofColor={colorById(roofColorId).hex}
             wallColor={colorById(wallColorId).hex}
             photoOverlay={photoOverlay}
+            roofOffset={roofOffset}
           />
         </section>
 
@@ -145,7 +150,13 @@ export default function App() {
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
 
-          <PriceSummary estimate={estimate} />
+          <AssemblyAdjustment
+            offset={roofOffset}
+            onChange={setRoofOffset}
+            onReset={() => setRoofOffset({ dx: 0, dy: 0, dz: 0 })}
+          />
+
+          <PriceSummary estimate={estimate} manualDiscount={manualDiscount} onManualDiscountChange={setManualDiscount} />
 
           <button type="button" className="btn-primary" onClick={handleExport}>
             Export Estimate
