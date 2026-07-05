@@ -16,7 +16,7 @@ export default function ColorPicker({ label, selectedId, onChange }) {
                 key={c.id}
                 type="button"
                 className={`color-swatch${selectedId === c.id ? ' selected' : ''}`}
-                style={{ background: c.hex }}
+                style={c.thumbnail ? { backgroundImage: `url(${c.thumbnail})` } : { background: c.hex }}
                 title={`${c.name} — ${c.code}`}
                 aria-label={`${c.name} ${c.code}`}
                 onClick={() => onChange(c.id)}

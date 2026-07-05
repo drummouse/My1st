@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 
+// Feet per texture tile for planar UV projection — keeps repeating material
+// maps (e.g. woodgrain siding) at a plausible physical scale rather than
+// stretching one image across an entire wall face.
+const TILE_SIZE_FT = 8;
+
 // Newell's method — robust face normal for a possibly non-convex planar polygon.
 function faceNormal(loop) {
   let nx = 0, ny = 0, nz = 0;
@@ -34,14 +39,17 @@ function triangulateFace(loops) {
   const contour2D = outer.map(to2D);
   const holes2D = holes.map((h) => h.map(to2D));
   const all3D = [...outer, ...holes.flat()];
+  const all2D = [...contour2D, ...holes2D.flat()];
 
   const triangles = THREE.ShapeUtils.triangulateShape(contour2D, holes2D);
 
   const positions = [];
+  const uvs = [];
   triangles.forEach(([a, b, c]) => {
     positions.push(...all3D[a], ...all3D[b], ...all3D[c]);
+    [a, b, c].forEach((i) => uvs.push(all2D[i].x / TILE_SIZE_FT, all2D[i].y / TILE_SIZE_FT));
   });
-  return positions;
+  return { positions, uvs };
 }
 
 /**
@@ -50,10 +58,13 @@ function triangulateFace(loops) {
  */
 export function buildFaceGeometry(faces) {
   const positions = [];
+  const uvs = [];
   faces.forEach((face) => {
     if (face.loops[0].length < 3) return;
     try {
-      positions.push(...triangulateFace(face.loops));
+      const result = triangulateFace(face.loops);
+      positions.push(...result.positions);
+      uvs.push(...result.uvs);
     } catch (e) {
       // Skip degenerate/self-intersecting facets rather than crash the viewer.
       console.warn('Skipped face', face.id, e.message);
@@ -62,6 +73,7 @@ export function buildFaceGeometry(faces) {
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.computeVertexNormals();
   return geometry;
 }

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildHouseScene, setMaterialColor } from '../lib/buildScene.js';
+import { buildHouseScene, setMeshColor } from '../lib/buildScene.js';
 
-export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor, photoOverlay, roofOffset }) {
+export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallColorEntry, photoOverlay, roofOffset }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -30,7 +30,7 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
     sun.position.set(80, -120, 160);
     scene.add(sun);
 
-    const { root, wallMesh, roofMesh, roofGroup, boundingSphere, roofBasePosition } = buildHouseScene(roofParsed, wallParsed);
+    const { root, wallMesh, roofMesh, wallRoofMesh, roofGroup, boundingSphere, roofBasePosition } = buildHouseScene(roofParsed, wallParsed);
     scene.add(root);
 
     const grid = new THREE.GridHelper(Math.max(boundingSphere.radius * 3, 100), 20, 0x8899aa, 0xaabbcc);
@@ -60,7 +60,10 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
     };
     window.addEventListener('resize', handleResize);
 
-    sceneRef.current = { wallMesh, roofMesh, roofGroup, roofBasePosition };
+    sceneRef.current = { wallMesh, roofMesh, wallRoofMesh, roofGroup, roofBasePosition };
+    setMeshColor(roofMesh, roofColorEntry);
+    if (wallRoofMesh) setMeshColor(wallRoofMesh, roofColorEntry);
+    setMeshColor(wallMesh, wallColorEntry);
     if (roofOffset) {
       roofGroup.position.set(
         roofBasePosition.x + (roofOffset.dx || 0),
@@ -82,13 +85,14 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColor, wallColor,
   // Cheap updates: recolor existing meshes without rebuilding the scene.
   useEffect(() => {
     if (!sceneRef.current) return;
-    setMaterialColor(sceneRef.current.roofMesh, roofColor);
-  }, [roofColor]);
+    setMeshColor(sceneRef.current.roofMesh, roofColorEntry);
+    if (sceneRef.current.wallRoofMesh) setMeshColor(sceneRef.current.wallRoofMesh, roofColorEntry);
+  }, [roofColorEntry]);
 
   useEffect(() => {
     if (!sceneRef.current) return;
-    setMaterialColor(sceneRef.current.wallMesh, wallColor);
-  }, [wallColor]);
+    setMeshColor(sceneRef.current.wallMesh, wallColorEntry);
+  }, [wallColorEntry]);
 
   useEffect(() => {
     const s = sceneRef.current;

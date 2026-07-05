@@ -28,8 +28,9 @@ export function buildHouseScene(roofParsed, wallParsed) {
   wallMesh.userData.materialRole = 'wall';
   wallGroup.add(wallMesh);
 
+  let wallRoofMesh = null;
   if (wallRoofFaces.length) {
-    const wallRoofMesh = new THREE.Mesh(
+    wallRoofMesh = new THREE.Mesh(
       buildFaceGeometry(wallRoofFaces),
       new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.4, metalness: 0.5 })
     );
@@ -63,9 +64,37 @@ export function buildHouseScene(roofParsed, wallParsed) {
   const sphere = new THREE.Sphere();
   overallBox.getBoundingSphere(sphere);
 
-  return { root, wallGroup, roofGroup, wallMesh, roofMesh, boundingSphere: sphere, roofBasePosition };
+  return { root, wallGroup, roofGroup, wallMesh, roofMesh, wallRoofMesh, boundingSphere: sphere, roofBasePosition };
 }
 
-export function setMaterialColor(mesh, hexColor) {
-  if (mesh) mesh.material.color.set(hexColor);
+const textureLoader = new THREE.TextureLoader();
+const textureCache = new Map();
+
+function loadTexture(url) {
+  if (!textureCache.has(url)) {
+    const texture = textureLoader.load(url);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    textureCache.set(url, texture);
+  }
+  return textureCache.get(url);
+}
+
+/**
+ * Applies a picked color to a mesh's material — either a flat color, or (for
+ * colors with a photographed texture map, e.g. Printech Woodgrain) the real
+ * texture tiled across the geometry's planar UVs.
+ */
+export function setMeshColor(mesh, colorEntry) {
+  if (!mesh || !colorEntry) return;
+  const material = mesh.material;
+  if (colorEntry.texture) {
+    material.map = loadTexture(colorEntry.texture);
+    material.color.set(0xffffff);
+  } else {
+    material.map = null;
+    material.color.set(colorEntry.hex);
+  }
+  material.needsUpdate = true;
 }

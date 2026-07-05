@@ -109,8 +109,8 @@ export default function App() {
           <Viewer3D
             roofParsed={roofParsed}
             wallParsed={wallParsed}
-            roofColor={colorById(roofColorId).hex}
-            wallColor={colorById(wallColorId).hex}
+            roofColorEntry={colorById(roofColorId)}
+            wallColorEntry={colorById(wallColorId)}
             photoOverlay={photoOverlay}
             roofOffset={roofOffset}
           />

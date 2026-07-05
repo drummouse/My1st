@@ -124,6 +124,8 @@ body {
   border-radius: 6px;
   border: 2px solid transparent;
   cursor: pointer;
+  background-size: cover;
+  background-position: center;
 }
 .color-swatch.selected { border-color: var(--brand-accent); box-shadow: 0 0 0 2px #fff inset; }
 
