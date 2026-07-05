@@ -8,8 +8,11 @@ export default function ColorPicker({ label, selectedId, onChange }) {
     <div className="control-block">
       <div className="control-label">{label}</div>
       {SERIES_ORDER.map((series) => (
-        <div key={series} className="color-series">
-          <div className="color-series-label">{series}</div>
+        <details key={series} className="color-series" open={selected.series === series}>
+          <summary className="color-series-label">
+            {series}
+            {selected.series === series && <span className="color-series-current"> — {selected.name}</span>}
+          </summary>
           <div className="color-grid">
             {RAL_COLORS.filter((c) => c.series === series).map((c) => (
               <button
@@ -23,7 +26,7 @@ export default function ColorPicker({ label, selectedId, onChange }) {
               />
             ))}
           </div>
-        </div>
+        </details>
       ))}
       <div className="control-sublabel">{selected.name} — {selected.code} ({selected.series})</div>
     </div>

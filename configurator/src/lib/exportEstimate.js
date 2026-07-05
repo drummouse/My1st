@@ -2,7 +2,9 @@ import { colorById } from '../data/colors.js';
 
 const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
-export function buildEstimateText({ brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate }) {
+const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
+
+export function buildEstimateText({ brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate, services, accessoryColors }) {
   const roofColor = colorById(roofColorId);
   const wallColor = colorById(wallColorId);
   const lines = [];
@@ -21,6 +23,14 @@ export function buildEstimateText({ brand, house, roofProduct, roofColorId, roof
   lines.push(`Roof color: ${roofColor.code} — ${roofColor.name}`);
   lines.push(`Siding material: ${wallProduct.label} (${wallProfile || 'standard profile'})`);
   lines.push(`Siding color: ${wallColor.code} — ${wallColor.name}`);
+  if (services && accessoryColors) {
+    Object.entries(ACCESSORY_LABELS)
+      .filter(([key]) => services[key])
+      .forEach(([key, label]) => {
+        const c = colorById(accessoryColors[key]);
+        lines.push(`${label} color: ${c.code} — ${c.name}`);
+      });
+  }
   lines.push('');
   lines.push('PRICE BREAKDOWN');
   lines.push('-'.repeat(50));

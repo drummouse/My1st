@@ -25,6 +25,13 @@ const DEFAULT_SERVICES = {
   garageDoorCapping: false,
 };
 
+const DEFAULT_ACCESSORY_COLORS = {
+  soffit: 'wk-04',
+  fascia: 'wk-04',
+  gutters: 'wk-04',
+  downspouts: 'wk-04',
+};
+
 export default function App() {
   const [brandId, setBrandId] = useState('ironwrap');
   const [house] = useState(SAMPLE_HOUSE);
@@ -43,6 +50,8 @@ export default function App() {
   const [photoOverlay, setPhotoOverlay] = useState(null);
   const [manualDiscount, setManualDiscount] = useState(0);
   const [roofOffset, setRoofOffset] = useState({ dx: 0, dy: 0, dz: 0 });
+  const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
+  const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
 
   const brand = BRANDS[brandId];
 
@@ -90,6 +99,8 @@ export default function App() {
       wallColorId,
       wallProfile,
       estimate,
+      services,
+      accessoryColors,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
   };
@@ -104,16 +115,46 @@ export default function App() {
         <BrandToggle brandId={brandId} onChange={setBrandId} />
       </header>
 
-      <main className="app-body">
+      <main className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}>
         <section className="viewer-pane">
-          <Viewer3D
-            roofParsed={roofParsed}
-            wallParsed={wallParsed}
-            roofColorEntry={colorById(roofColorId)}
-            wallColorEntry={colorById(wallColorId)}
-            photoOverlay={photoOverlay}
-            roofOffset={roofOffset}
-          />
+          <div className="viewer-toolbar">
+            <span className="viewer-toolbar-title">3D Model</span>
+            <div className="viewer-toolbar-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setViewerMode(viewerMode === 'minimized' ? 'normal' : 'minimized')}
+              >
+                {viewerMode === 'minimized' ? 'Show 3D Model' : 'Hide'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setViewerMode(viewerMode === 'maximized' ? 'normal' : 'maximized')}
+                disabled={viewerMode === 'minimized'}
+              >
+                {viewerMode === 'maximized' ? 'Restore' : 'Full Screen'}
+              </button>
+            </div>
+          </div>
+
+          {viewerMode !== 'minimized' && (
+            <>
+              <Viewer3D
+                roofParsed={roofParsed}
+                wallParsed={wallParsed}
+                roofColorEntry={colorById(roofColorId)}
+                wallColorEntry={colorById(wallColorId)}
+                photoOverlay={photoOverlay}
+                roofOffset={roofOffset}
+              />
+              <AssemblyAdjustment
+                offset={roofOffset}
+                onChange={setRoofOffset}
+                onReset={() => setRoofOffset({ dx: 0, dy: 0, dz: 0 })}
+              />
+            </>
+          )}
         </section>
 
         <aside className="controls-pane">
@@ -146,15 +187,11 @@ export default function App() {
             onMeasurementsChange={setMeasurements}
             gutterOptionId={gutterOptionId}
             onGutterOptionChange={setGutterOptionId}
+            accessoryColors={accessoryColors}
+            onAccessoryColorsChange={setAccessoryColors}
           />
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
-
-          <AssemblyAdjustment
-            offset={roofOffset}
-            onChange={setRoofOffset}
-            onReset={() => setRoofOffset({ dx: 0, dy: 0, dz: 0 })}
-          />
 
           <PriceSummary estimate={estimate} manualDiscount={manualDiscount} onManualDiscountChange={setManualDiscount} />
 

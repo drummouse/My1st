@@ -40,6 +40,12 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.copy(boundingSphere.center);
     controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    // Half the default speed and a longer damping tail — slower, smoother
+    // orbit/zoom instead of the default snappy feel.
+    controls.rotateSpeed = 0.5;
+    controls.zoomSpeed = 0.5;
+    controls.panSpeed = 0.5;
     const dist = boundingSphere.radius * 2.4;
     camera.position.set(boundingSphere.center.x + dist, boundingSphere.center.y - dist, boundingSphere.center.z + dist * 0.6);
     controls.update();
