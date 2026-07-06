@@ -7,21 +7,53 @@ const findRoofProduct = (id) => ROOF_PRODUCTS.find((p) => p.id === id) || ROOF_P
 const findWallProduct = (id) => WALL_PRODUCTS.find((p) => p.id === id) || WALL_PRODUCTS[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
 
+// Groups facets by their effective product (per-facet override, falling back
+// to the global product) and returns one line item per distinct product —
+// collapses to a single line item when there are no overrides.
+function groupFacetsByProduct(facets, overrides, globalProductId, findProduct, label) {
+  const sqftByProduct = new Map();
+  (facets || []).forEach(({ key, sizeSf }) => {
+    const productId = (overrides && overrides[key]) || globalProductId;
+    sqftByProduct.set(productId, (sqftByProduct.get(productId) || 0) + sizeSf);
+  });
+  if (sqftByProduct.size === 0) sqftByProduct.set(globalProductId, 0);
+
+  const items = [...sqftByProduct.entries()].map(([productId, sqft]) => {
+    const product = findProduct(productId);
+    return {
+      key: `${label.toLowerCase()}-${productId}`,
+      label: `${label} — ${product.label}`,
+      qty: sqft,
+      unit: 'sqft',
+      rate: product.pricePerSqft,
+      total: sqft * product.pricePerSqft,
+    };
+  });
+  return { items, total: items.reduce((sum, i) => sum + i.total, 0) };
+}
+
 /**
- * @param {object} measurements - { roofSqft, wallSqft, soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
- * @param {object} selections - { roofProduct, wallProduct, services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
+ * @param {object} measurements - { soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
+ * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, roofOverrides, wallOverrides,
+ *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
+ *   roofFaces/wallFaces: [{ key, sizeSf }]; roofOverrides/wallOverrides: { [key]: productId }
  */
 export function calculateEstimate(measurements, selections) {
   const line = [];
   const services = selections.services || {};
 
-  const roofProduct = findRoofProduct(selections.roofProduct);
-  const roofTotal = measurements.roofSqft * roofProduct.pricePerSqft;
-  line.push({ key: 'roof', label: `Roofing — ${roofProduct.label}`, qty: measurements.roofSqft, unit: 'sqft', rate: roofProduct.pricePerSqft, total: roofTotal });
+  // Package deals are mutually exclusive, not stackable: Full Wrap (all four
+  // accessory services selected) wins outright, and the two narrower deals
+  // only kick in when Full Wrap doesn't apply.
+  const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
 
-  const wallProduct = findWallProduct(selections.wallProduct);
-  const wallTotal = measurements.wallSqft * wallProduct.pricePerSqft;
-  line.push({ key: 'wall', label: `Siding — ${wallProduct.label}`, qty: measurements.wallSqft, unit: 'sqft', rate: wallProduct.pricePerSqft, total: wallTotal });
+  const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.roofOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
+  line.push(...roofGroups.items);
+  const roofTotal = roofGroups.total;
+
+  const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.wallOverrides, selections.wallProduct, findWallProduct, 'Siding');
+  line.push(...wallGroups.items);
+  const wallTotal = wallGroups.total;
 
   let soffitTotal = 0;
   if (services.soffit) {
@@ -31,7 +63,7 @@ export function calculateEstimate(measurements, selections) {
 
   let fasciaTotal = 0;
   let fasciaDiscount = 0;
-  const soffitFasciaDeal = !!(services.soffit && services.fascia);
+  const soffitFasciaDeal = !!(services.soffit && services.fascia && !fullWrap);
   if (services.fascia) {
     const base = measurements.fasciaLf * ACCESSORY_PRICING.fascia.pricePerLf;
     fasciaDiscount = soffitFasciaDeal ? base * 0.5 : 0;
@@ -51,7 +83,7 @@ export function calculateEstimate(measurements, selections) {
   }
 
   let downspoutTotal = 0;
-  const gutterDownspoutDeal = !!(services.gutters && services.downspouts);
+  const gutterDownspoutDeal = !!(services.gutters && services.downspouts && !fullWrap);
   if (services.downspouts) {
     const base = measurements.downspoutLf * gutterOption.downspout.pricePerLf;
     downspoutTotal = gutterDownspoutDeal ? 0 : base;
@@ -83,7 +115,6 @@ export function calculateEstimate(measurements, selections) {
   const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal;
 
   // Full Wrap: roof + walls + soffit + fascia + gutters + downspouts, 7% off total.
-  const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
   const fullWrapDiscount = fullWrap ? subtotal * 0.07 : 0;
 
   const manualDiscount = Math.max(0, Number(selections.manualDiscount) || 0);

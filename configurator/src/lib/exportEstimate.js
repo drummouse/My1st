@@ -1,10 +1,26 @@
 import { colorById } from '../data/colors.js';
+import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
 
-const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
+export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
 const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
 
-export function buildEstimateText({ brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate, services, accessoryColors }) {
+export function describeFacetOverrides(overrides, products, roleLabel) {
+  return Object.entries(overrides || {}).map(([key, val]) => {
+    const faceId = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key;
+    const product = val.productId ? products.find((p) => p.id === val.productId) : null;
+    const color = val.colorId ? colorById(val.colorId) : null;
+    const parts = [];
+    if (product) parts.push(product.label);
+    if (color) parts.push(`${color.name} (${color.code})`);
+    return `${roleLabel} Facet ${faceId}: ${parts.join(', ') || 'custom'}`;
+  });
+}
+
+export function buildEstimateText({
+  brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
+  services, accessoryColors, uniformFinish, roofOverrides, wallOverrides,
+}) {
   const roofColor = colorById(roofColorId);
   const wallColor = colorById(wallColorId);
   const lines = [];
@@ -31,6 +47,18 @@ export function buildEstimateText({ brand, house, roofProduct, roofColorId, roof
         lines.push(`${label} color: ${c.code} — ${c.name}`);
       });
   }
+
+  const roofOverrideLines = uniformFinish ? [] : describeFacetOverrides(roofOverrides, ROOF_PRODUCTS, 'Roof');
+  const wallOverrideLines = uniformFinish ? [] : describeFacetOverrides(wallOverrides, WALL_PRODUCTS, 'Wall');
+  if (roofOverrideLines.length || wallOverrideLines.length) {
+    lines.push('');
+    lines.push('PER-FACET CUSTOMIZATION (overrides the selections above for these facets only)');
+    lines.push('-'.repeat(50));
+    [...roofOverrideLines, ...wallOverrideLines].forEach((l) => lines.push(l));
+  } else {
+    lines.push(`All roof slopes / wall segments use the material and color above (uniform).`);
+  }
+
   lines.push('');
   lines.push('PRICE BREAKDOWN');
   lines.push('-'.repeat(50));

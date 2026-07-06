@@ -139,3 +139,13 @@ export function boundingBox(parsed) {
   );
   return { min, max, size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]] };
 }
+
+// A house's roof and wall RoofRuler exports are independent files whose face
+// ids ("F1", "F2", ...) can collide (e.g. both may have an "F1"). Facets are
+// identified everywhere in the app (mesh userData, override maps, click
+// selection) by a composite key namespaced by which export + role they came
+// from, so a roof-type facet from the wall XML can never be confused with one
+// from the roof XML.
+export function facetKey(sourceTag, faceId) {
+  return `${sourceTag}:${faceId}`;
+}

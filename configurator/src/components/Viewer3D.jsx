@@ -1,11 +1,29 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildHouseScene, setMeshColor } from '../lib/buildScene.js';
+import { buildHouseScene, setMeshColor, setMeshHighlighted } from '../lib/buildScene.js';
 
-export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallColorEntry, photoOverlay, roofOffset }) {
+const Viewer3D = forwardRef(function Viewer3D({
+  roofParsed,
+  wallParsed,
+  roofFaceColors,
+  wallFaceColors,
+  photoOverlay,
+  roofOffset,
+  facetSelectionEnabled,
+  selectedFacetId,
+  onFacetClick,
+}, ref) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    captureSnapshot: () => sceneRef.current?.renderer?.domElement?.toDataURL('image/png') || null,
+  }));
+  const onFacetClickRef = useRef(onFacetClick);
+  onFacetClickRef.current = onFacetClick;
+  const facetSelectionEnabledRef = useRef(facetSelectionEnabled);
+  facetSelectionEnabledRef.current = facetSelectionEnabled;
 
   // One-time scene setup + rebuild whenever the house data changes.
   useEffect(() => {
@@ -19,7 +37,7 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     const camera = new THREE.PerspectiveCamera(45, mount.clientWidth / mount.clientHeight, 0.1, 2000);
     camera.up.set(0, 0, 1);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     mount.innerHTML = '';
@@ -30,7 +48,8 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     sun.position.set(80, -120, 160);
     scene.add(sun);
 
-    const { root, wallMesh, roofMesh, wallRoofMesh, roofGroup, boundingSphere, roofBasePosition } = buildHouseScene(roofParsed, wallParsed);
+    const { root, roofFaceMeshes, wallFaceMeshes, wallRoofFaceMeshes, roofGroup, boundingSphere, roofBasePosition } =
+      buildHouseScene(roofParsed, wallParsed);
     scene.add(root);
 
     const grid = new THREE.GridHelper(Math.max(boundingSphere.radius * 3, 100), 20, 0x8899aa, 0xaabbcc);
@@ -66,10 +85,32 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     };
     window.addEventListener('resize', handleResize);
 
-    sceneRef.current = { wallMesh, roofMesh, wallRoofMesh, roofGroup, roofBasePosition };
-    setMeshColor(roofMesh, roofColorEntry);
-    if (wallRoofMesh) setMeshColor(wallRoofMesh, roofColorEntry);
-    setMeshColor(wallMesh, wallColorEntry);
+    // Click-to-select a facet: distinguish a click from an orbit-drag by
+    // pointer travel distance rather than relying on the native 'click'
+    // event, since OrbitControls' own listeners can interfere with it.
+    const raycaster = new THREE.Raycaster();
+    const allFacetMeshes = [...Object.values(roofFaceMeshes), ...Object.values(wallFaceMeshes), ...Object.values(wallRoofFaceMeshes)];
+    let downPos = null;
+    const onPointerDown = (e) => { downPos = [e.clientX, e.clientY]; };
+    const onPointerUp = (e) => {
+      if (!downPos) return;
+      const [dx0, dy0] = downPos;
+      downPos = null;
+      if (!facetSelectionEnabledRef.current) return;
+      if (Math.hypot(e.clientX - dx0, e.clientY - dy0) > 5) return; // was a drag/orbit
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(allFacetMeshes, false);
+      if (hits.length) onFacetClickRef.current?.(hits[0].object.userData);
+    };
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+
+    sceneRef.current = { roofFaceMeshes, wallFaceMeshes, wallRoofFaceMeshes, roofGroup, roofBasePosition, highlightedMesh: null, renderer };
     if (roofOffset) {
       roofGroup.position.set(
         roofBasePosition.x + (roofOffset.dx || 0),
@@ -81,6 +122,8 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', handleResize);
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
       controls.dispose();
       renderer.dispose();
       mount.innerHTML = '';
@@ -88,17 +131,22 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roofParsed, wallParsed]);
 
-  // Cheap updates: recolor existing meshes without rebuilding the scene.
+  // Cheap updates: recolor existing facet meshes without rebuilding the scene.
   useEffect(() => {
-    if (!sceneRef.current) return;
-    setMeshColor(sceneRef.current.roofMesh, roofColorEntry);
-    if (sceneRef.current.wallRoofMesh) setMeshColor(sceneRef.current.wallRoofMesh, roofColorEntry);
-  }, [roofColorEntry]);
+    const s = sceneRef.current;
+    if (!s || !roofFaceColors) return;
+    Object.entries(roofFaceColors).forEach(([faceId, colorEntry]) => {
+      setMeshColor(s.roofFaceMeshes[faceId] || s.wallRoofFaceMeshes[faceId], colorEntry);
+    });
+  }, [roofFaceColors]);
 
   useEffect(() => {
-    if (!sceneRef.current) return;
-    setMeshColor(sceneRef.current.wallMesh, wallColorEntry);
-  }, [wallColorEntry]);
+    const s = sceneRef.current;
+    if (!s || !wallFaceColors) return;
+    Object.entries(wallFaceColors).forEach(([faceId, colorEntry]) => {
+      setMeshColor(s.wallFaceMeshes[faceId], colorEntry);
+    });
+  }, [wallFaceColors]);
 
   useEffect(() => {
     const s = sceneRef.current;
@@ -110,8 +158,20 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
     );
   }, [roofOffset]);
 
+  // Highlight the selected facet (used when per-facet override mode is on).
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    if (s.highlightedMesh) setMeshHighlighted(s.highlightedMesh, false);
+    const mesh = selectedFacetId
+      ? s.roofFaceMeshes[selectedFacetId] || s.wallFaceMeshes[selectedFacetId] || s.wallRoofFaceMeshes[selectedFacetId]
+      : null;
+    if (mesh) setMeshHighlighted(mesh, true);
+    s.highlightedMesh = mesh || null;
+  }, [selectedFacetId]);
+
   return (
-    <div className="viewer3d-wrap">
+    <div className={`viewer3d-wrap${facetSelectionEnabled ? ' viewer3d-selectable' : ''}`}>
       {photoOverlay?.url && (
         <img
           className="viewer3d-photo"
@@ -126,4 +186,6 @@ export default function Viewer3D({ roofParsed, wallParsed, roofColorEntry, wallC
       </div>
     </div>
   );
-}
+});
+
+export default Viewer3D;

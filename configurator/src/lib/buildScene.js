@@ -1,8 +1,28 @@
 import * as THREE from 'three';
 import { buildFaceGeometry } from './buildGeometry.js';
-import { boundingBox } from './roofRulerParser.js';
+import { boundingBox, facetKey } from './roofRulerParser.js';
+
+function buildFacetMeshes(faces, group, role, sourceTag, defaults) {
+  const meshes = {};
+  faces.forEach((face) => {
+    const mesh = new THREE.Mesh(
+      buildFaceGeometry([face]),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, ...defaults })
+    );
+    const key = facetKey(sourceTag, face.id);
+    mesh.userData = { key, faceId: face.id, role, sizeSf: face.sizeSf, pitch: face.pitch, orientation: face.orientation };
+    group.add(mesh);
+    meshes[key] = mesh;
+  });
+  return meshes;
+}
 
 // Builds a positioned scene graph from the parsed roof + wall structures.
+// Every facet gets its own mesh (rather than one merged mesh per surface) so
+// individual slopes/segments can be independently selected, colored, and
+// priced — house sizes here (tens to low hundreds of facets) make this
+// trivially cheap for Three.js.
+//
 // RoofRuler exports use X/Y as plan coordinates and Z as height — kept as-is
 // here (the viewer sets camera.up = +Z instead of rotating geometry).
 //
@@ -21,22 +41,8 @@ export function buildHouseScene(roofParsed, wallParsed) {
 
   const wallFaces = wallParsed.faces.filter((f) => f.type === 'Wall');
   const wallRoofFaces = wallParsed.faces.filter((f) => f.type === 'Roof');
-  const wallMesh = new THREE.Mesh(
-    buildFaceGeometry(wallFaces),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.75, metalness: 0.15 })
-  );
-  wallMesh.userData.materialRole = 'wall';
-  wallGroup.add(wallMesh);
-
-  let wallRoofMesh = null;
-  if (wallRoofFaces.length) {
-    wallRoofMesh = new THREE.Mesh(
-      buildFaceGeometry(wallRoofFaces),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.4, metalness: 0.5 })
-    );
-    wallRoofMesh.userData.materialRole = 'roof';
-    wallGroup.add(wallRoofMesh);
-  }
+  const wallFaceMeshes = buildFacetMeshes(wallFaces, wallGroup, 'wall', 'wall', { roughness: 0.75, metalness: 0.15 });
+  const wallRoofFaceMeshes = buildFacetMeshes(wallRoofFaces, wallGroup, 'roof', 'wallxml-roof', { roughness: 0.4, metalness: 0.5 });
 
   const roofBox = boundingBox(roofParsed);
   const roofGroup = new THREE.Group();
@@ -52,19 +58,23 @@ export function buildHouseScene(roofParsed, wallParsed) {
   root.add(roofGroup);
 
   const roofFaces = roofParsed.faces.filter((f) => f.type === 'Roof');
-  const roofMesh = new THREE.Mesh(
-    buildFaceGeometry(roofFaces),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.4, metalness: 0.5 })
-  );
-  roofMesh.userData.materialRole = 'roof';
-  roofGroup.add(roofMesh);
+  const roofFaceMeshes = buildFacetMeshes(roofFaces, roofGroup, 'roof', 'roof', { roughness: 0.4, metalness: 0.5 });
 
   root.updateMatrixWorld(true);
   const overallBox = new THREE.Box3().setFromObject(root);
   const sphere = new THREE.Sphere();
   overallBox.getBoundingSphere(sphere);
 
-  return { root, wallGroup, roofGroup, wallMesh, roofMesh, wallRoofMesh, boundingSphere: sphere, roofBasePosition };
+  return {
+    root,
+    wallGroup,
+    roofGroup,
+    roofFaceMeshes,
+    wallFaceMeshes,
+    wallRoofFaceMeshes,
+    boundingSphere: sphere,
+    roofBasePosition,
+  };
 }
 
 const textureLoader = new THREE.TextureLoader();
@@ -97,4 +107,12 @@ export function setMeshColor(mesh, colorEntry) {
     material.color.set(colorEntry.hex);
   }
   material.needsUpdate = true;
+}
+
+const HIGHLIGHT_EMISSIVE = new THREE.Color(0xffa552);
+
+export function setMeshHighlighted(mesh, highlighted) {
+  if (!mesh) return;
+  mesh.material.emissive = highlighted ? HIGHLIGHT_EMISSIVE : new THREE.Color(0x000000);
+  mesh.material.emissiveIntensity = highlighted ? 0.55 : 0;
 }

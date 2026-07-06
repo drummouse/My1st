@@ -14,6 +14,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* mobile browsers: 100vh ignores the collapsing address bar and clips the bottom */
 }
 
 .app-header {
@@ -80,6 +81,13 @@ body {
 
 .viewer-pane .control-block { margin: 0.75rem; }
 
+.viewer3d-canvas-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
 .viewer3d-wrap {
   position: relative;
   width: 100%;
@@ -87,6 +95,40 @@ body {
   min-height: 0;
   background: linear-gradient(180deg, #cfe0ee 0%, #eef3f6 60%, #dfe7ef 100%);
 }
+
+.viewer3d-selectable .viewer3d-canvas { cursor: crosshair; }
+
+.facet-inspector {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 240px;
+  max-width: calc(100% - 1.5rem);
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.82rem;
+}
+.facet-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+.facet-inspector-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.1rem 0.3rem;
+}
+.facet-inspector-meta { color: #6b7280; font-size: 0.72rem; margin-bottom: 0.6rem; }
+.facet-inspector .control-select { margin-bottom: 0.55rem; }
+.facet-inspector .field-label { margin-bottom: 0.2rem; }
 
 /* Minimized: collapse the viewer pane to just its toolbar, controls take the rest. */
 .app-body.viewer-minimized .viewer-pane { flex: 0 0 auto; align-self: flex-start; }
@@ -124,8 +166,10 @@ body {
   flex: 0 0 35%;
   min-width: 320px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #f7f8fa;
   padding: 1rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -249,9 +293,52 @@ body {
   cursor: pointer;
 }
 
+.field-label { display: block; font-size: 0.72rem; font-weight: 600; color: #6b7280; margin: 0.5rem 0 0.25rem; }
+.field-label:first-of-type { margin-top: 0; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.import-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.import-file-btn {
+  margin-top: 0;
+  flex: 1 1 auto;
+  text-align: center;
+  display: inline-block;
+}
+
+.uniform-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.uniform-toggle input { margin-top: 0.2rem; }
+
+.export-buttons { display: flex; gap: 0.6rem; }
+.export-buttons .btn-primary, .export-buttons .btn-secondary { flex: 1 1 0; margin-top: 0; text-align: center; }
+
 @media (max-width: 860px) {
   .app-body { flex-direction: column; }
   .viewer-pane, .controls-pane { flex: none; width: 100%; }
-  .viewer-pane { height: 45vh; }
-  .controls-pane { height: 55vh; }
+  .viewer-pane { height: 45vh; height: 45dvh; }
+  .controls-pane { height: 55vh; height: 55dvh; }
+
+  /* Minimize/maximize repurpose height instead of width on narrow screens. */
+  .app-body.viewer-minimized .viewer-pane { height: auto; align-self: stretch; }
+  .app-body.viewer-minimized .controls-pane { height: auto; flex: 1 1 auto; }
+  .app-body.viewer-maximized .viewer-pane { height: 100%; }
 }

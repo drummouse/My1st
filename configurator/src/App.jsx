@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Viewer3D from './components/Viewer3D.jsx';
 import BrandToggle from './components/BrandToggle.jsx';
 import ColorPicker from './components/ColorPicker.jsx';
@@ -7,9 +7,12 @@ import ServicesPanel from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
-import { parseAppliCadXML, roofSqft, wallSqft } from './lib/roofRulerParser.js';
+import HouseImport from './components/HouseImport.jsx';
+import FacetInspector from './components/FacetInspector.jsx';
+import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
+import { buildEstimatePdf } from './lib/exportPdf.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -32,9 +35,27 @@ const DEFAULT_ACCESSORY_COLORS = {
   downspouts: 'wk-04',
 };
 
+const ZERO_MEASUREMENTS = {
+  soffitSqft: 0,
+  fasciaLf: 0,
+  gutterLf: 0,
+  downspoutLf: 0,
+  snowRetentionLf: 0,
+  capFlashingLf: 0,
+  garageDoorCappingLf: 0,
+};
+
+function extractProductOverrides(overrides) {
+  const result = {};
+  Object.entries(overrides).forEach(([key, val]) => {
+    if (val?.productId) result[key] = val.productId;
+  });
+  return result;
+}
+
 export default function App() {
   const [brandId, setBrandId] = useState('ironwrap');
-  const [house] = useState(SAMPLE_HOUSE);
+  const [house, setHouse] = useState(SAMPLE_HOUSE);
 
   const [roofProductId, setRoofProductId] = useState(ROOF_PRODUCTS[0].id);
   const [roofProfile, setRoofProfile] = useState(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
@@ -53,31 +74,72 @@ export default function App() {
   const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
   const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
 
+  const [uniformFinish, setUniformFinish] = useState(true);
+  const [roofOverrides, setRoofOverrides] = useState({}); // key -> { productId?, colorId? }
+  const [wallOverrides, setWallOverrides] = useState({});
+  const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, sizeSf, pitch, orientation }
+
+  const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
 
-  const roofParsed = useMemo(() => parseAppliCadXML(house.roofXml, 'Roof'), [house]);
-  const wallParsed = useMemo(() => parseAppliCadXML(house.wallXml, 'Wall'), [house]);
+  const roofParsed = useMemo(() => parseAppliCadXML(house.roofXml, 'Roof'), [house.roofXml]);
+  const wallParsed = useMemo(() => parseAppliCadXML(house.wallXml, 'Wall'), [house.wallXml]);
 
-  const liveMeasurements = useMemo(
-    () => ({
-      roofSqft: roofSqft(roofParsed),
-      wallSqft: wallSqft(wallParsed),
-      ...measurements,
-    }),
-    [roofParsed, wallParsed, measurements]
+  // Face ids are only unique within a single RoofRuler export, so imports of
+  // a new house (or the sample resetting) invalidate any per-facet overrides
+  // and the current selection.
+  useEffect(() => {
+    setRoofOverrides({});
+    setWallOverrides({});
+    setSelectedFacet(null);
+  }, [roofParsed, wallParsed]);
+
+  const roofFacesForPricing = useMemo(() => {
+    const primary = roofParsed.faces.filter((f) => f.type === 'Roof').map((f) => ({ key: facetKey('roof', f.id), sizeSf: f.sizeSf }));
+    const stray = wallParsed.faces.filter((f) => f.type === 'Roof').map((f) => ({ key: facetKey('wallxml-roof', f.id), sizeSf: f.sizeSf }));
+    return [...primary, ...stray];
+  }, [roofParsed, wallParsed]);
+
+  const wallFacesForPricing = useMemo(
+    () => wallParsed.faces.filter((f) => f.type === 'Wall').map((f) => ({ key: facetKey('wall', f.id), sizeSf: f.sizeSf })),
+    [wallParsed]
   );
 
   const estimate = useMemo(
     () =>
-      calculateEstimate(liveMeasurements, {
+      calculateEstimate(measurements, {
         roofProduct: roofProductId,
         wallProduct: wallProductId,
+        roofFaces: roofFacesForPricing,
+        wallFaces: wallFacesForPricing,
+        roofOverrides: uniformFinish ? {} : extractProductOverrides(roofOverrides),
+        wallOverrides: uniformFinish ? {} : extractProductOverrides(wallOverrides),
         services,
         gutterOption: gutterOptionId,
         manualDiscount,
       }),
-    [liveMeasurements, roofProductId, wallProductId, services, gutterOptionId, manualDiscount]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, roofOverrides, wallOverrides, services, gutterOptionId, manualDiscount]
   );
+
+  const roofFaceColors = useMemo(() => {
+    const globalColor = colorById(roofColorId);
+    const map = {};
+    roofFacesForPricing.forEach(({ key }) => {
+      const override = !uniformFinish && roofOverrides[key];
+      map[key] = override?.colorId ? colorById(override.colorId) : globalColor;
+    });
+    return map;
+  }, [roofFacesForPricing, roofOverrides, roofColorId, uniformFinish]);
+
+  const wallFaceColors = useMemo(() => {
+    const globalColor = colorById(wallColorId);
+    const map = {};
+    wallFacesForPricing.forEach(({ key }) => {
+      const override = !uniformFinish && wallOverrides[key];
+      map[key] = override?.colorId ? colorById(override.colorId) : globalColor;
+    });
+    return map;
+  }, [wallFacesForPricing, wallOverrides, wallColorId, uniformFinish]);
 
   const handleRoofProductChange = (id) => {
     setRoofProductId(id);
@@ -88,7 +150,40 @@ export default function App() {
     setWallProfile(WALL_PROFILES[id]?.[0] || '');
   };
 
-  const handleExport = () => {
+  const handleHouseMetaChange = (patch) => setHouse((h) => ({ ...h, ...patch }));
+  const handleHouseXmlImport = (kind, xmlText) => {
+    setHouse((h) => ({ ...h, [kind]: xmlText }));
+    setMeasurements(ZERO_MEASUREMENTS);
+  };
+
+  const handleFacetClick = (payload) => {
+    if (uniformFinish) return;
+    setSelectedFacet(payload);
+  };
+
+  const facetOverrideState = selectedFacet
+    ? (selectedFacet.role === 'roof' ? roofOverrides : wallOverrides)[selectedFacet.key]
+    : null;
+  const facetGlobalProductId = selectedFacet?.role === 'roof' ? roofProductId : wallProductId;
+  const facetGlobalColorId = selectedFacet?.role === 'roof' ? roofColorId : wallColorId;
+
+  const setFacetOverride = (patch) => {
+    if (!selectedFacet) return;
+    const setOverrides = selectedFacet.role === 'roof' ? setRoofOverrides : setWallOverrides;
+    setOverrides((prev) => ({ ...prev, [selectedFacet.key]: { ...prev[selectedFacet.key], ...patch } }));
+  };
+
+  const clearFacetOverride = () => {
+    if (!selectedFacet) return;
+    const setOverrides = selectedFacet.role === 'roof' ? setRoofOverrides : setWallOverrides;
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[selectedFacet.key];
+      return next;
+    });
+  };
+
+  const handleExportText = () => {
     const text = buildEstimateText({
       brand,
       house,
@@ -101,8 +196,31 @@ export default function App() {
       estimate,
       services,
       accessoryColors,
+      uniformFinish,
+      roofOverrides,
+      wallOverrides,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
+  };
+
+  const handleExportPdf = () => {
+    buildEstimatePdf({
+      brand,
+      house,
+      snapshotDataUrl: viewerRef.current?.captureSnapshot() || null,
+      roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
+      roofColorId,
+      roofProfile,
+      wallProduct: WALL_PRODUCTS.find((p) => p.id === wallProductId),
+      wallColorId,
+      wallProfile,
+      estimate,
+      services,
+      accessoryColors,
+      uniformFinish,
+      roofOverrides,
+      wallOverrides,
+    });
   };
 
   return (
@@ -140,14 +258,32 @@ export default function App() {
 
           {viewerMode !== 'minimized' && (
             <>
-              <Viewer3D
-                roofParsed={roofParsed}
-                wallParsed={wallParsed}
-                roofColorEntry={colorById(roofColorId)}
-                wallColorEntry={colorById(wallColorId)}
-                photoOverlay={photoOverlay}
-                roofOffset={roofOffset}
-              />
+              <div className="viewer3d-canvas-wrap">
+                <Viewer3D
+                  ref={viewerRef}
+                  roofParsed={roofParsed}
+                  wallParsed={wallParsed}
+                  roofFaceColors={roofFaceColors}
+                  wallFaceColors={wallFaceColors}
+                  photoOverlay={photoOverlay}
+                  roofOffset={roofOffset}
+                  facetSelectionEnabled={!uniformFinish}
+                  selectedFacetId={selectedFacet?.key}
+                  onFacetClick={handleFacetClick}
+                />
+                {!uniformFinish && (
+                  <FacetInspector
+                    facet={selectedFacet}
+                    effectiveProductId={facetOverrideState?.productId || facetGlobalProductId}
+                    effectiveColorId={facetOverrideState?.colorId || facetGlobalColorId}
+                    hasOverride={!!facetOverrideState}
+                    onProductChange={(id) => setFacetOverride({ productId: id })}
+                    onColorChange={(id) => setFacetOverride({ colorId: id })}
+                    onClear={clearFacetOverride}
+                    onClose={() => setSelectedFacet(null)}
+                  />
+                )}
+              </div>
               <AssemblyAdjustment
                 offset={roofOffset}
                 onChange={setRoofOffset}
@@ -158,6 +294,23 @@ export default function App() {
         </section>
 
         <aside className="controls-pane">
+          <HouseImport house={house} onMetaChange={handleHouseMetaChange} onXmlImport={handleHouseXmlImport} />
+
+          <div className="control-block">
+            <label className="uniform-toggle">
+              <input type="checkbox" checked={uniformFinish} onChange={(e) => setUniformFinish(e.target.checked)} />
+              <span>All roof slopes / wall segments use the same profile and color</span>
+            </label>
+            {!uniformFinish && (
+              <div className="control-sublabel">
+                Click a roof slope or wall segment in the 3D model to set its own material and color.
+                {Object.keys(roofOverrides).length + Object.keys(wallOverrides).length > 0
+                  ? ` ${Object.keys(roofOverrides).length + Object.keys(wallOverrides).length} facet(s) customized.`
+                  : ''}
+              </div>
+            )}
+          </div>
+
           <ProductSelector
             label="Roof Material"
             products={ROOF_PRODUCTS}
@@ -195,9 +348,10 @@ export default function App() {
 
           <PriceSummary estimate={estimate} manualDiscount={manualDiscount} onManualDiscountChange={setManualDiscount} />
 
-          <button type="button" className="btn-primary" onClick={handleExport}>
-            Export Estimate
-          </button>
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
+            <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
+          </div>
         </aside>
       </main>
     </div>

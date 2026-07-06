@@ -22,6 +22,21 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
 - **Test house**: Rakievich Residence, Job 26-180-ER (`src/data/sample/*.xml`).
   Parsed roof/wall square footage matches the source RoofRuler reports almost
   exactly (9,394 sqft roof vs. 9,397 reported; 6,775.43 sqft wall — exact match).
+  Replace it any time via **Import Roof/Wall Report XML** in the House/Project panel.
+- **Real finish photos** for all three color systems (Icecrystal Relief,
+  Printech Woodgrain, Wrinkle Coating) — sourced from the company's Google
+  Drive color folders, used as both swatch thumbnails and tiled 3D texture
+  maps (`src/data/textures/`, `src/data/colors.js`).
+- **Per-facet customization** — every roof slope and wall segment is its own
+  mesh (`src/lib/buildScene.js`) so it can be clicked in the 3D viewer and
+  given its own material/color, overriding the global selection. Governed by
+  an "all same" checkbox (default on); `pricingEngine.js` groups facets by
+  their effective product so the price breakdown reflects any per-facet
+  material changes.
+- **PDF export** (`src/lib/exportPdf.js`, via `jspdf`) — full itemized
+  estimate (selections, per-facet overrides, price breakdown, package
+  discounts, GST) plus a snapshot of the current 3D view, captured straight
+  from the WebGL canvas.
 
 ## Known simplification
 
@@ -45,7 +60,11 @@ npm run build      # production build to dist/
 
 - Live QuickBooks pricing via Make.com (currently hardcoded)
 - JobNimbus push
-- PDF export (currently a downloadable text summary)
 - Shareable design links
-- 26-color RAL/woodgrain palette (currently a 12-color starter RAL set —
-  swap in the full supplier swatch list when available)
+- Real profile (rib/panel) geometry — "profile" selectors are currently
+  visual-only labels; actual rib spacing/geometry needs the supplier profile
+  spec sheets (Eastside siding, Schlebach/NewTech roofing, gutter profiles)
+- A locked-down "shareable snapshot" export (frozen selections, no edit
+  controls, still-rotatable 3D view) — a PDF can't embed an interactive 3D
+  model, so this would be a separate read-only build of the app; ask if you
+  want one generated for a specific configuration
