@@ -11,5 +11,12 @@ export default defineConfig({
   build: {
     outDir: 'dist-artifact',
     assetsInlineLimit: 200000,
+    rollupOptions: {
+      output: {
+        // Force everything (including jsPDF's dynamically-imported chunks)
+        // into the single JS file this build's HTML-inlining step reads.
+        inlineDynamicImports: true,
+      },
+    },
   },
 });
