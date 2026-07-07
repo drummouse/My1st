@@ -8,6 +8,7 @@ import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
+import ProjectsPanel from './components/ProjectsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -70,40 +71,54 @@ export default function App() {
   const [uniformFinish, setUniformFinish] = useState(true);
   const [facetOverrides, setFacetOverrides] = useState({}); // key -> { productId?, colorId? }
   const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, layerId, sizeSf, pitch, orientation }
+  const [currentProjectId, setCurrentProjectId] = useState(null);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
 
-  // True when this load came from an exported HTML file or a shared link —
-  // both open the full editable app for a customer, so the manual/override
-  // discount field gets locked (they can still explore colors/profiles and
-  // see any automatic package-deal discounts recalculate live).
+  // True when this load came from an exported HTML file or a shared/project
+  // link — all open the full editable app for a customer, so the
+  // manual/override discount field gets locked (they can still explore
+  // colors/profiles and see any automatic package-deal discounts
+  // recalculate live).
   const [isCustomerView, setIsCustomerView] = useState(false);
+
+  const buildDesignSnapshot = () =>
+    captureDesignState({
+      brandId, house, roofProductId, roofProfile, roofColorId,
+      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
+      measurements, manualDiscount, layerOffsets, accessoryColors,
+      uniformFinish, facetOverrides,
+    });
+
+  const applyDesignSnapshot = (snapshot, lock) => {
+    if (lock) setIsCustomerView(true);
+    applyDesignState(snapshot, {
+      setBrandId,
+      setHouse,
+      setRoofProductId,
+      setRoofProfile,
+      setRoofColorId,
+      setWallProductId,
+      setWallProfile,
+      setWallColorId,
+      setServices,
+      setGutterOptionId,
+      setMeasurements,
+      setManualDiscount,
+      setLayerOffsets,
+      setAccessoryColors,
+      setUniformFinish,
+      setFacetOverrides,
+    });
+  };
 
   // Standalone HTML exports embed a frozen design as
   // window.__IRONWRAP_DESIGN__ before this bundle runs; load it once on
   // mount so the exported file opens showing that customer's exact design.
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
-      setIsCustomerView(true);
-      applyDesignState(window.__IRONWRAP_DESIGN__, {
-        setBrandId,
-        setHouse,
-        setRoofProductId,
-        setRoofProfile,
-        setRoofColorId,
-        setWallProductId,
-        setWallProfile,
-        setWallColorId,
-        setServices,
-        setGutterOptionId,
-        setMeasurements,
-        setManualDiscount,
-        setLayerOffsets,
-        setAccessoryColors,
-        setUniformFinish,
-        setFacetOverrides,
-      });
+      applyDesignSnapshot(window.__IRONWRAP_DESIGN__, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -113,29 +128,28 @@ export default function App() {
   useEffect(() => {
     const encoded = new URLSearchParams(window.location.search).get('d');
     if (!encoded) return;
-    setIsCustomerView(true);
     decodeDesignFromUrl(encoded)
-      .then((snapshot) => {
-        applyDesignState(snapshot, {
-          setBrandId,
-          setHouse,
-          setRoofProductId,
-          setRoofProfile,
-          setRoofColorId,
-          setWallProductId,
-          setWallProfile,
-          setWallColorId,
-          setServices,
-          setGutterOptionId,
-          setMeasurements,
-          setManualDiscount,
-          setLayerOffsets,
-          setAccessoryColors,
-          setUniformFinish,
-          setFacetOverrides,
-        });
-      })
+      .then((snapshot) => applyDesignSnapshot(snapshot, true))
       .catch((err) => console.error('Failed to load shared design link:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Project links (?p=<id>) reference a design saved to the Projects
+  // database rather than embedding it directly — load it once on mount if
+  // present.
+  useEffect(() => {
+    const projectId = new URLSearchParams(window.location.search).get('p');
+    if (!projectId) return;
+    fetch(`/api/projects/${projectId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((row) => {
+        applyDesignSnapshot(row.design, true);
+        setCurrentProjectId(projectId);
+      })
+      .catch((err) => console.error('Failed to load project link:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -313,12 +327,7 @@ export default function App() {
       alert('Could not load the export template. Please try again.');
       return;
     }
-    const state = captureDesignState({
-      brandId, house, roofProductId, roofProfile, roofColorId,
-      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
-      measurements, manualDiscount, layerOffsets, accessoryColors,
-      uniformFinish, facetOverrides,
-    });
+    const state = buildDesignSnapshot();
     // Escape "</script>" sequences that could appear inside string values
     // (e.g. a customer name) so they can't break out of the inline script.
     const stateJson = JSON.stringify(state).replace(/</g, '\\u003c');
@@ -335,12 +344,7 @@ export default function App() {
 
   const handleCopyShareLink = async () => {
     try {
-      const state = captureDesignState({
-        brandId, house, roofProductId, roofProfile, roofColorId,
-        wallProductId, wallProfile, wallColorId, services, gutterOptionId,
-        measurements, manualDiscount, layerOffsets, accessoryColors,
-        uniformFinish, facetOverrides,
-      });
+      const state = buildDesignSnapshot();
       const encoded = await encodeDesignForUrl(state);
       const url = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
       await navigator.clipboard.writeText(url);
@@ -452,6 +456,13 @@ export default function App() {
             onRemoveLayer={handleRemoveLayer}
             onToggleVisibility={handleToggleLayerVisibility}
             onRenameLayer={handleRenameLayer}
+          />
+
+          <ProjectsPanel
+            getCurrentDesign={buildDesignSnapshot}
+            onOpenProject={(design) => applyDesignSnapshot(design, false)}
+            currentProjectId={currentProjectId}
+            onProjectIdChange={setCurrentProjectId}
           />
 
           <div className="control-block">

@@ -260,6 +260,8 @@ body {
   cursor: pointer;
 }
 .btn-primary:hover { background: var(--brand-accent-dark); }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary:disabled:hover { background: var(--brand-accent); }
 
 .adjust-row {
   display: flex;
@@ -348,6 +350,24 @@ body {
 }
 .layer-remove-btn:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
 .layer-remove-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.project-open-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 0.82rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-open-btn:hover:not(:disabled) { background: #f7f8fa; }
+.project-open-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.project-open-btn-active { border-color: var(--brand-accent); background: #fff4ee; }
 
 .uniform-toggle {
   display: flex;

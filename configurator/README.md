@@ -58,6 +58,19 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   export reporting all aggregate across however many layers are loaded,
   bucketed by each facet's own `type` (Roof/Wall) rather than by which file
   it came from.
+- **Projects (save/load/edit)** — the whole design state (job #, customer,
+  address, layers, product/color selections, overrides, everything
+  `designState.js` captures) can be saved to a Postgres database (Neon, via
+  Vercel's marketplace integration and the HTTP-based
+  `@neondatabase/serverless` driver) and reopened, updated, or deleted later
+  from the **Projects** panel. "Copy Project Link" gives a short `?p=<id>`
+  URL that loads a saved project the same way the self-contained `?d=`
+  shareable link does, but by reference instead of embedding the whole
+  design — this is meant to eventually anchor a rotatable 3D view linked
+  from an exported PDF (see "Not yet built" below). API routes:
+  `api/projects/index.js` (list, create), `api/projects/[id].js`
+  (get/update/delete); schema is created automatically on first request (see
+  `db/schema.sql`).
 
 ## Known simplification
 
@@ -96,4 +109,11 @@ npm run build      # production build to dist/
   stays a static screenshot + full facet report, with Export HTML and the
   shareable link as the two genuinely rotatable options. A clickable
   link/QR code in the PDF pointing to the live rotatable view is the
-  next-best alternative, on request.
+  next-best alternative, on request — now that Projects gives every design a
+  stable short `?p=<id>` URL, that link is a natural fit for this, but it
+  hasn't been wired into `exportPdf.js` yet.
+- Projects database (`db/schema.sql`, `api/projects/*`) is built but not yet
+  live-tested end-to-end: this sandbox's network egress allowlist blocks the
+  Neon HTTP endpoint (`*.neon.tech`), so it's untested against a running
+  database — pending the environment's network allowance being added
+  (desktop-only setting) and a fresh session.
