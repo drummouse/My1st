@@ -5,15 +5,15 @@
 // not part of the design itself).
 export function captureDesignState(state) {
   return {
-    version: 1,
+    version: 2,
     brandId: state.brandId,
     house: {
       jobNumber: state.house.jobNumber,
       customerName: state.house.customerName,
       address: state.house.address,
-      roofXml: state.house.roofXml,
-      wallXml: state.house.wallXml,
+      layers: state.house.layers,
     },
+    layerOffsets: state.layerOffsets,
     roofProductId: state.roofProductId,
     roofProfile: state.roofProfile,
     roofColorId: state.roofColorId,
@@ -24,11 +24,9 @@ export function captureDesignState(state) {
     gutterOptionId: state.gutterOptionId,
     measurements: state.measurements,
     manualDiscount: state.manualDiscount,
-    roofOffset: state.roofOffset,
     accessoryColors: state.accessoryColors,
     uniformFinish: state.uniformFinish,
-    roofOverrides: state.roofOverrides,
-    wallOverrides: state.wallOverrides,
+    facetOverrides: state.facetOverrides,
   };
 }
 
@@ -59,9 +57,9 @@ function base64UrlToBytes(str) {
 }
 
 // Encodes a design snapshot for a shareable URL — no backend involved, the
-// whole design (including roof/wall XML) round-trips through the link
-// itself. Gzip-compressed when the browser supports it (XML compresses
-// well), with a plain-base64 fallback for older browsers.
+// whole design (including layer XML) round-trips through the link itself.
+// Gzip-compressed when the browser supports it (XML compresses well), with a
+// plain-base64 fallback for older browsers.
 export async function encodeDesignForUrl(state) {
   const json = JSON.stringify(state);
   if (typeof CompressionStream !== 'undefined') {
@@ -82,10 +80,15 @@ export async function decodeDesignFromUrl(encoded) {
 
 // Reads a previously-captured design state, tolerating missing/old fields
 // (falls back to whatever the caller's current defaults already are).
+// Version 1 snapshots (pre-Layers, fixed roofXml/wallXml + separate
+// roofOverrides/wallOverrides) predate this shape and can't be migrated
+// automatically since layer ids didn't exist yet — those old shareable
+// links/HTML exports stop loading; this is an accepted MVP-stage break.
 export function applyDesignState(snapshot, setters) {
-  if (!snapshot || snapshot.version !== 1) return;
+  if (!snapshot || snapshot.version !== 2) return;
   if (snapshot.brandId) setters.setBrandId(snapshot.brandId);
   if (snapshot.house) setters.setHouse((h) => ({ ...h, ...snapshot.house }));
+  if (snapshot.layerOffsets) setters.setLayerOffsets(snapshot.layerOffsets);
   if (snapshot.roofProductId) setters.setRoofProductId(snapshot.roofProductId);
   if (snapshot.roofProfile) setters.setRoofProfile(snapshot.roofProfile);
   if (snapshot.roofColorId) setters.setRoofColorId(snapshot.roofColorId);
@@ -96,9 +99,7 @@ export function applyDesignState(snapshot, setters) {
   if (snapshot.gutterOptionId) setters.setGutterOptionId(snapshot.gutterOptionId);
   if (snapshot.measurements) setters.setMeasurements(snapshot.measurements);
   if (typeof snapshot.manualDiscount === 'number') setters.setManualDiscount(snapshot.manualDiscount);
-  if (snapshot.roofOffset) setters.setRoofOffset(snapshot.roofOffset);
   if (snapshot.accessoryColors) setters.setAccessoryColors(snapshot.accessoryColors);
   if (typeof snapshot.uniformFinish === 'boolean') setters.setUniformFinish(snapshot.uniformFinish);
-  if (snapshot.roofOverrides) setters.setRoofOverrides(snapshot.roofOverrides);
-  if (snapshot.wallOverrides) setters.setWallOverrides(snapshot.wallOverrides);
+  if (snapshot.facetOverrides) setters.setFacetOverrides(snapshot.facetOverrides);
 }

@@ -49,15 +49,26 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
   works even if any third-party service is down. Same discount lock as the
   HTML export. (`src/lib/designState.js`)
+- **Layers** — import any number of RoofRuler/AppliCAD XML reports (roof,
+  wall, a garage roof, a second building, anything); each import becomes its
+  own layer with a visibility checkbox, an editable name, and a remove
+  button (`src/components/LayersPanel.jsx`). Every facet is keyed by
+  `layerId:faceId` (`facetKey()`, generalized from the original fixed
+  roof/wall tags), so per-facet material/color overrides, pricing, and
+  export reporting all aggregate across however many layers are loaded,
+  bucketed by each facet's own `type` (Roof/Wall) rather than by which file
+  it came from.
 
 ## Known simplification
 
-The roof and wall RoofRuler exports use independent local coordinate frames
-(confirmed against the source files), so the two structures are centered on
-their own footprints and stacked by bounding-box height rather than merged
-into one seamless coordinate space. This is called out in the brief as an
-accepted MVP limitation ("house geometry: simplified — proof of concept") and
-is surfaced in the viewer's on-screen caption.
+Each imported layer's RoofRuler export uses its own independent local
+coordinate frame (confirmed against the source files), so every layer is
+centered on its own footprint and auto-stacked on top of the layers before
+it by bounding-box height, rather than merged into one seamless coordinate
+space. This is called out in the brief as an accepted MVP limitation ("house
+geometry: simplified — proof of concept") and is surfaced in the viewer's
+on-screen caption. The Layer Position Adjustment control lets you manually
+nudge any one layer if the auto-stack doesn't line it up correctly.
 
 ## Run it
 

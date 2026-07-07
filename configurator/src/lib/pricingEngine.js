@@ -34,9 +34,10 @@ function groupFacetsByProduct(facets, overrides, globalProductId, findProduct, l
 
 /**
  * @param {object} measurements - { soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
- * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, roofOverrides, wallOverrides,
+ * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, facetOverrides,
  *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
- *   roofFaces/wallFaces: [{ key, sizeSf }]; roofOverrides/wallOverrides: { [key]: productId }
+ *   roofFaces/wallFaces: [{ key, sizeSf }]; facetOverrides: { [key]: productId } (roof/wall keys are
+ *   disjoint since they come from distinct layer:faceId facet keys, so the same map is used for both)
  */
 export function calculateEstimate(measurements, selections) {
   const line = [];
@@ -47,11 +48,11 @@ export function calculateEstimate(measurements, selections) {
   // only kick in when Full Wrap doesn't apply.
   const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
 
-  const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.roofOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
+  const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
   line.push(...roofGroups.items);
   const roofTotal = roofGroups.total;
 
-  const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.wallOverrides, selections.wallProduct, findWallProduct, 'Siding');
+  const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding');
   line.push(...wallGroups.items);
   const wallTotal = wallGroups.total;
 
