@@ -13,6 +13,7 @@ import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
+import { captureDesignState, applyDesignState, encodeDesignForUrl, decodeDesignFromUrl } from './lib/designState.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -73,6 +74,7 @@ export default function App() {
   const [roofOffset, setRoofOffset] = useState({ dx: 0, dy: 0, dz: 0 });
   const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
   const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
+  const [shareStatus, setShareStatus] = useState('');
 
   const [uniformFinish, setUniformFinish] = useState(true);
   const [roofOverrides, setRoofOverrides] = useState({}); // key -> { productId?, colorId? }
@@ -81,6 +83,73 @@ export default function App() {
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
+
+  // True when this load came from an exported HTML file or a shared link —
+  // both open the full editable app for a customer, so the manual/override
+  // discount field gets locked (they can still explore colors/profiles and
+  // see any automatic package-deal discounts recalculate live).
+  const [isCustomerView, setIsCustomerView] = useState(false);
+
+  // Standalone HTML exports embed a frozen design as
+  // window.__IRONWRAP_DESIGN__ before this bundle runs; load it once on
+  // mount so the exported file opens showing that customer's exact design.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
+      setIsCustomerView(true);
+      applyDesignState(window.__IRONWRAP_DESIGN__, {
+        setBrandId,
+        setHouse,
+        setRoofProductId,
+        setRoofProfile,
+        setRoofColorId,
+        setWallProductId,
+        setWallProfile,
+        setWallColorId,
+        setServices,
+        setGutterOptionId,
+        setMeasurements,
+        setManualDiscount,
+        setRoofOffset,
+        setAccessoryColors,
+        setUniformFinish,
+        setRoofOverrides,
+        setWallOverrides,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Shareable links carry the whole design in a ?d= query param — decode
+  // and load it once on mount if present.
+  useEffect(() => {
+    const encoded = new URLSearchParams(window.location.search).get('d');
+    if (!encoded) return;
+    setIsCustomerView(true);
+    decodeDesignFromUrl(encoded)
+      .then((snapshot) => {
+        applyDesignState(snapshot, {
+          setBrandId,
+          setHouse,
+          setRoofProductId,
+          setRoofProfile,
+          setRoofColorId,
+          setWallProductId,
+          setWallProfile,
+          setWallColorId,
+          setServices,
+          setGutterOptionId,
+          setMeasurements,
+          setManualDiscount,
+          setRoofOffset,
+          setAccessoryColors,
+          setUniformFinish,
+          setRoofOverrides,
+          setWallOverrides,
+        });
+      })
+      .catch((err) => console.error('Failed to load shared design link:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const roofParsed = useMemo(() => parseAppliCadXML(house.roofXml, 'Roof'), [house.roofXml]);
   const wallParsed = useMemo(() => parseAppliCadXML(house.wallXml, 'Wall'), [house.wallXml]);
@@ -199,8 +268,59 @@ export default function App() {
       uniformFinish,
       roofOverrides,
       wallOverrides,
+      roofFacesForPricing,
+      wallFacesForPricing,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
+  };
+
+  const handleExportHtml = async () => {
+    let template;
+    try {
+      const res = await fetch('/snapshot-template.html');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      template = await res.text();
+    } catch (err) {
+      alert('Could not load the export template. Please try again.');
+      return;
+    }
+    const state = captureDesignState({
+      brandId, house, roofProductId, roofProfile, roofColorId,
+      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
+      measurements, manualDiscount, roofOffset, accessoryColors,
+      uniformFinish, roofOverrides, wallOverrides,
+    });
+    // Escape "</script>" sequences that could appear inside string values
+    // (e.g. a customer name) so they can't break out of the inline script.
+    const stateJson = JSON.stringify(state).replace(/</g, '\\u003c');
+    const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson};</script>\n`;
+    const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `IronWrap_Design_${house.jobNumber || 'export'}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyShareLink = async () => {
+    try {
+      const state = captureDesignState({
+        brandId, house, roofProductId, roofProfile, roofColorId,
+        wallProductId, wallProfile, wallColorId, services, gutterOptionId,
+        measurements, manualDiscount, roofOffset, accessoryColors,
+        uniformFinish, roofOverrides, wallOverrides,
+      });
+      const encoded = await encodeDesignForUrl(state);
+      const url = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
+      await navigator.clipboard.writeText(url);
+      setShareStatus('Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to build share link:', err);
+      setShareStatus('Could not create link — please try again.');
+    }
+    setTimeout(() => setShareStatus(''), 4000);
   };
 
   const handleExportPdf = () => {
@@ -220,6 +340,8 @@ export default function App() {
       uniformFinish,
       roofOverrides,
       wallOverrides,
+      roofFacesForPricing,
+      wallFacesForPricing,
     });
   };
 
@@ -346,12 +468,22 @@ export default function App() {
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
 
-          <PriceSummary estimate={estimate} manualDiscount={manualDiscount} onManualDiscountChange={setManualDiscount} />
+          <PriceSummary
+            estimate={estimate}
+            manualDiscount={manualDiscount}
+            onManualDiscountChange={setManualDiscount}
+            readOnlyDiscount={isCustomerView}
+          />
 
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
+            <button type="button" className="btn-secondary" onClick={handleExportHtml}>Export HTML</button>
             <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
           </div>
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={handleCopyShareLink}>Copy Shareable Link</button>
+          </div>
+          {shareStatus && <div className="control-sublabel">{shareStatus}</div>}
         </aside>
       </main>
     </div>

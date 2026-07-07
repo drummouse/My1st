@@ -17,9 +17,32 @@ export function describeFacetOverrides(overrides, products, roleLabel) {
   });
 }
 
+// One row per facet, always — every slope/segment gets its effective
+// product+color spelled out (default or overridden), not just the ones the
+// customer changed, so a mixed-material house is fully documented.
+export function buildFacetTable(facesForPricing, overrides, products, globalProductId, globalColorId) {
+  return facesForPricing
+    .map(({ key, sizeSf }) => {
+      const faceId = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key;
+      const override = overrides?.[key];
+      const productId = override?.productId || globalProductId;
+      const colorId = override?.colorId || globalColorId;
+      const product = products.find((p) => p.id === productId);
+      return {
+        label: faceId,
+        productLabel: product?.label || productId,
+        color: colorById(colorId),
+        sizeSf,
+        customized: !!(override?.productId || override?.colorId),
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+}
+
 export function buildEstimateText({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   services, accessoryColors, uniformFinish, roofOverrides, wallOverrides,
+  roofFacesForPricing, wallFacesForPricing,
 }) {
   const roofColor = colorById(roofColorId);
   const wallColor = colorById(wallColorId);
@@ -48,16 +71,21 @@ export function buildEstimateText({
       });
   }
 
-  const roofOverrideLines = uniformFinish ? [] : describeFacetOverrides(roofOverrides, ROOF_PRODUCTS, 'Roof');
-  const wallOverrideLines = uniformFinish ? [] : describeFacetOverrides(wallOverrides, WALL_PRODUCTS, 'Wall');
-  if (roofOverrideLines.length || wallOverrideLines.length) {
+  const renderFacetRows = (title, facesForPricing, overrides, products, globalProductId, globalColorId) => {
+    if (!facesForPricing?.length) return;
+    const rows = buildFacetTable(facesForPricing, uniformFinish ? {} : overrides, products, globalProductId, globalColorId);
     lines.push('');
-    lines.push('PER-FACET CUSTOMIZATION (overrides the selections above for these facets only)');
+    lines.push(title);
     lines.push('-'.repeat(50));
-    [...roofOverrideLines, ...wallOverrideLines].forEach((l) => lines.push(l));
-  } else {
-    lines.push(`All roof slopes / wall segments use the material and color above (uniform).`);
-  }
+    rows.forEach((row) => {
+      const mark = row.customized ? '*' : ' ';
+      lines.push(
+        `${mark} ${String(row.label).padEnd(6)} ${row.productLabel.padEnd(30)} ${row.color.code.padEnd(12)} ${row.color.name.padEnd(18)} ${row.sizeSf.toLocaleString(undefined, { maximumFractionDigits: 1 })} sqft`
+      );
+    });
+  };
+  renderFacetRows('ROOF SLOPES (* = customized, differs from default above)', roofFacesForPricing, roofOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId);
+  renderFacetRows('WALL SEGMENTS (* = customized, differs from default above)', wallFacesForPricing, wallOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId);
 
   lines.push('');
   lines.push('PRICE BREAKDOWN');
