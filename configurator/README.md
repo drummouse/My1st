@@ -33,10 +33,22 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   an "all same" checkbox (default on); `pricingEngine.js` groups facets by
   their effective product so the price breakdown reflects any per-facet
   material changes.
-- **PDF export** (`src/lib/exportPdf.js`, via `jspdf`) — full itemized
-  estimate (selections, per-facet overrides, price breakdown, package
-  discounts, GST) plus a snapshot of the current 3D view, captured straight
-  from the WebGL canvas.
+- **PDF & text export** (`src/lib/exportPdf.js`, `src/lib/exportEstimate.js`)
+  — full itemized estimate (selections, price breakdown, package discounts,
+  GST) plus a snapshot of the current 3D view. Every roof slope and wall
+  segment gets its own row (product, color, sqft) in both formats — always,
+  not just the customized ones — matching the Label/Material/Color/Area
+  table style of the company's existing RoofRuler Wall/Roof Reports.
+- **Export HTML** — downloads a single self-contained interactive file
+  (`vite.artifact.config.js` build, inlined via
+  `scripts/build-snapshot-template.mjs`) with the current design loaded in.
+  Still fully explorable — rotate the 3D view, try other colors/profiles —
+  but the manual/override discount field is locked (colors/profiles/products
+  stay live, and automatic package-deal discounts still recalculate).
+- **Shareable design link** — "Copy Shareable Link" encodes the whole design
+  (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
+  works even if any third-party service is down. Same discount lock as the
+  HTML export. (`src/lib/designState.js`)
 
 ## Known simplification
 
@@ -58,13 +70,19 @@ npm run build      # production build to dist/
 
 ## Not yet built (Phase 2, per brief)
 
-- Live QuickBooks pricing via Make.com (currently hardcoded)
+- Live QuickBooks pricing via Make.com — the Make.com/QuickBooks/Claude
+  agent side of this (separate from the configurator app) is built and the
+  read tools are verified live; wiring it into the configurator's own
+  pricing engine hasn't been started
 - JobNimbus push
-- Shareable design links
 - Real profile (rib/panel) geometry — "profile" selectors are currently
   visual-only labels; actual rib spacing/geometry needs the supplier profile
   spec sheets (Eastside siding, Schlebach/NewTech roofing, gutter profiles)
-- A locked-down "shareable snapshot" export (frozen selections, no edit
-  controls, still-rotatable 3D view) — a PDF can't embed an interactive 3D
-  model, so this would be a separate read-only build of the app; ask if you
-  want one generated for a specific configuration
+- A rotatable **locked** 3D model embedded directly in the PDF (as opposed
+  to a flat screenshot) — investigated; the only vendor built for this
+  (PDF3D) shut down in 2023, and no free/open path exists to convert a
+  Three.js scene to the required U3D/PRC format. Current fallback: the PDF
+  stays a static screenshot + full facet report, with Export HTML and the
+  shareable link as the two genuinely rotatable options. A clickable
+  link/QR code in the PDF pointing to the live rotatable view is the
+  next-best alternative, on request.
