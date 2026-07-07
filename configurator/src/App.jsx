@@ -84,11 +84,18 @@ export default function App() {
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
 
+  // True when this load came from an exported HTML file or a shared link —
+  // both open the full editable app for a customer, so the manual/override
+  // discount field gets locked (they can still explore colors/profiles and
+  // see any automatic package-deal discounts recalculate live).
+  const [isCustomerView, setIsCustomerView] = useState(false);
+
   // Standalone HTML exports embed a frozen design as
   // window.__IRONWRAP_DESIGN__ before this bundle runs; load it once on
   // mount so the exported file opens showing that customer's exact design.
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
+      setIsCustomerView(true);
       applyDesignState(window.__IRONWRAP_DESIGN__, {
         setBrandId,
         setHouse,
@@ -117,6 +124,7 @@ export default function App() {
   useEffect(() => {
     const encoded = new URLSearchParams(window.location.search).get('d');
     if (!encoded) return;
+    setIsCustomerView(true);
     decodeDesignFromUrl(encoded)
       .then((snapshot) => {
         applyDesignState(snapshot, {
@@ -460,7 +468,12 @@ export default function App() {
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
 
-          <PriceSummary estimate={estimate} manualDiscount={manualDiscount} onManualDiscountChange={setManualDiscount} />
+          <PriceSummary
+            estimate={estimate}
+            manualDiscount={manualDiscount}
+            onManualDiscountChange={setManualDiscount}
+            readOnlyDiscount={isCustomerView}
+          />
 
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>

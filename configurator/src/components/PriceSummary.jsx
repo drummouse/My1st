@@ -1,6 +1,6 @@
 const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
-export default function PriceSummary({ estimate, manualDiscount, onManualDiscountChange }) {
+export default function PriceSummary({ estimate, manualDiscount, onManualDiscountChange, readOnlyDiscount }) {
   return (
     <div className="control-block price-summary">
       <div className="control-label">Estimate Summary</div>
@@ -26,19 +26,28 @@ export default function PriceSummary({ estimate, manualDiscount, onManualDiscoun
         </div>
       )}
 
-      <div className="price-row price-row-discount">
-        <label htmlFor="manual-discount">Additional discount</label>
-        <span className="price-discount-input">
-          $<input
-            id="manual-discount"
-            type="number"
-            min="0"
-            step="1"
-            value={manualDiscount}
-            onChange={(e) => onManualDiscountChange(Number(e.target.value) || 0)}
-          />
-        </span>
-      </div>
+      {readOnlyDiscount ? (
+        manualDiscount > 0 && (
+          <div className="price-row price-row-deal">
+            <span>Additional discount</span>
+            <span>-{money(manualDiscount)}</span>
+          </div>
+        )
+      ) : (
+        <div className="price-row price-row-discount">
+          <label htmlFor="manual-discount">Additional discount</label>
+          <span className="price-discount-input">
+            $<input
+              id="manual-discount"
+              type="number"
+              min="0"
+              step="1"
+              value={manualDiscount}
+              onChange={(e) => onManualDiscountChange(Number(e.target.value) || 0)}
+            />
+          </span>
+        </div>
+      )}
 
       <div className="price-row">
         <span>Pre-tax total</span>
