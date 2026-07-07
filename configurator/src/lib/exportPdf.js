@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
 import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { money, describeFacetOverrides } from './exportEstimate.js';
+import { money, buildFacetTable } from './exportEstimate.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
@@ -16,6 +16,7 @@ function hexToRgb(hex) {
 export function buildEstimatePdf({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   services, accessoryColors, uniformFinish, roofOverrides, wallOverrides, snapshotDataUrl,
+  roofFacesForPricing, wallFacesForPricing,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const [ar, ag, ab] = hexToRgb(brand.accent);
@@ -93,22 +94,60 @@ export function buildEstimatePdf({
   ];
   selectionLines.forEach((line) => { ensureRoom(13); doc.text(line, MARGIN, y); y += 13; });
 
-  const roofOverrideLines = uniformFinish ? [] : describeFacetOverrides(roofOverrides, ROOF_PRODUCTS, 'Roof');
-  const wallOverrideLines = uniformFinish ? [] : describeFacetOverrides(wallOverrides, WALL_PRODUCTS, 'Wall');
-  y += 6;
-  ensureRoom(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Per-Facet Customization', MARGIN, y); y += 14;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  if (roofOverrideLines.length || wallOverrideLines.length) {
-    [...roofOverrideLines, ...wallOverrideLines].forEach((line) => { ensureRoom(13); doc.text(line, MARGIN, y); y += 13; });
-  } else {
-    ensureRoom(13);
-    doc.text('All roof slopes / wall segments use the material and color above (uniform).', MARGIN, y);
-    y += 13;
-  }
+  const facetCol = { label: MARGIN, product: MARGIN + 45, swatch: PAGE_W - MARGIN - 150, color: PAGE_W - MARGIN - 135, sqft: PAGE_W - MARGIN };
+
+  const renderFacetTable = (title, rows) => {
+    y += 6;
+    ensureRoom(30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(title, MARGIN, y); y += 14;
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(110);
+    doc.text('Facet', facetCol.label, y);
+    doc.text('Product', facetCol.product, y);
+    doc.text('Color', facetCol.color, y);
+    doc.text('Sqft', facetCol.sqft, y, { align: 'right' });
+    doc.setTextColor(0);
+    y += 5;
+    doc.setDrawColor(200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 11;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    rows.forEach((row) => {
+      ensureRoom(13);
+      if (row.customized) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...hexToRgb('#A83200'));
+      }
+      doc.text(String(row.label), facetCol.label, y);
+      doc.text(row.productLabel, facetCol.product, y, { maxWidth: facetCol.swatch - facetCol.product - 8 });
+      const [cr, cg, cb] = hexToRgb(row.color.hex);
+      doc.setFillColor(cr, cg, cb);
+      doc.setDrawColor(180);
+      doc.rect(facetCol.swatch, y - 7, 9, 9, 'FD');
+      doc.text(`${row.color.code}`, facetCol.color, y, { maxWidth: facetCol.sqft - facetCol.color - 8 });
+      doc.text(row.sizeSf.toLocaleString(undefined, { maximumFractionDigits: 1 }), facetCol.sqft, y, { align: 'right' });
+      if (row.customized) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0);
+      }
+      y += 13;
+    });
+  };
+
+  const roofFacetRows = roofFacesForPricing?.length
+    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : roofOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId)
+    : [];
+  const wallFacetRows = wallFacesForPricing?.length
+    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : wallOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId)
+    : [];
+
+  if (roofFacetRows.length) renderFacetTable('Roof Slopes (bold = customized, differs from default above)', roofFacetRows);
+  if (wallFacetRows.length) renderFacetTable('Wall Segments (bold = customized, differs from default above)', wallFacetRows);
 
   // Price table
   y += 12;

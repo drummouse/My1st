@@ -260,6 +260,8 @@ export default function App() {
       uniformFinish,
       roofOverrides,
       wallOverrides,
+      roofFacesForPricing,
+      wallFacesForPricing,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
   };
@@ -330,6 +332,8 @@ export default function App() {
       uniformFinish,
       roofOverrides,
       wallOverrides,
+      roofFacesForPricing,
+      wallFacesForPricing,
     });
   };
 
