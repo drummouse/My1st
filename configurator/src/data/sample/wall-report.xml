@@ -1,0 +1,1657 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<APPLICAD_EXPORT xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file:///c:/temp/applicad-export.xsd">
+<LOCATION ADDRESS=" " CITY="" STATE="2 July 2026" POSTAL="2 July 2026" LAT="" LONG="" />
+<REFERENCE FILE=""/>
+<DATABASE FILE="RAKIEVICH SHOP.dab" MODEL="wall"/>
+<NOTES>
+</NOTES>
+<STRUCTURES NORTHORIENTATION="0.0">
+<ROOF ID="ROOF1">
+<VOLUME vol="60.694471" uom="cuft"/>
+<FACES>
+<FACE id="F1">
+<POLYGON id="P1" path="L259,L257,L254,L253,L255,L256,L258,L0,L317,L318,L319,L320,L0,L313,L314,L315,L316,L0,L306,L310,L311,L312"  size = "722.39" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F2">
+<POLYGON id="P2" path="L70,L71,L69,L58,L59,L74,L75,L73,L72,L56,L57,L60,L68,L62,L63,L61,L67,L65,L66,L257,L64,L0,L326,L327,L328,L334,L0,L322,L323,L324,L325"  size = "318.98" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F3">
+<POLYGON id="P3" path="L253,L78,L77,L76,L0,L347,L348,L349,L350,L0,L343,L344,L345,L346"  size = "707.90" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F4">
+<POLYGON id="P4" path="L8,L9,L6,L7"  size = "165.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F5">
+<POLYGON id="P5" path="L44,L41,L77,L48,L74,L43,L47,L42,L70,L45,L46,L0,L338,L339,L340,L341,L0,L335,L333,L336,L337,L0,L329,L330,L331,L332"  size = "688.17" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F6">
+<POLYGON id="P6" path="L147,L150,L151,L149,L148,L143,L242,L194,L144,L145,L146"  size = "188.96" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F7">
+<POLYGON id="P7" path="L266,L267,L268,L262,L263,L264,L265,L0,L478,L479,L480,L483,L0,L474,L475,L476,L477"  size = "78.49" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F8">
+<POLYGON id="P8" path="L95,L267,L96"  size = "33.75" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F9">
+<POLYGON id="P9" path="L262,L261,L260"  size = "33.75" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F10">
+<POLYGON id="P10" path="L231,L232,L233"  size = "33.75" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F11">
+<POLYGON id="P11" path="L186,L167,L166"  size = "33.75" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F12">
+<POLYGON id="P12" path="L190,L232,L191,L186,L187,L188,L189,L0,L469,L470,L471,L473,L0,L465,L466,L467,L468"  size = "78.49" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F13">
+<POLYGON id="P13" path="L55,L53,L54,L0,L603,L605,L606,L608,L0,L597,L598,L600,L602,L0,L590,L592,L594,L595"  size = "53.49" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F14">
+<POLYGON id="P14" path="L177,L175,L180,L172,L171,L173,L174,L176"  size = "174.98" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F15">
+<POLYGON id="P15" path="L89,L161,L177,L23"  size = "16.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F16">
+<POLYGON id="P16" path="L181,L179,L185,L178,L180"  size = "36.30" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F17">
+<POLYGON id="P17" path="L183,L164,L165,L171,L163"  size = "36.30" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F18">
+<POLYGON id="P18" path="L185,L182,L183,L184"  size = "48.30" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F19">
+<POLYGON id="P19" path="L174,L10,L101,L160"  size = "16.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F20">
+<POLYGON id="P20" path="L30,L32,L31,L28,L29"  size = "75.39" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F21">
+<POLYGON id="P21" path="L34,L33,L36,L35"  size = "77.13" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F22">
+<POLYGON id="P22" path="L12,L13,L14,L11"  size = "254.52" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F23">
+<POLYGON id="P23" path="L237,L239,L240,L238,L234,L235,L274,L236,L0,L303,L304,L308,L305,L0,L300,L301,L307,L302"  size = "294.08" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F24">
+<POLYGON id="P24" path="L246,L230,L228,L227,L237,L229,L0,L295,L296,L297,L298,L0,L291,L292,L293,L294,L0,L287,L288,L289,L290"  size = "228.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F25">
+<POLYGON id="P25" path="L251,L252,L250,L249,L247,L248,L246,L245"  size = "42.62" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F26">
+<POLYGON id="P26" path="L241,L242,L243,L244"  size = "8.62" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F27">
+<POLYGON id="P27" path="L169,L193,L241,L52"  size = "9.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F28">
+<POLYGON id="P28" path="L168,L252,L169,L170"  size = "6.37" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F29">
+<POLYGON id="P29" path="L49,L248,L50,L51"  size = "6.37" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F30">
+<POLYGON id="P30" path="L228,L230,L49,L37"  size = "4.50" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F31">
+<POLYGON id="P31" path="L123,L129,L125,L126,L127,L128,L130"  size = "9.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F32">
+<POLYGON id="P32" path="L102,L151,L131,L103"  size = "8.62" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F33">
+<POLYGON id="P33" path="L21,L106,L22,L20"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F34">
+<POLYGON id="P34" path="L21,L105,L16,L17"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F35">
+<POLYGON id="P35" path="L15,L107,L22,L18"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F36">
+<POLYGON id="P36" path="L16,L104,L15,L19"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F37">
+<POLYGON id="P37" path="L653,L652,L651,L650"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F38">
+<POLYGON id="P38" path="L651,L649,L648,L647"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F39">
+<POLYGON id="P39" path="L645,L644,L653,L646"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F40">
+<POLYGON id="P40" path="L645,L643,L648,L642"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F41">
+<POLYGON id="P41" path="L201,L197,L195,L196"  size = "4.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F42">
+<POLYGON id="P42" path="L88,L200,L196,L87"  size = "3.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F43">
+<POLYGON id="P43" path="L88,L199,L85,L84"  size = "4.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F44">
+<POLYGON id="P44" path="L197,L202,L85,L86"  size = "3.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F45">
+<POLYGON id="P45" path="L203,L205,L213,L208"  size = "3.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F46">
+<POLYGON id="P46" path="L211,L212,L213,L210"  size = "4.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F47">
+<POLYGON id="P47" path="L211,L204,L198,L207"  size = "3.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F48">
+<POLYGON id="P48" path="L198,L206,L203,L209"  size = "4.48" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F49">
+<POLYGON id="P49" path="L140,L141,L142,L139"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F50">
+<POLYGON id="P50" path="L140,L117,L111,L136"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F51">
+<POLYGON id="P51" path="L111,L119,L108,L138"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F52">
+<POLYGON id="P52" path="L108,L118,L142,L137"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F53">
+<POLYGON id="P53" path="L132,L113,L114,L112"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F54">
+<POLYGON id="P54" path="L122,L120,L134,L121"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F55">
+<POLYGON id="P55" path="L134,L135,L132,L133"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F56">
+<POLYGON id="P56" path="L114,L110,L122,L109"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F57">
+<POLYGON id="P57" path="L153,L156,L154,L152"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F58">
+<POLYGON id="P58" path="L116,L155,L153,L115"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F59">
+<POLYGON id="P59" path="L116,L158,L38,L40"  size = "5.97" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F60">
+<POLYGON id="P60" path="L38,L157,L154,L39"  size = "4.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F61">
+<POLYGON id="P61" path="L620,L220,L271,L226,L214,L225,L215,L216,L217,L224,L222,L223,L221,L621,L0,L387,L382,L389,L383,L0,L385,L386,L381,L388,L0,L377,L378,L379,L380,L0,L373,L374,L375,L376,L0,L367,L368,L369,L372,L0,L365,L366,L370,L371,L0,L360,L361,L362,L363,L0,L356,L357,L358,L359,L0,L352,L353,L354,L355"  size = "609.66" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F62">
+<POLYGON id="P62" path="L97,L221,L100,L101,L159,L164,L99,L98,L0,L454,L455,L610,L456,L0,L451,L452,L611,L453,L0,L448,L449,L612,L450,L0,L446,L445,L613,L447,L0,L441,L443,L614,L444,L0,L439,L440,L615,L442,L0,L436,L437,L616,L438,L0,L433,L434,L617,L435,L0,L430,L431,L618,L432,L0,L427,L428,L619,L429,L0,L423,L425,L364,L426,L0,L421,L422,L218,L424,L0,L418,L419,L420,L219,L0,L414,L416,L281,L417"  size = "483.43" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F63">
+<POLYGON id="P63" path="L283,L282,L81,L92,L82,L126,L125,L83,L79,L0,L583,L585,L586,L588,L0,L576,L578,L580,L581,L0,L569,L571,L573,L575,L0,L563,L564,L567,L566,L0,L556,L558,L561,L560,L0,L549,L551,L553,L554,L0,L538,L539,L541,L542,L0,L534,L546,L536,L537,L0,L529,L530,L531,L532,L0,L523,L524,L526,L527,L0,L516,L518,L519,L521,L0,L509,L511,L513,L514,L0,L503,L504,L506,L508,L0,L494,L498,L500,L502,L0,L490,L492,L493,L496,L0,L482,L485,L487,L489"  size = "470.55" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F64">
+<POLYGON id="P64" path="L33,L27,L26,L24,L32,L25,L0,L410,L411,L412,L415,L0,L406,L407,L408,L409,L0,L402,L403,L404,L405,L0,L398,L399,L401,L400,L0,L394,L395,L396,L397,L0,L384,L392,L391,L393"  size = "132.00" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F65">
+<POLYGON id="P65" path="L90,L179,L162,L89,L93,L80,L192,L91,L0,L463,L464,L269,L461,L0,L458,L459,L280,L460"  size = "71.66" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F66">
+<POLYGON id="P66" path="L83,L124,L150,L94"  size = "19.50" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F67">
+<POLYGON id="P67" path="L278,L279,L277,L285,L270,L273,L274,L272,L271,L275,L276"  size = "348.13" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F68">
+<POLYGON id="P68" path="L284,L194,L193,L251"  size = "19.50" sizeuom="sf" pitch="0.00" pitchuom="slope" orientation="-1.00" type="Wall" mat="Metal"/>
+</FACE>
+<FACE id="F69">
+<POLYGON id="P69" path="L3,L2,L1,L5,L4"  size = "95.68" sizeuom="sf" pitch="10.00" pitchuom="slope" orientation="0.00" type="Roof" mat="Low-Slope"/>
+</FACE>
+</FACES>
+<LINES>
+<LINE id="L1" path="C1,C3" type="APRON" length="35.749999" uom="lf" pitch="10.00,10.00" pitchuom="slope"/>
+<LINE id="L2" path="C5,C1" type="TUCK-UNDER" length="1.782953" uom="lf" pitch="10.00,10.00" pitchuom="slope"/>
+<LINE id="L3" path="C4,C5" type="" length="1.500000" uom="lf" pitch="10.00,10.00" pitchuom="slope"/>
+<LINE id="L4" path="C4,C2" type="FASCIA" length="37.750000" uom="lf" pitch="10.00,10.00" pitchuom="slope" soffit="0.000000" soffituom="lf"/>
+<LINE id="L5" path="C3,C2" type="STEP" length="2.603417" uom="lf" pitch="10.00,10.00" pitchuom="slope"/>
+<LINE id="L6" path="C511,C510" type="WALL-TOP" length="22.778220" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L7" path="C509,C511" type="WALL-TOP" length="9.273990" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L8" path="C508,C509" type="WALL-BASE" length="13.504230" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L9" path="C510,C508" type="WALL-BASE" length="14.248953" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L10" path="C507,C506" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L11" path="C505,C503" type="WALL-TOP" length="21.151204" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L12" path="C502,C505" type="WALL-TOP" length="22.778220" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L13" path="C501,C502" type="WALL-BASE" length="33.747519" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L14" path="C503,C501" type="WALL-CORNER" length="1.041590" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L15" path="C500,C499" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L16" path="C498,C497" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L17" path="C496,C497" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L18" path="C500,C495" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L19" path="C497,C500" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L20" path="C496,C495" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L21" path="C494,C496" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L22" path="C495,C493" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L23" path="C492,C491" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L24" path="C489,C488" type="WALL-BASE" length="1.249908" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L25" path="C487,C486" type="WALL-TOP" length="20.998457" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L26" path="C488,C485" type="WALL-CORNER" length="1.432364" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L27" path="C485,C484" type="WALL-BASE" length="19.748549" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L28" path="C483,C482" type="WALL-BASE" length="17.976515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L29" path="C481,C483" type="WALL-TOP" length="17.779587" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L30" path="C486,C481" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L31" path="C482,C489" type="WALL-BASE" length="2.511591" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L32" path="C489,C486" type="WALL-CORNER" length="7.796125" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L33" path="C487,C484" type="WALL-CORNER" length="9.228488" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L34" path="C484,C480" type="WALL-BASE" length="21.151205" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L35" path="C480,C479" type="WALL-TOP" length="17.779587" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L36" path="C479,C487" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L37" path="C478,C477" type="WALL-CORNER" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L38" path="C476,C475" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L39" path="C476,C474" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L40" path="C472,C476" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L41" path="C471,C470" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L42" path="C469,C468" type="WALL-BASE" length="13.041030" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L43" path="C467,C466" type="WALL-TOP" length="13.041025" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L44" path="C465,C464" type="WALL-TOP" length="21.241085" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L45" path="C463,C462" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L46" path="C464,C463" type="WALL-TOP" length="21.241085" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L47" path="C468,C467" type="WALL-CORNER" length="2.315668" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L48" path="C461,C460" type="WALL-BASE" length="34.997428" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L49" path="C459,C477" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L50" path="C458,C457" type="DOOR-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L51" path="C477,C458" type="WALL-BASE" length="2.124844" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L52" path="C456,C455" type="WALL-BASE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L53" path="C454,C453" type="WALL-TOP" length="12.019931" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L54" path="C452,C454" type="WALL-TOP" length="12.019931" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L55" path="C453,C452" type="WALL-BASE" length="16.998750" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L56" path="C451,C450" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L57" path="C449,C451" type="WALL-BASE" length="7.288115" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L58" path="C448,C447" type="WALL-CORNER" length="2.319168" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L59" path="C466,C448" type="WALL-TOP" length="12.051601" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L60" path="C446,C449" type="DOOR-EDGE" length="13.998971" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L61" path="C445,C444" type="DOOR-EDGE" length="13.998971" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L62" path="C443,C442" type="DOOR-EDGE" length="13.998971" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L63" path="C444,C443" type="WALL-BASE" length="3.994498" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L64" path="C462,C441" type="WALL-TOP" length="44.996694" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L65" path="C440,C439" type="DOOR-EDGE" length="13.998971" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L66" path="C438,C440" type="WALL-BASE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L67" path="C439,C445" type="DOOR-HEAD" length="11.999118" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L68" path="C442,C446" type="DOOR-HEAD" length="11.999118" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L69" path="C447,C469" type="WALL-BASE" length="12.041099" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L70" path="C469,C462" type="WALL-CORNER" length="3.680406" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L71" path="C469,C469" type="WALL-CORNER" length="0.000000" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L72" path="C450,C437" type="DOOR-HEAD" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L73" path="C437,C436" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L74" path="C461,C466" type="WALL-CORNER" length="9.999265" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L75" path="C436,C461" type="WALL-BASE" length="2.716359" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L76" path="C435,C434" type="WALL-TOP" length="44.996694" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L77" path="C434,C460" type="WALL-CORNER" length="15.998824" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L78" path="C460,C433" type="WALL-BASE" length="44.996694" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L79" path="C136,C201" type="WALL-TOP" length="32.747594" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L80" path="C135,C61" type="WALL-CORNER" length="9.499302" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L81" path="C135,C133" type="WALL-TOP" length="20.998457" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L82" path="C428,C134" type="WALL-BASE" length="70.744801" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L83" path="C427,C201" type="WALL-CORNER" length="6.499522" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L84" path="C426,C425" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L85" path="C425,C424" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L86" path="C423,C425" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L87" path="C426,C422" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L88" path="C421,C426" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L89" path="C492,C420" type="WALL-CORNER" length="8.238978" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L90" path="C419,C63" type="WALL-TOP" length="3.282190" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L91" path="C63,C62" type="WALL-TOP" length="16.024465" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L92" path="C135,C134" type="WALL-CORNER" length="8.666030" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L93" path="C61,C492" type="WALL-BASE" length="3.905963" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L94" path="C201,C418" type="WALL-TOP" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L95" path="C417,C416" type="WALL-BASE" length="11.714514" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L96" path="C416,C415" type="WALL-TOP" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L97" path="C72,C75" type="WALL-CORNER" length="0.799941" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L98" path="C75,C74" type="WALL-TOP" length="27.073543" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L99" path="C74,C414" type="WALL-TOP" length="11.836540" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L100" path="C506,C73" type="WALL-BASE" length="27.091759" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L101" path="C413,C506" type="WALL-CORNER" length="8.238978" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L102" path="C412,C411" type="DOOR-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L103" path="C411,C410" type="WALL-BASE" length="2.874789" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L104" path="C498,C499" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L105" path="C494,C498" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L106" path="C493,C494" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L107" path="C499,C493" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L108" path="C409,C408" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L109" path="C407,C406" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L110" path="C405,C404" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L111" path="C403,C402" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L112" path="C401,C407" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L113" path="C404,C400" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L114" path="C407,C404" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L115" path="C472,C399" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L116" path="C398,C472" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L117" path="C397,C403" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L118" path="C409,C396" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L119" path="C403,C409" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L120" path="C395,C405" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L121" path="C406,C394" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L122" path="C405,C406" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L123" path="C393,C410" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L124" path="C393,C427" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L125" path="C392,C427" type="WALL-CORNER" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L126" path="C428,C392" type="WALL-CORNER" length="0.166654" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L127" path="C391,C428" type="WALL-CORNER" length="0.416636" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L128" path="C390,C391" type="WALL-CORNER" length="0.416636" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L129" path="C427,C393" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L130" path="C410,C390" type="WALL-BASE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L131" path="C393,C410" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L132" path="C401,C400" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L133" path="C394,C401" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L134" path="C395,C394" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L135" path="C400,C395" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L136" path="C389,C402" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L137" path="C408,C388" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L138" path="C402,C408" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L139" path="C389,C388" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L140" path="C397,C389" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L141" path="C396,C397" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L142" path="C388,C396" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L143" path="C387,C386" type="DOOR-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L144" path="C385,C432" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L145" path="C384,C385" type="WALL-TOP" length="16.107456" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L146" path="C383,C384" type="WALL-TOP" length="16.107456" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L147" path="C418,C383" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L148" path="C386,C382" type="DOOR-HEAD" length="15.998824" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L149" path="C382,C412" type="DOOR-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L150" path="C393,C418" type="WALL-CORNER" length="6.499522" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L151" path="C412,C393" type="WALL-CORNER" length="2.874789" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L152" path="C399,C474" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L153" path="C381,C399" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L154" path="C474,C380" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L155" path="C381,C398" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L156" path="C380,C381" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L157" path="C475,C380" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L158" path="C398,C475" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L159" path="C413,C379" type="WALL-BASE" length="2.463502" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L160" path="C378,C413" type="WALL-TOP" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L161" path="C420,C377" type="WALL-TOP" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L162" path="C376,C420" type="WALL-BASE" length="2.463502" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L163" path="C375,C374" type="WALL-TOP" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L164" path="C379,C414" type="WALL-CORNER" length="10.576191" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L165" path="C373,C379" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L166" path="C372,C371" type="WALL-TOP" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L167" path="C371,C370" type="WALL-BASE" length="11.714514" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L168" path="C369,C368" type="DOOR-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L169" path="C456,C429" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L170" path="C368,C456" type="WALL-BASE" length="2.124844" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L171" path="C373,C374" type="WALL-CORNER" length="18.153759" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L172" path="C374,C367" type="WALL-TOP" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L173" path="C378,C373" type="WALL-TOP" length="2.463502" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L174" path="C507,C378" type="WALL-CORNER" length="8.238978" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L175" path="C366,C377" type="WALL-TOP" length="2.463502" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L176" path="C491,C507" type="WALL-BASE" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L177" path="C377,C491" type="WALL-CORNER" length="8.238978" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L178" path="C367,C365" type="WALL-TOP" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L179" path="C419,C376" type="WALL-CORNER" length="6.409830" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L180" path="C366,C367" type="WALL-CORNER" length="18.153759" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L181" path="C376,C366" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L182" path="C414,C419" type="WALL-BASE" length="6.508063" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L183" path="C375,C414" type="WALL-CORNER" length="7.577568" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L184" path="C365,C375" type="WALL-TOP" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L185" path="C419,C365" type="WALL-CORNER" length="11.743929" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L186" path="C372,C370" type="WALL-CORNER" length="7.499449" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L187" path="C364,C372" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L188" path="C363,C364" type="WALL-TOP" length="8.484658" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L189" path="C362,C363" type="WALL-TOP" length="8.484658" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L190" path="C361,C362" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L191" path="C370,C360" type="WALL-BASE" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L192" path="C62,C135" type="WALL-BASE" length="11.999118" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L193" path="C429,C430" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L194" path="C430,C432" type="WALL-CORNER" length="6.499522" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L195" path="C422,C423" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L196" path="C357,C422" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L197" path="C423,C356" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L198" path="C355,C354" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L199" path="C421,C424" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L200" path="C357,C421" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L201" path="C356,C357" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L202" path="C424,C356" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L203" path="C353,C352" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L204" path="C351,C354" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L205" path="C352,C350" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L206" path="C354,C352" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L207" path="C349,C355" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L208" path="C353,C348" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L209" path="C355,C353" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L210" path="C349,C348" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L211" path="C351,C349" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L212" path="C350,C351" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L213" path="C348,C350" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L214" path="C17,C16" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L215" path="C19,C18" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L216" path="C20,C19" type="WALL-BASE" length="0.244774" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L217" path="C21,C20" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L218" path="C121,C123" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L219" path="C126,C127" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L220" path="C14,C13" type="WALL-TOP" length="51.996179" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L221" path="C72,C73" type="WALL-CORNER" length="10.499228" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L222" path="C23,C22" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L223" path="C73,C23" type="WALL-BASE" length="3.801666" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L224" path="C22,C21" type="DOOR-HEAD" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L225" path="C18,C17" type="DOOR-HEAD" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L226" path="C16,C15" type="WALL-BASE" length="55.949152" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L227" path="C346,C478" type="WALL-BASE" length="24.498200" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L228" path="C478,C345" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L229" path="C344,C343" type="WALL-TOP" length="25.998090" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L230" path="C345,C459" type="WALL-CORNER" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L231" path="C360,C342" type="WALL-BASE" length="11.714514" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L232" path="C361,C360" type="WALL-CORNER" length="7.499449" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L233" path="C342,C361" type="WALL-TOP" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L234" path="C341,C340" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L235" path="C358,C341" type="WALL-BASE" length="3.280749" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L236" path="C343,C359" type="WALL-TOP" length="34.747446" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L237" path="C346,C343" type="WALL-CORNER" length="9.499302" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L238" path="C340,C339" type="DOOR-HEAD" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L239" path="C338,C346" type="WALL-BASE" length="28.466918" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L240" path="C339,C338" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L241" path="C430,C455" type="WALL-CORNER" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L242" path="C387,C430" type="WALL-CORNER" length="2.874789" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L243" path="C337,C387" type="DOOR-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L244" path="C455,C337" type="WALL-BASE" length="2.874789" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L245" path="C431,C344" type="WALL-TOP" length="14.248953" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L246" path="C344,C459" type="WALL-CORNER" length="6.499522" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L247" path="C457,C336" type="DOOR-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L248" path="C459,C457" type="WALL-CORNER" length="2.124844" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L249" path="C336,C335" type="DOOR-HEAD" length="9.999265" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L250" path="C335,C369" type="DOOR-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L251" path="C429,C431" type="WALL-CORNER" length="6.499522" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L252" path="C369,C429" type="WALL-CORNER" length="2.124844" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L253" path="C435,C433" type="WALL-CORNER" length="15.998824" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L254" path="C433,C438" type="WALL-BASE" length="34.997428" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L255" path="C333,C435" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L256" path="C332,C333" type="WALL-TOP" length="21.241085" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L257" path="C438,C441" type="WALL-CORNER" length="15.998824" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L258" path="C331,C332" type="WALL-TOP" length="21.241085" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L259" path="C441,C331" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L260" path="C330,C329" type="WALL-TOP" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L261" path="C329,C328" type="WALL-BASE" length="11.714514" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L262" path="C330,C328" type="WALL-CORNER" length="7.499449" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L263" path="C327,C330" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L264" path="C326,C327" type="WALL-TOP" length="8.484658" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L265" path="C325,C326" type="WALL-TOP" length="8.484658" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L266" path="C415,C325" type="WALL-BASE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L267" path="C417,C415" type="WALL-CORNER" length="7.499449" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L268" path="C328,C417" type="WALL-BASE" length="8.999339" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L269" path="C65,C67" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L270" path="C9,C8" type="WALL-BASE" length="2.603226" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L271" path="C14,C15" type="WALL-CORNER" length="9.499302" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L272" path="C15,C358" type="WALL-BASE" length="13.998971" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L273" path="C359,C9" type="WALL-TOP" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L274" path="C358,C359" type="WALL-CORNER" length="9.499302" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L275" path="C10,C14" type="WALL-BASE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L276" path="C11,C10" type="WALL-TOP" length="28.635478" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L277" path="C7,C12" type="WALL-BASE" length="1.249908" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L278" path="C6,C11" type="WALL-TOP" length="9.111288" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L279" path="C12,C6" type="WALL-BASE" length="15.293948" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L280" path="C69,C71" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L281" path="C129,C131" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L282" path="C133,C132" type="WALL-TOP" length="12.019932" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L283" path="C132,C136" type="WALL-TOP" length="12.019932" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L284" path="C432,C431" type="WALL-TOP" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L285" path="C8,C7" type="WALL-BASE" length="1.041590" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L286" path="C203,C202" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L287" path="C252,C255" type="WINDOW-HEAD" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L288" path="C255,C253" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L289" path="C253,C250" type="WINDOW-SILL" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L290" path="C250,C252" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L291" path="C256,C259" type="WINDOW-HEAD" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L292" path="C259,C257" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L293" path="C257,C254" type="WINDOW-SILL" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L294" path="C254,C256" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L295" path="C260,C262" type="WINDOW-HEAD" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L296" path="C262,C261" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L297" path="C261,C258" type="WINDOW-SILL" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L298" path="C258,C260" type="WINDOW-EDGE" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L299" path="C688,C204" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L300" path="C319,C318" type="WINDOW-HEAD" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L301" path="C318,C316" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L302" path="C317,C319" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L303" path="C315,C322" type="WINDOW-HEAD" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L304" path="C322,C321" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L305" path="C320,C315" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L306" path="C226,C225" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L307" path="C316,C317" type="WINDOW-SILL" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L308" path="C321,C320" type="WINDOW-SILL" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L309" path="C206,C205" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L310" path="C225,C223" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L311" path="C223,C222" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L312" path="C222,C226" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L313" path="C221,C220" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L314" path="C220,C219" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L315" path="C219,C218" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L316" path="C218,C221" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L317" path="C217,C216" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L318" path="C216,C215" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L319" path="C215,C214" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L320" path="C214,C217" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L321" path="C741,C207" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L322" path="C212,C211" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L323" path="C211,C210" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L324" path="C210,C209" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L325" path="C209,C212" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L326" path="C208,C229" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L327" path="C229,C230" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L328" path="C230,C228" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L329" path="C232,C233" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L330" path="C233,C234" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L331" path="C234,C231" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L332" path="C231,C232" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L333" path="C239,C236" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L334" path="C228,C208" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L335" path="C237,C239" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L336" path="C236,C235" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L337" path="C235,C237" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L338" path="C242,C241" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L339" path="C241,C240" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L340" path="C240,C238" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L341" path="C238,C242" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L342" path="C739,C213" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L343" path="C246,C245" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L344" path="C245,C244" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L345" path="C244,C243" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L346" path="C243,C246" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L347" path="C249,C248" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L348" path="C248,C251" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L349" path="C251,C247" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L350" path="C247,C249" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L351" path="C227,C224" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L352" path="C58,C59" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L353" path="C59,C57" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L354" path="C57,C60" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L355" path="C60,C58" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L356" path="C55,C53" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L357" path="C53,C54" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L358" path="C54,C56" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L359" path="C56,C55" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L360" path="C51,C49" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L361" path="C49,C50" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L362" path="C50,C52" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L363" path="C52,C51" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L364" path="C117,C119" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L365" path="C45,C46" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L366" path="C46,C48" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L367" path="C43,C41" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L368" path="C41,C42" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L369" path="C42,C44" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L370" path="C48,C47" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L371" path="C47,C45" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L372" path="C44,C43" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L373" path="C39,C37" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L374" path="C37,C38" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L375" path="C38,C40" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L376" path="C40,C39" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L377" path="C36,C33" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L378" path="C33,C34" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L379" path="C34,C35" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L380" path="C35,C36" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L381" path="C30,C32" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L382" path="C25,C26" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L383" path="C28,C27" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L384" path="C293,C298" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L385" path="C31,C29" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L386" path="C29,C30" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L387" path="C27,C25" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L388" path="C32,C31" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L389" path="C26,C28" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L390" path="C295,C287" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L391" path="C294,C291" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L392" path="C298,C294" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L393" path="C291,C293" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L394" path="C299,C301" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L395" path="C301,C296" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L396" path="C296,C297" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L397" path="C297,C299" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L398" path="C302,C305" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L399" path="C305,C303" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L400" path="C300,C302" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L401" path="C303,C300" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L402" path="C306,C309" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L403" path="C309,C307" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L404" path="C307,C304" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L405" path="C304,C306" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L406" path="C310,C314" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L407" path="C314,C312" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L408" path="C312,C308" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L409" path="C308,C310" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L410" path="C323,C324" type="WINDOW-SILL" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L411" path="C324,C313" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L412" path="C313,C311" type="WINDOW-HEAD" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L413" path="C347,C334" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L414" path="C130,C128" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L415" path="C311,C323" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L416" path="C128,C129" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L417" path="C131,C130" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L418" path="C127,C124" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L419" path="C124,C125" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L420" path="C125,C126" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L421" path="C122,C120" type="WINDOW-EDGE" length="2.692385" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L422" path="C120,C121" type="WINDOW-EDGE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L423" path="C118,C116" type="WINDOW-EDGE" length="2.692385" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L424" path="C123,C122" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L425" path="C116,C117" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L426" path="C119,C118" type="WINDOW-EDGE" length="1.999853" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L427" path="C114,C112" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L428" path="C112,C113" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L429" path="C115,C114" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L430" path="C110,C108" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L431" path="C108,C109" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L432" path="C111,C110" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L433" path="C106,C105" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L434" path="C105,C104" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L435" path="C107,C106" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L436" path="C102,C100" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L437" path="C100,C101" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L438" path="C103,C102" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L439" path="C98,C96" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L440" path="C96,C97" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L441" path="C94,C92" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L442" path="C99,C98" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L443" path="C92,C93" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L444" path="C95,C94" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L445" path="C88,C89" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L446" path="C90,C88" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L447" path="C91,C90" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L448" path="C86,C84" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L449" path="C84,C85" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L450" path="C87,C86" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L451" path="C81,C80" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L452" path="C80,C82" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L453" path="C83,C81" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L454" path="C78,C76" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L455" path="C76,C77" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L456" path="C79,C78" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L457" path="C717,C473" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L458" path="C70,C68" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L459" path="C68,C69" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L460" path="C71,C70" type="WINDOW-EDGE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L461" path="C67,C66" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L462" path="C722,C490" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L463" path="C66,C64" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L464" path="C64,C65" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L465" path="C264,C268" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L466" path="C268,C266" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L467" path="C266,C263" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L468" path="C263,C264" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L469" path="C267,C271" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L470" path="C271,C269" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L471" path="C269,C265" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L472" path="C732,C504" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L473" path="C265,C267" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L474" path="C272,C275" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L475" path="C275,C273" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L476" path="C273,C270" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L477" path="C270,C272" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L478" path="C276,C279" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L479" path="C279,C277" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L480" path="C277,C274" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L481" path="C513,C512" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L482" path="C199,C197" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L483" path="C274,C276" type="WINDOW-EDGE" length="4.999633" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L484" path="C524,C517" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L485" path="C197,C198" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L486" path="C515,C514" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L487" path="C198,C200" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L488" path="C518,C516" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L489" path="C200,C199" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L490" path="C195,C193" type="WINDOW-HEAD" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L491" path="C519,C520" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L492" path="C193,C194" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L493" path="C194,C196" type="WINDOW-SILL" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L494" path="C191,C189" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L495" path="C522,C521" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L496" path="C196,C195" type="WINDOW-EDGE" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L497" path="C525,C523" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L498" path="C189,C190" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L499" path="C526,C527" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L500" path="C190,C192" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L501" path="C529,C528" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L502" path="C192,C191" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L503" path="C187,C185" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L504" path="C185,C186" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L505" path="C531,C530" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L506" path="C186,C188" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L507" path="C533,C532" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L508" path="C188,C187" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L509" path="C183,C181" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L510" path="C534,C535" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L511" path="C181,C182" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L512" path="C537,C536" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L513" path="C182,C184" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L514" path="C184,C183" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L515" path="C539,C538" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L516" path="C179,C177" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L517" path="C541,C540" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L518" path="C177,C178" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L519" path="C178,C180" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L520" path="C543,C542" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L521" path="C180,C179" type="WINDOW-EDGE" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L522" path="C545,C544" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L523" path="C175,C173" type="DOOR-HEAD" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L524" path="C173,C174" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L525" path="C547,C546" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L526" path="C174,C176" type="WINDOW-SILL" length="2.999780" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L527" path="C176,C175" type="DOOR-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L528" path="C549,C548" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L529" path="C170,C171" type="WINDOW-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L530" path="C171,C169" type="WINDOW-HEAD" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L531" path="C169,C172" type="WINDOW-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L532" path="C172,C170" type="WINDOW-SILL" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L533" path="C551,C550" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L534" path="C167,C165" type="WINDOW-HEAD" length="6.275581" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L535" path="C553,C552" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L536" path="C166,C168" type="WINDOW-SILL" length="6.275581" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L537" path="C168,C167" type="WINDOW-EDGE" length="1.083254" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L538" path="C162,C161" type="WINDOW-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L539" path="C161,C163" type="WINDOW-SILL" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L540" path="C555,C554" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L541" path="C163,C164" type="WINDOW-EDGE" length="6.999486" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L542" path="C164,C162" type="WINDOW-HEAD" length="1.499890" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L543" path="C557,C556" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L544" path="C558,C560" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L545" path="C559,C561" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L546" path="C165,C166" type="WINDOW-EDGE" length="1.083254" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L547" path="C563,C562" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L548" path="C565,C564" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L549" path="C158,C159" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L550" path="C567,C566" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L551" path="C159,C157" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L552" path="C569,C568" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L553" path="C157,C160" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L554" path="C160,C158" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L555" path="C571,C570" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L556" path="C155,C153" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L557" path="C573,C572" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L558" path="C153,C154" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L559" path="C575,C574" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L560" path="C156,C155" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L561" path="C154,C156" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L562" path="C577,C576" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L563" path="C150,C149" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L564" path="C149,C151" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L565" path="C579,C578" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L566" path="C152,C150" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L567" path="C151,C152" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L568" path="C581,C580" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L569" path="C146,C147" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L570" path="C583,C582" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L571" path="C147,C145" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L572" path="C584,C593" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L573" path="C145,C148" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L574" path="C586,C585" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L575" path="C148,C146" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L576" path="C143,C141" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L577" path="C587,C588" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L578" path="C141,C142" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L579" path="C590,C589" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L580" path="C142,C144" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L581" path="C144,C143" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L582" path="C592,C591" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L583" path="C138,C137" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L584" path="C594,C593" type="OUTSIDE-DIRECTION" length="7.856537" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L585" path="C137,C139" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L586" path="C139,C140" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L587" path="C596,C595" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L588" path="C140,C138" type="WINDOW-EDGE" length="5.999559" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L589" path="C607,C601" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L590" path="C280,C285" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L591" path="C598,C597" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L592" path="C285,C281" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L593" path="C600,C599" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L594" path="C281,C278" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L595" path="C278,C280" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L596" path="C603,C602" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L597" path="C288,C284" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L598" path="C284,C282" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L599" path="C605,C604" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L600" path="C282,C283" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L601" path="C608,C606" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L602" path="C283,C288" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L603" path="C289,C292" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L604" path="C610,C609" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L605" path="C292,C290" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L606" path="C290,C286" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L607" path="C612,C611" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L608" path="C286,C289" type="WINDOW-EDGE" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L609" path="C687,C686" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L610" path="C77,C79" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L611" path="C82,C83" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L612" path="C85,C87" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L613" path="C89,C91" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L614" path="C93,C95" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L615" path="C97,C99" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L616" path="C101,C103" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L617" path="C104,C107" type="WINDOW-HEAD" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L618" path="C109,C111" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L619" path="C113,C115" type="WINDOW-SILL" length="2.499816" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L620" path="C13,C24" type="WALL-TOP" length="14.848151" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L621" path="C24,C72" type="WALL-TOP" length="13.434042" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L622" path="C614,C613" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L623" path="C616,C615" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L624" path="C618,C617" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L625" path="C620,C619" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L626" path="C622,C621" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L627" path="C624,C623" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L628" path="C625,C634" type="" length="3.278953" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L629" path="C627,C626" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L630" path="C629,C628" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L631" path="C631,C630" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L632" path="C633,C632" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L633" path="C635,C634" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L634" path="C637,C636" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L635" path="C639,C638" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L636" path="C641,C640" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L637" path="C643,C642" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L638" path="C645,C644" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L639" path="C647,C646" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L640" path="C649,C648" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L641" path="C651,C650" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L642" path="C652,C654" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L643" path="C655,C653" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L644" path="C653,C659" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L645" path="C653,C652" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L646" path="C652,C658" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L647" path="C656,C654" type="WALL-TOP" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L648" path="C654,C655" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L649" path="C657,C655" type="WALL-BASE" length="0.999927" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L650" path="C658,C656" type="WALL-TOP" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L651" path="C656,C657" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L652" path="C659,C657" type="WALL-BASE" length="1.493515" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L653" path="C659,C658" type="WALL-CORNER" length="3.999706" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L654" path="C661,C660" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L655" path="C663,C662" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L656" path="C665,C664" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L657" path="C668,C666" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L658" path="C669,C667" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L659" path="C671,C670" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L660" path="C672,C673" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L661" path="C675,C674" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L662" path="C677,C676" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L663" path="C679,C678" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L664" path="C681,C680" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L665" path="C682,C683" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L666" path="C685,C684" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L667" path="C694,C689" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L668" path="C691,C690" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L669" path="C693,C692" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L670" path="C696,C695" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L671" path="C698,C697" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L672" path="C700,C699" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L673" path="C701,C702" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L674" path="C704,C703" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L675" path="C719,C718" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L676" path="C707,C705" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L677" path="C708,C706" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L678" path="C710,C709" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L679" path="C712,C711" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L680" path="C715,C713" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L681" path="C716,C714" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L682" path="C721,C720" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L683" path="C733,C723" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L684" path="C725,C724" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L685" path="C728,C726" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L686" path="C729,C727" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L687" path="C731,C730" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L688" path="C735,C734" type="OUTSIDE-DIRECTION" length="7.861058" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L689" path="C737,C736" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+<LINE id="L690" path="C738,C740" type="" length="3.280840" uom="lf" pitch="0.00,0.00" pitchuom="slope"/>
+</LINES>
+<POINTS>
+<POINT id="C1" data="115.604140,179.260167,27.815566"/>
+<POINT id="C2" data="151.354139,181.260168,26.148899"/>
+<POINT id="C3" data="151.354139,179.260167,27.815566"/>
+<POINT id="C4" data="113.604139,181.260168,26.148899"/>
+<POINT id="C5" data="114.517951,180.346356,26.910409"/>
+<POINT id="C6" data="150.351585,166.259212,38.648103"/>
+<POINT id="C7" data="150.351585,179.258257,28.857157"/>
+<POINT id="C8" data="150.351585,179.258257,27.815566"/>
+<POINT id="C9" data="150.351585,181.258110,26.149022"/>
+<POINT id="C10" data="150.351586,195.257082,26.149022"/>
+<POINT id="C11" data="150.351585,173.258698,44.481008"/>
+<POINT id="C12" data="150.351585,178.008348,28.857157"/>
+<POINT id="C13" data="202.347765,193.257228,26.149022"/>
+<POINT id="C14" data="150.351586,193.257228,26.149022"/>
+<POINT id="C15" data="150.351586,193.257228,16.649720"/>
+<POINT id="C16" data="206.300738,193.257228,16.649720"/>
+<POINT id="C17" data="206.300738,193.257228,23.649206"/>
+<POINT id="C18" data="212.300297,193.257228,23.649206"/>
+<POINT id="C19" data="212.300297,193.257228,16.649720"/>
+<POINT id="C20" data="212.545071,193.257228,16.649720"/>
+<POINT id="C21" data="212.545071,193.257228,23.649206"/>
+<POINT id="C22" data="218.544630,193.257228,23.649206"/>
+<POINT id="C23" data="218.544630,193.257228,16.649720"/>
+<POINT id="C24" data="212.846994,193.257228,36.648250"/>
+<POINT id="C25" data="202.946818,193.257228,19.649500"/>
+<POINT id="C26" data="202.946818,193.257228,23.649206"/>
+<POINT id="C27" data="200.447001,193.257228,19.649500"/>
+<POINT id="C28" data="200.447001,193.257228,23.649206"/>
+<POINT id="C29" data="195.707766,193.257228,19.649500"/>
+<POINT id="C30" data="195.707766,193.257228,23.649206"/>
+<POINT id="C31" data="193.207950,193.257228,19.649500"/>
+<POINT id="C32" data="193.207950,193.257228,23.649206"/>
+<POINT id="C33" data="189.395730,193.257228,19.649500"/>
+<POINT id="C34" data="189.395730,193.257228,23.649206"/>
+<POINT id="C35" data="186.895914,193.257228,23.649206"/>
+<POINT id="C36" data="186.895914,193.257228,19.649500"/>
+<POINT id="C37" data="184.958556,193.257228,18.649573"/>
+<POINT id="C38" data="184.958556,193.257228,23.649206"/>
+<POINT id="C39" data="182.458740,193.257228,18.649573"/>
+<POINT id="C40" data="182.458740,193.257228,23.649206"/>
+<POINT id="C41" data="182.229590,193.257228,18.649573"/>
+<POINT id="C42" data="182.229590,193.257228,23.649206"/>
+<POINT id="C43" data="179.729774,193.257228,18.649573"/>
+<POINT id="C44" data="179.729774,193.257228,23.649206"/>
+<POINT id="C45" data="176.506052,193.257228,18.649573"/>
+<POINT id="C46" data="179.005869,193.257228,18.649573"/>
+<POINT id="C47" data="176.506052,193.257228,23.649206"/>
+<POINT id="C48" data="179.005869,193.257228,23.649206"/>
+<POINT id="C49" data="176.276902,193.257228,18.649573"/>
+<POINT id="C50" data="176.276902,193.257228,23.649206"/>
+<POINT id="C51" data="173.777086,193.257228,18.649573"/>
+<POINT id="C52" data="173.777086,193.257228,23.649206"/>
+<POINT id="C53" data="171.917848,193.257228,19.649500"/>
+<POINT id="C54" data="171.917848,193.257228,23.649206"/>
+<POINT id="C55" data="169.418031,193.257228,19.649500"/>
+<POINT id="C56" data="169.418031,193.257228,23.649206"/>
+<POINT id="C57" data="169.074307,193.257228,23.649206"/>
+<POINT id="C58" data="166.574490,193.257228,19.649500"/>
+<POINT id="C59" data="169.074307,193.257228,19.649500"/>
+<POINT id="C60" data="166.574490,193.257228,23.649206"/>
+<POINT id="C61" data="222.346295,153.260168,16.649720"/>
+<POINT id="C62" data="222.346295,141.261049,26.149022"/>
+<POINT id="C63" data="222.346296,156.644535,30.635872"/>
+<POINT id="C64" data="222.346295,154.229367,18.582198"/>
+<POINT id="C65" data="222.346295,154.229367,23.581830"/>
+<POINT id="C66" data="222.346295,156.729183,18.582198"/>
+<POINT id="C67" data="222.346295,156.729183,23.581830"/>
+<POINT id="C68" data="222.346295,156.729183,24.753619"/>
+<POINT id="C69" data="222.346295,156.729183,23.753693"/>
+<POINT id="C70" data="222.346295,154.229367,24.753619"/>
+<POINT id="C71" data="222.346295,154.229367,23.753693"/>
+<POINT id="C72" data="222.346296,193.257228,27.148948"/>
+<POINT id="C73" data="222.346296,193.257228,16.649720"/>
+<POINT id="C74" data="222.346296,173.258698,44.481008"/>
+<POINT id="C75" data="222.346296,194.057170,27.148948"/>
+<POINT id="C76" data="222.346295,167.639840,18.582198"/>
+<POINT id="C77" data="222.346295,167.639840,23.581830"/>
+<POINT id="C78" data="222.346295,170.139656,18.582198"/>
+<POINT id="C79" data="222.346295,170.139656,23.581830"/>
+<POINT id="C80" data="222.346295,170.139656,24.753619"/>
+<POINT id="C81" data="222.346295,167.639840,24.753619"/>
+<POINT id="C82" data="222.346295,170.139656,23.753693"/>
+<POINT id="C83" data="222.346295,167.639840,23.753693"/>
+<POINT id="C84" data="222.346294,172.644680,18.582198"/>
+<POINT id="C85" data="222.346294,172.644680,23.581830"/>
+<POINT id="C86" data="222.346294,175.144496,18.582198"/>
+<POINT id="C87" data="222.346294,175.144496,23.581830"/>
+<POINT id="C88" data="222.346294,175.451766,18.582198"/>
+<POINT id="C89" data="222.346294,175.451766,23.581830"/>
+<POINT id="C90" data="222.346293,177.951582,18.582198"/>
+<POINT id="C91" data="222.346293,177.951582,23.581830"/>
+<POINT id="C92" data="222.346294,175.144496,24.753619"/>
+<POINT id="C93" data="222.346294,175.144496,23.753693"/>
+<POINT id="C94" data="222.346294,172.644680,24.753619"/>
+<POINT id="C95" data="222.346294,172.644680,23.753693"/>
+<POINT id="C96" data="222.346293,177.951582,24.753619"/>
+<POINT id="C97" data="222.346293,177.951582,23.753693"/>
+<POINT id="C98" data="222.346294,175.451766,24.753619"/>
+<POINT id="C99" data="222.346294,175.451766,23.753693"/>
+<POINT id="C100" data="222.346292,185.841627,18.582198"/>
+<POINT id="C101" data="222.346292,185.841627,23.581830"/>
+<POINT id="C102" data="222.346291,188.341443,18.582198"/>
+<POINT id="C103" data="222.346291,188.341443,23.581830"/>
+<POINT id="C104" data="222.346291,188.648712,23.581830"/>
+<POINT id="C105" data="222.346291,188.648712,18.582198"/>
+<POINT id="C106" data="222.346291,191.148529,18.582198"/>
+<POINT id="C107" data="222.346291,191.148529,23.581830"/>
+<POINT id="C108" data="222.346291,191.148529,24.753619"/>
+<POINT id="C109" data="222.346291,191.148529,23.753693"/>
+<POINT id="C110" data="222.346291,188.648712,24.753619"/>
+<POINT id="C111" data="222.346291,188.648712,23.753693"/>
+<POINT id="C112" data="222.346291,188.341443,24.753619"/>
+<POINT id="C113" data="222.346291,188.341443,23.753693"/>
+<POINT id="C114" data="222.346292,185.841627,24.753619"/>
+<POINT id="C115" data="222.346292,185.841627,23.753693"/>
+<POINT id="C116" data="222.346294,175.144496,34.226882"/>
+<POINT id="C117" data="222.346294,175.144496,33.226955"/>
+<POINT id="C118" data="222.346294,172.644680,35.226808"/>
+<POINT id="C119" data="222.346294,172.644680,33.226955"/>
+<POINT id="C120" data="222.346295,170.139656,35.226808"/>
+<POINT id="C121" data="222.346295,170.139656,33.226955"/>
+<POINT id="C122" data="222.346295,167.639840,34.226882"/>
+<POINT id="C123" data="222.346295,167.639840,33.226955"/>
+<POINT id="C124" data="222.346295,170.139656,28.055460"/>
+<POINT id="C125" data="222.346295,167.639840,28.055460"/>
+<POINT id="C126" data="222.346295,167.639840,33.055093"/>
+<POINT id="C127" data="222.346295,170.139656,33.055093"/>
+<POINT id="C128" data="222.346294,172.644680,28.055460"/>
+<POINT id="C129" data="222.346294,172.644680,33.055093"/>
+<POINT id="C130" data="222.346294,175.144496,28.055460"/>
+<POINT id="C131" data="222.346294,175.144496,33.055093"/>
+<POINT id="C132" data="192.848463,153.260168,34.648397"/>
+<POINT id="C133" data="201.347839,153.260168,26.149022"/>
+<POINT id="C134" data="222.346295,153.260168,17.482992"/>
+<POINT id="C135" data="222.346295,153.260168,26.149022"/>
+<POINT id="C136" data="184.349088,153.260168,26.149022"/>
+<POINT id="C137" data="218.210458,153.260168,19.547448"/>
+<POINT id="C138" data="220.710274,153.260168,19.547448"/>
+<POINT id="C139" data="218.210458,153.260168,25.547007"/>
+<POINT id="C140" data="220.710274,153.260168,25.547007"/>
+<POINT id="C141" data="215.424205,153.260168,19.547448"/>
+<POINT id="C142" data="215.424205,153.260168,25.547007"/>
+<POINT id="C143" data="217.924021,153.260168,19.547448"/>
+<POINT id="C144" data="217.924021,153.260168,25.547007"/>
+<POINT id="C145" data="212.700446,153.260168,25.547007"/>
+<POINT id="C146" data="215.200263,153.260168,19.547448"/>
+<POINT id="C147" data="212.700446,153.260168,19.547448"/>
+<POINT id="C148" data="215.200263,153.260168,25.547007"/>
+<POINT id="C149" data="207.164395,153.260168,19.547448"/>
+<POINT id="C150" data="209.664211,153.260168,19.547448"/>
+<POINT id="C151" data="207.164395,153.260168,25.547007"/>
+<POINT id="C152" data="209.664211,153.260168,25.547007"/>
+<POINT id="C153" data="204.378141,153.260168,19.547448"/>
+<POINT id="C154" data="204.378141,153.260168,25.547007"/>
+<POINT id="C155" data="206.877958,153.260168,19.547448"/>
+<POINT id="C156" data="206.877958,153.260168,25.547007"/>
+<POINT id="C157" data="201.654383,153.260168,25.547007"/>
+<POINT id="C158" data="204.154199,153.260168,19.547448"/>
+<POINT id="C159" data="201.654383,153.260168,19.547448"/>
+<POINT id="C160" data="204.154199,153.260168,25.547007"/>
+<POINT id="C161" data="196.104890,153.260168,17.710121"/>
+<POINT id="C162" data="196.104890,153.260168,24.709607"/>
+<POINT id="C163" data="194.605000,153.260168,17.710121"/>
+<POINT id="C164" data="194.605000,153.260168,24.709607"/>
+<POINT id="C165" data="196.104890,153.260168,25.995971"/>
+<POINT id="C166" data="196.104890,153.260168,24.912717"/>
+<POINT id="C167" data="189.829310,153.260168,25.995971"/>
+<POINT id="C168" data="189.829310,153.260168,24.912717"/>
+<POINT id="C169" data="191.329199,153.260168,24.709607"/>
+<POINT id="C170" data="189.829310,153.260168,17.710121"/>
+<POINT id="C171" data="189.829310,153.260168,24.709607"/>
+<POINT id="C172" data="191.329199,153.260168,17.710121"/>
+<POINT id="C173" data="194.448762,153.260168,24.709607"/>
+<POINT id="C174" data="194.448762,153.260168,17.710121"/>
+<POINT id="C175" data="191.448982,153.260168,24.709607"/>
+<POINT id="C176" data="191.448982,153.260168,17.710121"/>
+<POINT id="C177" data="184.857985,153.260168,25.547007"/>
+<POINT id="C178" data="184.857985,153.260168,21.547301"/>
+<POINT id="C179" data="182.358169,153.260168,25.547007"/>
+<POINT id="C180" data="182.358169,153.260168,21.547301"/>
+<POINT id="C181" data="178.775099,153.260168,25.547007"/>
+<POINT id="C182" data="178.775099,153.260168,19.547448"/>
+<POINT id="C183" data="176.275283,153.260168,25.547007"/>
+<POINT id="C184" data="176.275283,153.260168,19.547448"/>
+<POINT id="C185" data="175.988845,153.260168,25.547007"/>
+<POINT id="C186" data="175.988845,153.260168,19.547448"/>
+<POINT id="C187" data="173.489029,153.260168,25.547007"/>
+<POINT id="C188" data="173.489029,153.260168,19.547448"/>
+<POINT id="C189" data="173.265087,153.260168,25.547007"/>
+<POINT id="C190" data="173.265087,153.260168,19.547448"/>
+<POINT id="C191" data="170.765271,153.260168,25.547007"/>
+<POINT id="C192" data="170.765271,153.260168,19.547448"/>
+<POINT id="C193" data="167.270736,153.260168,25.547007"/>
+<POINT id="C194" data="167.270736,153.260168,24.047117"/>
+<POINT id="C195" data="163.271030,153.260168,25.547007"/>
+<POINT id="C196" data="163.271030,153.260168,24.047117"/>
+<POINT id="C197" data="157.505828,153.260168,25.547007"/>
+<POINT id="C198" data="157.505828,153.260168,19.547448"/>
+<POINT id="C199" data="155.006012,153.260168,25.547007"/>
+<POINT id="C200" data="155.006012,153.260168,19.547448"/>
+<POINT id="C201" data="151.601494,153.260168,26.149022"/>
+<POINT id="C202" data="39.431981,-32.940280,8.933221"/>
+<POINT id="C203" data="42.712821,-32.940280,8.933221"/>
+<POINT id="C204" data="49.633496,-30.866967,8.915916"/>
+<POINT id="C205" data="10.626301,-6.121046,4.090801"/>
+<POINT id="C206" data="13.907140,-6.121046,4.090801"/>
+<POINT id="C207" data="23.870940,-10.147215,3.493972"/>
+<POINT id="C208" data="82.687985,213.181713,2.150785"/>
+<POINT id="C209" data="84.890948,213.181713,6.150491"/>
+<POINT id="C210" data="82.891095,213.181713,6.150491"/>
+<POINT id="C211" data="82.891095,213.181713,2.150785"/>
+<POINT id="C212" data="84.890948,213.181713,2.150785"/>
+<POINT id="C213" data="23.289795,4.459085,2.947906"/>
+<POINT id="C214" data="46.584279,218.655616,13.446824"/>
+<POINT id="C215" data="46.584279,222.655322,13.446824"/>
+<POINT id="C216" data="46.584279,222.655322,11.946935"/>
+<POINT id="C217" data="46.584279,218.655616,11.946935"/>
+<POINT id="C218" data="46.584279,228.274701,13.446824"/>
+<POINT id="C219" data="46.584279,232.274407,13.446824"/>
+<POINT id="C220" data="46.584279,232.274407,11.946935"/>
+<POINT id="C221" data="46.584279,228.274701,11.946935"/>
+<POINT id="C222" data="46.584279,237.997945,13.446824"/>
+<POINT id="C223" data="46.584279,241.997651,13.446824"/>
+<POINT id="C224" data="174.975553,-44.237722,23.058980"/>
+<POINT id="C225" data="46.584279,241.997651,11.946935"/>
+<POINT id="C226" data="46.584279,237.997945,11.946935"/>
+<POINT id="C227" data="174.975553,-52.098779,23.058980"/>
+<POINT id="C228" data="82.687985,213.181713,6.150491"/>
+<POINT id="C229" data="80.688132,213.181713,2.150785"/>
+<POINT id="C230" data="80.688132,213.181713,6.150491"/>
+<POINT id="C231" data="91.580973,228.606150,13.324676"/>
+<POINT id="C232" data="91.580973,232.605856,13.324676"/>
+<POINT id="C233" data="91.580973,232.605856,11.824786"/>
+<POINT id="C234" data="91.580973,228.606150,11.824786"/>
+<POINT id="C235" data="91.580973,220.808513,7.367809"/>
+<POINT id="C236" data="91.580973,220.808513,3.368103"/>
+<POINT id="C237" data="91.580973,222.808366,7.367809"/>
+<POINT id="C238" data="91.580973,220.605403,3.368103"/>
+<POINT id="C239" data="91.580973,222.808366,3.368103"/>
+<POINT id="C240" data="91.580973,220.605403,7.367809"/>
+<POINT id="C241" data="91.580973,218.605550,7.367809"/>
+<POINT id="C242" data="91.580973,218.605550,3.368103"/>
+<POINT id="C243" data="79.974929,248.179141,13.038522"/>
+<POINT id="C244" data="83.974635,248.179141,13.038522"/>
+<POINT id="C245" data="83.974635,248.179141,11.538632"/>
+<POINT id="C246" data="79.974929,248.179141,11.538632"/>
+<POINT id="C247" data="56.200634,248.179141,13.038522"/>
+<POINT id="C248" data="60.200340,248.179141,11.538632"/>
+<POINT id="C249" data="56.200634,248.179141,11.538632"/>
+<POINT id="C250" data="115.604139,169.841697,20.895948"/>
+<POINT id="C251" data="60.200340,248.179141,13.038522"/>
+<POINT id="C252" data="115.604139,169.841697,23.895727"/>
+<POINT id="C253" data="115.604139,168.341807,20.895948"/>
+<POINT id="C254" data="115.604139,168.237648,20.895948"/>
+<POINT id="C255" data="115.604139,168.341807,23.895727"/>
+<POINT id="C256" data="115.604139,168.237648,23.895727"/>
+<POINT id="C257" data="115.604139,166.737759,20.895948"/>
+<POINT id="C258" data="115.604139,166.633600,20.895948"/>
+<POINT id="C259" data="115.604139,166.737759,23.895727"/>
+<POINT id="C260" data="115.604139,166.633600,23.895727"/>
+<POINT id="C261" data="115.604139,165.133710,20.895948"/>
+<POINT id="C262" data="115.604139,165.133710,23.895727"/>
+<POINT id="C263" data="156.549512,153.760131,29.842700"/>
+<POINT id="C264" data="156.549512,153.760131,34.842333"/>
+<POINT id="C265" data="159.215982,153.760131,29.842700"/>
+<POINT id="C266" data="159.049328,153.760131,29.842700"/>
+<POINT id="C267" data="159.215982,153.760131,34.842333"/>
+<POINT id="C268" data="159.049328,153.760131,34.842333"/>
+<POINT id="C269" data="161.715799,153.760131,29.842700"/>
+<POINT id="C270" data="170.798464,153.760131,29.842700"/>
+<POINT id="C271" data="161.715799,153.760131,34.842333"/>
+<POINT id="C272" data="170.798464,153.760131,34.842333"/>
+<POINT id="C273" data="173.298281,153.760131,29.842700"/>
+<POINT id="C274" data="173.464935,153.760131,29.842700"/>
+<POINT id="C275" data="173.298281,153.760131,34.842333"/>
+<POINT id="C276" data="173.464935,153.760131,34.842333"/>
+<POINT id="C277" data="175.964752,153.760131,29.842700"/>
+<POINT id="C278" data="206.556111,155.260021,31.146856"/>
+<POINT id="C279" data="175.964752,153.760131,34.842333"/>
+<POINT id="C280" data="206.556111,155.260021,33.646673"/>
+<POINT id="C281" data="209.055927,155.260021,31.146856"/>
+<POINT id="C282" data="211.764062,155.260021,31.146856"/>
+<POINT id="C283" data="209.264245,155.260021,31.146856"/>
+<POINT id="C284" data="211.764062,155.260021,33.646673"/>
+<POINT id="C285" data="209.055927,155.260021,33.646673"/>
+<POINT id="C286" data="211.972380,155.260021,31.146856"/>
+<POINT id="C287" data="70.458919,-18.358437,13.370711"/>
+<POINT id="C288" data="209.264245,155.260021,33.646673"/>
+<POINT id="C289" data="211.972380,155.260021,33.646673"/>
+<POINT id="C290" data="214.472196,155.260021,31.146856"/>
+<POINT id="C291" data="186.855986,193.507210,35.243816"/>
+<POINT id="C292" data="214.472196,155.260021,33.646673"/>
+<POINT id="C293" data="186.855986,193.507210,30.244183"/>
+<POINT id="C294" data="188.855839,193.507210,35.243816"/>
+<POINT id="C295" data="70.458919,-21.639277,13.370711"/>
+<POINT id="C296" data="186.595588,193.507210,35.243816"/>
+<POINT id="C297" data="184.595735,193.507210,35.243816"/>
+<POINT id="C298" data="188.855839,193.507210,30.244183"/>
+<POINT id="C299" data="184.595735,193.507210,30.244183"/>
+<POINT id="C300" data="182.335485,193.507210,35.243816"/>
+<POINT id="C301" data="186.595588,193.507210,30.244183"/>
+<POINT id="C302" data="182.335485,193.507210,30.244183"/>
+<POINT id="C303" data="184.335338,193.507210,35.243816"/>
+<POINT id="C304" data="179.335705,193.507210,35.243816"/>
+<POINT id="C305" data="184.335338,193.507210,30.244183"/>
+<POINT id="C306" data="179.335705,193.507210,30.244183"/>
+<POINT id="C307" data="181.335558,193.507210,35.243816"/>
+<POINT id="C308" data="177.075455,193.507210,35.243816"/>
+<POINT id="C309" data="181.335558,193.507210,30.244183"/>
+<POINT id="C310" data="177.075455,193.507210,30.244183"/>
+<POINT id="C311" data="174.815204,193.507210,35.243816"/>
+<POINT id="C312" data="179.075308,193.507210,35.243816"/>
+<POINT id="C313" data="176.815057,193.507210,35.243816"/>
+<POINT id="C314" data="179.075308,193.507210,30.244183"/>
+<POINT id="C315" data="125.660951,179.258257,24.612676"/>
+<POINT id="C316" data="136.071645,179.258257,23.112787"/>
+<POINT id="C317" data="141.071277,179.258257,23.112787"/>
+<POINT id="C318" data="136.071645,179.258257,24.612676"/>
+<POINT id="C319" data="141.071277,179.258257,24.612676"/>
+<POINT id="C320" data="125.660951,179.258257,23.112787"/>
+<POINT id="C321" data="120.661319,179.258257,23.112787"/>
+<POINT id="C322" data="120.661319,179.258257,24.612676"/>
+<POINT id="C323" data="174.815204,193.507210,30.244183"/>
+<POINT id="C324" data="176.815057,193.507210,30.244183"/>
+<POINT id="C325" data="179.099474,153.760131,35.731651"/>
+<POINT id="C326" data="173.099914,153.760131,41.731210"/>
+<POINT id="C327" data="167.100355,153.760131,35.731651"/>
+<POINT id="C328" data="168.600245,153.760131,28.232202"/>
+<POINT id="C329" data="168.600245,162.759470,35.731651"/>
+<POINT id="C330" data="168.600245,153.760131,35.731651"/>
+<POINT id="C331" data="46.584279,211.681823,15.149830"/>
+<POINT id="C332" data="46.584279,230.680427,24.649132"/>
+<POINT id="C333" data="46.584279,249.679031,15.149830"/>
+<POINT id="C334" data="201.223171,-67.627577,28.555544"/>
+<POINT id="C335" data="127.728248,153.260168,24.649132"/>
+<POINT id="C336" data="117.728983,153.260168,24.649132"/>
+<POINT id="C337" data="132.727881,150.260388,16.649720"/>
+<POINT id="C338" data="144.071057,179.258257,16.649720"/>
+<POINT id="C339" data="144.071057,179.258257,23.649206"/>
+<POINT id="C340" data="147.070836,179.258257,23.649206"/>
+<POINT id="C341" data="147.070836,179.258257,16.649720"/>
+<POINT id="C342" data="163.350631,162.759470,35.731651"/>
+<POINT id="C343" data="115.604139,179.258257,26.149022"/>
+<POINT id="C344" data="115.604139,153.260168,26.149022"/>
+<POINT id="C345" data="115.604139,154.760057,19.649500"/>
+<POINT id="C346" data="115.604139,179.258257,16.649720"/>
+<POINT id="C347" data="209.084229,-67.627575,28.555544"/>
+<POINT id="C348" data="221.346369,140.261123,20.482772"/>
+<POINT id="C349" data="221.346369,141.754638,20.482772"/>
+<POINT id="C350" data="221.346369,140.261123,17.482992"/>
+<POINT id="C351" data="221.346369,141.754638,17.482992"/>
+<POINT id="C352" data="220.346443,140.261123,17.482992"/>
+<POINT id="C353" data="220.346443,140.261123,20.482772"/>
+<POINT id="C354" data="220.346443,141.754638,17.482992"/>
+<POINT id="C355" data="220.346443,141.754638,20.482772"/>
+<POINT id="C356" data="211.883523,140.261123,17.482992"/>
+<POINT id="C357" data="211.883523,141.754638,17.482992"/>
+<POINT id="C358" data="150.351585,179.258257,16.649720"/>
+<POINT id="C359" data="150.351585,179.258257,26.149022"/>
+<POINT id="C360" data="163.350631,153.760131,28.232202"/>
+<POINT id="C361" data="163.350631,153.760131,35.731651"/>
+<POINT id="C362" data="164.850521,153.760131,35.731651"/>
+<POINT id="C363" data="158.850961,153.760131,41.731210"/>
+<POINT id="C364" data="152.851402,153.760131,35.731651"/>
+<POINT id="C365" data="222.346295,159.165984,44.481008"/>
+<POINT id="C366" data="224.346148,159.165984,26.327249"/>
+<POINT id="C367" data="224.346148,159.165984,44.481008"/>
+<POINT id="C368" data="127.728248,153.260168,16.649720"/>
+<POINT id="C369" data="127.728248,153.260168,19.649500"/>
+<POINT id="C370" data="154.351292,153.760131,28.232202"/>
+<POINT id="C371" data="154.351292,162.759470,35.731651"/>
+<POINT id="C372" data="154.351292,153.760131,35.731651"/>
+<POINT id="C373" data="224.346148,164.165616,26.327249"/>
+<POINT id="C374" data="224.346148,164.165616,44.481008"/>
+<POINT id="C375" data="222.346295,164.165616,44.481008"/>
+<POINT id="C376" data="222.346295,159.165984,26.327249"/>
+<POINT id="C377" data="224.346148,157.166131,24.888698"/>
+<POINT id="C378" data="224.346148,166.165469,24.888698"/>
+<POINT id="C379" data="222.346295,164.165616,26.327249"/>
+<POINT id="C380" data="192.416203,203.141919,16.772107"/>
+<POINT id="C381" data="192.416203,204.635434,16.772107"/>
+<POINT id="C382" data="148.726705,150.260388,24.649132"/>
+<POINT id="C383" data="152.601421,150.260388,26.149022"/>
+<POINT id="C384" data="140.227330,150.260388,36.460764"/>
+<POINT id="C385" data="127.853239,150.260388,26.149022"/>
+<POINT id="C386" data="132.727881,150.260388,24.649132"/>
+<POINT id="C387" data="132.727881,150.260388,19.649500"/>
+<POINT id="C388" data="221.065140,208.605059,20.771813"/>
+<POINT id="C389" data="221.065140,210.098574,20.771813"/>
+<POINT id="C390" data="151.601494,153.260168,16.649720"/>
+<POINT id="C391" data="151.601494,153.260168,17.066356"/>
+<POINT id="C392" data="151.601494,153.260168,17.649646"/>
+<POINT id="C393" data="151.601494,150.260388,19.649500"/>
+<POINT id="C394" data="205.347545,210.098574,20.771813"/>
+<POINT id="C395" data="205.347545,210.098574,16.772107"/>
+<POINT id="C396" data="221.065140,208.605059,16.772107"/>
+<POINT id="C397" data="221.065140,210.098574,16.772107"/>
+<POINT id="C398" data="191.416277,204.635434,16.772107"/>
+<POINT id="C399" data="192.416203,204.635434,20.771813"/>
+<POINT id="C400" data="206.347471,210.098574,16.772107"/>
+<POINT id="C401" data="206.347471,210.098574,20.771813"/>
+<POINT id="C402" data="220.065213,210.098574,20.771813"/>
+<POINT id="C403" data="220.065213,210.098574,16.772107"/>
+<POINT id="C404" data="206.347471,208.605059,16.772107"/>
+<POINT id="C405" data="205.347545,208.605059,16.772107"/>
+<POINT id="C406" data="205.347545,208.605059,20.771813"/>
+<POINT id="C407" data="206.347471,208.605059,20.771813"/>
+<POINT id="C408" data="220.065213,208.605059,20.771813"/>
+<POINT id="C409" data="220.065213,208.605059,16.772107"/>
+<POINT id="C410" data="151.601494,150.260388,16.649720"/>
+<POINT id="C411" data="148.726705,150.260388,16.649720"/>
+<POINT id="C412" data="148.726705,150.260388,19.649500"/>
+<POINT id="C413" data="222.346295,166.165469,24.888698"/>
+<POINT id="C414" data="222.346296,164.165616,36.903440"/>
+<POINT id="C415" data="177.599584,153.760131,35.731651"/>
+<POINT id="C416" data="177.599584,162.759470,35.731651"/>
+<POINT id="C417" data="177.599584,153.760131,28.232202"/>
+<POINT id="C418" data="151.601494,150.260388,26.149022"/>
+<POINT id="C419" data="222.346296,159.165984,32.737079"/>
+<POINT id="C420" data="222.346295,157.166131,24.888698"/>
+<POINT id="C421" data="210.883596,141.754638,17.482992"/>
+<POINT id="C422" data="211.883523,141.754638,20.482772"/>
+<POINT id="C423" data="211.883523,140.261123,20.482772"/>
+<POINT id="C424" data="210.883596,140.261123,17.482992"/>
+<POINT id="C425" data="210.883596,140.261123,20.482772"/>
+<POINT id="C426" data="210.883596,141.754638,20.482772"/>
+<POINT id="C427" data="151.601494,153.260168,19.649500"/>
+<POINT id="C428" data="151.601494,153.260168,17.482992"/>
+<POINT id="C429" data="129.853092,153.260168,19.649500"/>
+<POINT id="C430" data="129.853092,150.260388,19.649500"/>
+<POINT id="C431" data="129.853092,153.260168,26.149022"/>
+<POINT id="C432" data="129.853092,150.260388,26.149022"/>
+<POINT id="C433" data="46.584279,248.179141,-0.848994"/>
+<POINT id="C434" data="91.580973,248.179141,15.149830"/>
+<POINT id="C435" data="46.584279,248.179141,15.149830"/>
+<POINT id="C436" data="88.864614,213.181713,-0.848994"/>
+<POINT id="C437" data="88.864614,213.181713,6.150491"/>
+<POINT id="C438" data="46.584279,213.181713,-0.848994"/>
+<POINT id="C439" data="50.583985,213.181713,13.149977"/>
+<POINT id="C440" data="50.583985,213.181713,-0.848994"/>
+<POINT id="C441" data="46.584279,213.181713,15.149830"/>
+<POINT id="C442" data="66.577602,213.181713,13.149977"/>
+<POINT id="C443" data="66.577602,213.181713,-0.848994"/>
+<POINT id="C444" data="62.583103,213.181713,-0.848994"/>
+<POINT id="C445" data="62.583103,213.181713,13.149977"/>
+<POINT id="C446" data="78.576720,213.181713,13.149977"/>
+<POINT id="C447" data="79.529372,213.181713,11.469439"/>
+<POINT id="C448" data="79.529372,213.181713,9.150271"/>
+<POINT id="C449" data="78.576720,213.181713,-0.848994"/>
+<POINT id="C450" data="85.864834,213.181713,6.150491"/>
+<POINT id="C451" data="85.864834,213.181713,-0.848994"/>
+<POINT id="C452" data="219.346516,155.260021,30.232056"/>
+<POINT id="C453" data="202.347766,155.260021,30.232056"/>
+<POINT id="C454" data="210.847141,155.260021,38.731431"/>
+<POINT id="C455" data="129.853092,150.260388,16.649720"/>
+<POINT id="C456" data="129.853092,153.260168,16.649720"/>
+<POINT id="C457" data="117.728983,153.260168,19.649500"/>
+<POINT id="C458" data="117.728983,153.260168,16.649720"/>
+<POINT id="C459" data="115.604139,153.260168,19.649500"/>
+<POINT id="C460" data="91.580973,248.179141,-0.848994"/>
+<POINT id="C461" data="91.580973,213.181713,-0.848994"/>
+<POINT id="C462" data="91.580973,213.181713,15.149830"/>
+<POINT id="C463" data="91.580973,211.681823,15.149830"/>
+<POINT id="C464" data="91.580973,230.680427,24.649132"/>
+<POINT id="C465" data="91.580973,249.679031,15.149830"/>
+<POINT id="C466" data="91.580973,213.181713,9.150271"/>
+<POINT id="C467" data="91.580973,226.222738,9.150271"/>
+<POINT id="C468" data="91.580973,226.222738,11.465939"/>
+<POINT id="C469" data="91.570470,213.181713,11.469439"/>
+<POINT id="C470" data="91.580973,248.179141,15.149830"/>
+<POINT id="C471" data="91.580973,249.679031,15.149830"/>
+<POINT id="C472" data="191.416277,204.635434,20.771813"/>
+<POINT id="C473" data="201.223168,-91.400769,25.899357"/>
+<POINT id="C474" data="192.416203,203.141919,20.771813"/>
+<POINT id="C475" data="191.416277,203.141919,16.772107"/>
+<POINT id="C476" data="191.416277,203.141919,20.771813"/>
+<POINT id="C477" data="115.604139,153.260168,16.649720"/>
+<POINT id="C478" data="115.604139,154.760057,16.649720"/>
+<POINT id="C479" data="171.600025,194.507137,36.835736"/>
+<POINT id="C480" data="171.600025,177.258404,41.147920"/>
+<POINT id="C481" data="192.598482,194.507137,36.835736"/>
+<POINT id="C482" data="192.598482,191.068346,29.639635"/>
+<POINT id="C483" data="192.598482,177.258404,41.147920"/>
+<POINT id="C484" data="171.600025,193.507210,27.607248"/>
+<POINT id="C485" data="191.348573,193.507210,27.607248"/>
+<POINT id="C486" data="192.598482,193.507210,36.835736"/>
+<POINT id="C487" data="171.600025,193.507210,36.835736"/>
+<POINT id="C488" data="191.348573,193.507210,29.039612"/>
+<POINT id="C489" data="192.598482,193.507210,29.039612"/>
+<POINT id="C490" data="60.724592,-41.508700,14.400298"/>
+<POINT id="C491" data="224.346148,157.166131,16.649720"/>
+<POINT id="C492" data="222.346295,157.166131,16.649720"/>
+<POINT id="C493" data="186.348941,140.261123,17.482992"/>
+<POINT id="C494" data="186.348941,141.754638,17.482992"/>
+<POINT id="C495" data="186.348941,140.261123,21.482698"/>
+<POINT id="C496" data="186.348941,141.754638,21.482698"/>
+<POINT id="C497" data="185.349014,141.754638,21.482698"/>
+<POINT id="C498" data="185.349014,141.754638,17.482992"/>
+<POINT id="C499" data="185.349014,140.261123,17.482992"/>
+<POINT id="C500" data="185.349014,140.261123,21.482698"/>
+<POINT id="C501" data="149.351659,179.258257,27.815566"/>
+<POINT id="C502" data="115.604140,179.258257,27.815566"/>
+<POINT id="C503" data="149.351659,179.258257,28.857157"/>
+<POINT id="C504" data="66.671442,-41.508700,14.400298"/>
+<POINT id="C505" data="133.102853,179.258257,42.397828"/>
+<POINT id="C506" data="222.346295,166.165469,16.649720"/>
+<POINT id="C507" data="224.346148,166.165469,16.649720"/>
+<POINT id="C508" data="129.853093,153.260168,27.815566"/>
+<POINT id="C509" data="140.227330,153.260167,36.460764"/>
+<POINT id="C510" data="115.604140,153.260168,27.815566"/>
+<POINT id="C511" data="133.102853,153.260168,42.397828"/>
+<POINT id="C512" data="115.980505,-84.234783,33.747712"/>
+<POINT id="C513" data="115.980505,-92.095840,33.747711"/>
+<POINT id="C514" data="127.127622,-87.234562,27.732121"/>
+<POINT id="C515" data="127.127622,-95.095620,27.732121"/>
+<POINT id="C516" data="156.476456,-88.596097,33.231835"/>
+<POINT id="C517" data="171.860677,-84.234782,22.609844"/>
+<POINT id="C518" data="164.337513,-88.596097,33.231835"/>
+<POINT id="C519" data="155.338175,-88.596097,33.231835"/>
+<POINT id="C520" data="147.477117,-88.596097,33.231835"/>
+<POINT id="C521" data="142.227503,-88.596097,33.231835"/>
+<POINT id="C522" data="150.088561,-88.596097,33.231835"/>
+<POINT id="C523" data="133.228164,-88.596097,33.231835"/>
+<POINT id="C524" data="171.860677,-92.095840,22.609844"/>
+<POINT id="C525" data="141.089222,-88.596097,33.231835"/>
+<POINT id="C526" data="211.084078,-83.690208,28.635087"/>
+<POINT id="C527" data="203.223021,-83.690208,28.635087"/>
+<POINT id="C528" data="210.084152,-96.050935,20.769207"/>
+<POINT id="C529" data="210.084152,-88.189877,20.769207"/>
+<POINT id="C530" data="210.084152,-78.328966,35.404128"/>
+<POINT id="C531" data="210.084152,-86.190024,35.404128"/>
+<POINT id="C532" data="210.084152,-73.329334,35.404129"/>
+<POINT id="C533" data="210.084152,-81.190391,35.404129"/>
+<POINT id="C534" data="209.084225,-83.869889,39.575767"/>
+<POINT id="C535" data="216.945283,-83.869889,39.575767"/>
+<POINT id="C536" data="210.084152,-71.329481,20.769213"/>
+<POINT id="C537" data="210.084152,-79.190538,20.769213"/>
+<POINT id="C538" data="187.197469,-57.362192,35.434037"/>
+<POINT id="C539" data="179.336411,-57.362192,35.434037"/>
+<POINT id="C540" data="166.199012,-57.255750,35.282951"/>
+<POINT id="C541" data="158.337954,-57.255750,35.282951"/>
+<POINT id="C542" data="119.798161,-73.958808,32.687864"/>
+<POINT id="C543" data="119.798161,-66.097751,32.687864"/>
+<POINT id="C544" data="109.466546,-84.234782,23.778961"/>
+<POINT id="C545" data="109.466546,-92.095840,23.778961"/>
+<POINT id="C546" data="118.028416,-87.234562,18.149610"/>
+<POINT id="C547" data="118.028416,-95.095620,18.149610"/>
+<POINT id="C548" data="108.729964,-93.595730,18.149610"/>
+<POINT id="C549" data="116.591022,-93.595730,18.149610"/>
+<POINT id="C550" data="115.528600,-84.234782,18.149610"/>
+<POINT id="C551" data="115.528600,-92.095840,18.149610"/>
+<POINT id="C552" data="103.404491,-84.234782,18.149610"/>
+<POINT id="C553" data="103.404491,-92.095840,18.149610"/>
+<POINT id="C554" data="94.481011,-91.345902,18.149610"/>
+<POINT id="C555" data="102.342069,-91.345902,18.149610"/>
+<POINT id="C556" data="130.478366,-93.595730,18.149610"/>
+<POINT id="C557" data="138.339424,-93.595730,18.149610"/>
+<POINT id="C558" data="136.902030,-95.095620,18.149610"/>
+<POINT id="C559" data="173.086871,-104.348127,19.482845"/>
+<POINT id="C560" data="136.902030,-87.234562,18.149610"/>
+<POINT id="C561" data="165.225813,-104.348127,19.482845"/>
+<POINT id="C562" data="172.586907,-95.740312,19.482845"/>
+<POINT id="C563" data="172.586907,-103.601370,19.482845"/>
+<POINT id="C564" data="172.586907,-97.233827,19.482845"/>
+<POINT id="C565" data="172.586907,-105.094885,19.482845"/>
+<POINT id="C566" data="164.225886,-104.348127,19.482845"/>
+<POINT id="C567" data="172.086944,-104.348127,19.482845"/>
+<POINT id="C568" data="190.760395,-104.348127,18.982882"/>
+<POINT id="C569" data="198.621453,-104.348127,18.982882"/>
+<POINT id="C570" data="198.121489,-111.462427,18.982882"/>
+<POINT id="C571" data="198.121489,-103.601370,18.982882"/>
+<POINT id="C572" data="189.760468,-104.348127,18.982882"/>
+<POINT id="C573" data="197.621526,-104.348127,18.982882"/>
+<POINT id="C574" data="198.121489,-112.955942,18.982882"/>
+<POINT id="C575" data="198.121489,-105.094885,18.982882"/>
+<POINT id="C576" data="207.584336,-97.233827,18.982882"/>
+<POINT id="C577" data="207.584336,-105.094885,18.982882"/>
+<POINT id="C578" data="200.223241,-104.348127,18.982882"/>
+<POINT id="C579" data="208.084299,-104.348127,18.982882"/>
+<POINT id="C580" data="207.584336,-95.740312,18.982882"/>
+<POINT id="C581" data="207.584336,-103.601370,18.982882"/>
+<POINT id="C582" data="214.945430,-104.348127,18.982882"/>
+<POINT id="C583" data="207.084372,-104.348127,18.982882"/>
+<POINT id="C584" data="207.803070,-36.004191,18.771960"/>
+<POINT id="C585" data="207.303106,-27.396376,18.771960"/>
+<POINT id="C586" data="207.303106,-35.257434,18.771960"/>
+<POINT id="C587" data="206.803143,-36.004191,18.771960"/>
+<POINT id="C588" data="198.942085,-36.004191,18.771960"/>
+<POINT id="C589" data="207.303106,-44.612006,18.771960"/>
+<POINT id="C590" data="207.303106,-36.750949,18.771960"/>
+<POINT id="C591" data="200.946459,-36.004191,18.771960"/>
+<POINT id="C592" data="193.085401,-36.004191,18.771960"/>
+<POINT id="C593" data="199.942012,-36.004191,18.771960"/>
+<POINT id="C594" data="192.085474,-36.004191,18.771960"/>
+<POINT id="C595" data="192.585438,-43.118491,18.771960"/>
+<POINT id="C596" data="192.585438,-35.257434,18.771960"/>
+<POINT id="C597" data="192.585438,-44.612006,18.771960"/>
+<POINT id="C598" data="192.585438,-36.750949,18.771960"/>
+<POINT id="C599" data="171.293075,-41.467331,18.771960"/>
+<POINT id="C600" data="179.154133,-41.467331,18.771960"/>
+<POINT id="C601" data="82.511526,-34.321036,13.897637"/>
+<POINT id="C602" data="178.654170,-48.581631,18.771960"/>
+<POINT id="C603" data="178.654170,-40.720574,18.771960"/>
+<POINT id="C604" data="170.293149,-41.467331,18.771960"/>
+<POINT id="C605" data="178.154207,-41.467331,18.771960"/>
+<POINT id="C606" data="178.654170,-34.353031,18.771960"/>
+<POINT id="C607" data="82.511526,-37.601876,13.897637"/>
+<POINT id="C608" data="178.654170,-42.214089,18.771960"/>
+<POINT id="C609" data="197.701771,-82.234929,33.299439"/>
+<POINT id="C610" data="197.701771,-90.095987,33.299439"/>
+<POINT id="C611" data="159.748133,-99.456934,34.503838"/>
+<POINT id="C612" data="159.748133,-91.595877,34.503838"/>
+<POINT id="C613" data="74.561943,-14.337358,7.834543"/>
+<POINT id="C614" data="74.561943,-17.618198,7.834543"/>
+<POINT id="C615" data="71.072442,-17.306536,7.834543"/>
+<POINT id="C616" data="74.353282,-17.306536,7.834543"/>
+<POINT id="C617" data="74.561943,-20.275714,7.834543"/>
+<POINT id="C618" data="74.561943,-16.994874,7.834543"/>
+<POINT id="C619" data="71.489765,-17.306536,7.834543"/>
+<POINT id="C620" data="74.770605,-17.306536,7.834543"/>
+<POINT id="C621" data="80.376207,-18.618977,7.834543"/>
+<POINT id="C622" data="80.376207,-15.338137,7.834543"/>
+<POINT id="C623" data="80.376207,-17.995653,7.834543"/>
+<POINT id="C624" data="80.376207,-14.714813,7.834543"/>
+<POINT id="C625" data="80.167545,-15.026475,7.834543"/>
+<POINT id="C626" data="83.865708,-15.026475,7.834543"/>
+<POINT id="C627" data="80.584868,-15.026475,7.834543"/>
+<POINT id="C628" data="86.518677,-18.618977,7.834543"/>
+<POINT id="C629" data="86.518677,-15.338137,7.834543"/>
+<POINT id="C630" data="83.029176,-15.026475,7.834543"/>
+<POINT id="C631" data="86.310016,-15.026475,7.834543"/>
+<POINT id="C632" data="86.518677,-11.433973,7.834543"/>
+<POINT id="C633" data="86.518677,-14.714813,7.834543"/>
+<POINT id="C634" data="83.446499,-15.026475,7.834543"/>
+<POINT id="C635" data="86.727338,-15.026475,7.834543"/>
+<POINT id="C636" data="89.708228,-43.550056,7.922572"/>
+<POINT id="C637" data="86.427388,-43.550056,7.922572"/>
+<POINT id="C638" data="86.636049,-39.957555,7.922572"/>
+<POINT id="C639" data="86.636049,-43.238394,7.922572"/>
+<POINT id="C640" data="83.563871,-43.550056,7.922572"/>
+<POINT id="C641" data="86.844711,-43.550056,7.922572"/>
+<POINT id="C642" data="86.636049,-40.580878,7.922572"/>
+<POINT id="C643" data="86.636049,-43.861718,7.922572"/>
+<POINT id="C644" data="82.686697,-47.142558,7.922572"/>
+<POINT id="C645" data="82.686697,-43.861718,7.922572"/>
+<POINT id="C646" data="79.197196,-43.550056,7.922572"/>
+<POINT id="C647" data="82.478036,-43.550056,7.922572"/>
+<POINT id="C648" data="82.686697,-46.519234,7.922572"/>
+<POINT id="C649" data="82.686697,-43.238394,7.922572"/>
+<POINT id="C650" data="79.614519,-43.550056,7.922572"/>
+<POINT id="C651" data="82.895359,-43.550056,7.922572"/>
+<POINT id="C652" data="201.066609,141.754638,21.482698"/>
+<POINT id="C653" data="201.066609,141.754638,17.482992"/>
+<POINT id="C654" data="201.066609,140.261123,21.482698"/>
+<POINT id="C655" data="201.066609,140.261123,17.482992"/>
+<POINT id="C656" data="200.066683,140.261123,21.482698"/>
+<POINT id="C657" data="200.066683,140.261123,17.482992"/>
+<POINT id="C658" data="200.066683,141.754638,21.482698"/>
+<POINT id="C659" data="200.066683,141.754638,17.482992"/>
+<POINT id="C660" data="68.540249,-43.550056,8.131234"/>
+<POINT id="C661" data="71.821088,-43.550056,8.131234"/>
+<POINT id="C662" data="72.029750,-40.580878,8.131234"/>
+<POINT id="C663" data="72.029750,-43.861718,8.131234"/>
+<POINT id="C664" data="72.029750,-39.957555,8.131234"/>
+<POINT id="C665" data="72.029750,-43.238394,8.131234"/>
+<POINT id="C666" data="68.957571,-43.550056,8.131234"/>
+<POINT id="C667" data="57.136541,-36.407650,7.574803"/>
+<POINT id="C668" data="72.238411,-43.550056,8.131234"/>
+<POINT id="C669" data="57.136541,-39.688490,7.574803"/>
+<POINT id="C670" data="54.455603,-39.062505,7.574803"/>
+<POINT id="C671" data="57.736443,-39.062505,7.574803"/>
+<POINT id="C672" data="42.712821,-38.123532,7.574803"/>
+<POINT id="C673" data="39.431981,-38.123532,7.574803"/>
+<POINT id="C674" data="43.156226,-35.155681,7.574803"/>
+<POINT id="C675" data="43.156226,-38.436521,7.574803"/>
+<POINT id="C676" data="48.216266,-35.155681,7.574803"/>
+<POINT id="C677" data="48.216266,-38.436521,7.574803"/>
+<POINT id="C678" data="45.378831,-39.062505,7.574803"/>
+<POINT id="C679" data="48.659671,-39.062505,7.574803"/>
+<POINT id="C680" data="49.259573,-36.407650,7.574803"/>
+<POINT id="C681" data="49.259573,-39.688490,7.574803"/>
+<POINT id="C682" data="116.591022,-93.595730,22.899261"/>
+<POINT id="C683" data="124.452080,-93.595730,22.899261"/>
+<POINT id="C684" data="45.686246,-35.155681,9.924233"/>
+<POINT id="C685" data="45.686246,-38.436521,9.924233"/>
+<POINT id="C686" data="145.499180,-99.456934,34.503838"/>
+<POINT id="C687" data="145.499180,-91.595877,34.503838"/>
+<POINT id="C688" data="49.633496,-27.586128,8.915916"/>
+<POINT id="C689" data="168.823118,-43.987740,32.036897"/>
+<POINT id="C690" data="49.998182,-30.866968,13.642394"/>
+<POINT id="C691" data="49.998182,-27.586128,13.642394"/>
+<POINT id="C692" data="144.950573,-63.373024,29.165259"/>
+<POINT id="C693" data="137.089515,-63.373024,29.165259"/>
+<POINT id="C694" data="168.823118,-51.848797,32.036897"/>
+<POINT id="C695" data="55.803521,10.684191,7.063331"/>
+<POINT id="C696" data="55.803521,2.823133,7.063331"/>
+<POINT id="C697" data="69.363739,-23.895888,14.725463"/>
+<POINT id="C698" data="66.082900,-23.895888,14.725463"/>
+<POINT id="C699" data="78.127519,-23.940312,14.788519"/>
+<POINT id="C700" data="74.846679,-23.940312,14.788519"/>
+<POINT id="C701" data="78.318902,-13.961357,9.934154"/>
+<POINT id="C702" data="70.457845,-13.961357,9.934154"/>
+<POINT id="C703" data="57.195975,-24.313237,8.371732"/>
+<POINT id="C704" data="57.195975,-32.174295,8.371732"/>
+<POINT id="C705" data="87.679356,-29.769608,8.668104"/>
+<POINT id="C706" data="90.542873,-35.003392,16.517085"/>
+<POINT id="C707" data="87.679356,-33.050448,8.668104"/>
+<POINT id="C708" data="87.262033,-35.003392,16.517085"/>
+<POINT id="C709" data="87.679356,-30.604254,14.776037"/>
+<POINT id="C710" data="87.679356,-33.885094,14.776037"/>
+<POINT id="C711" data="87.679356,-32.690868,14.776037"/>
+<POINT id="C712" data="87.679356,-35.971708,14.776037"/>
+<POINT id="C713" data="87.679356,-40.087194,8.668101"/>
+<POINT id="C714" data="84.815839,-34.928401,11.950954"/>
+<POINT id="C715" data="87.679356,-36.806354,8.668101"/>
+<POINT id="C716" data="88.096679,-34.928401,11.950954"/>
+<POINT id="C717" data="209.084226,-91.400768,25.899356"/>
+<POINT id="C718" data="25.461151,-14.666334,9.801766"/>
+<POINT id="C719" data="33.322209,-14.666334,9.801766"/>
+<POINT id="C720" data="118.924355,-73.958808,21.362984"/>
+<POINT id="C721" data="118.924355,-66.097750,21.362984"/>
+<POINT id="C722" data="60.724592,-38.227860,14.400298"/>
+<POINT id="C723" data="94.481011,-78.926568,21.404448"/>
+<POINT id="C724" data="55.603241,-36.975891,13.869423"/>
+<POINT id="C725" data="58.884081,-36.975891,13.869423"/>
+<POINT id="C726" data="59.359146,-36.975891,13.869423"/>
+<POINT id="C727" data="61.550091,-36.975891,13.869423"/>
+<POINT id="C728" data="62.639986,-36.975891,13.869423"/>
+<POINT id="C729" data="64.830931,-36.975891,13.869423"/>
+<POINT id="C730" data="65.305997,-36.975891,13.869423"/>
+<POINT id="C731" data="68.586837,-36.975891,13.869423"/>
+<POINT id="C732" data="66.671442,-38.227860,14.400298"/>
+<POINT id="C733" data="102.342069,-78.926568,21.404448"/>
+<POINT id="C734" data="130.478366,-93.595730,22.899261"/>
+<POINT id="C735" data="138.339424,-93.595730,22.899261"/>
+<POINT id="C736" data="53.057158,-36.407650,11.574098"/>
+<POINT id="C737" data="53.057158,-39.688490,11.574098"/>
+<POINT id="C738" data="48.404870,-38.436521,14.084725"/>
+<POINT id="C739" data="23.289795,1.178245,2.947906"/>
+<POINT id="C740" data="48.404870,-35.155681,14.084726"/>
+<POINT id="C741" data="23.870940,-13.428055,3.493972"/>
+</POINTS>
+</ROOF>
+</STRUCTURES>
+</APPLICAD_EXPORT>
