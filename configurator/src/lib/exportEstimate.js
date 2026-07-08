@@ -3,19 +3,7 @@ import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
 
 export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
-const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
-
-export function describeFacetOverrides(overrides, products, roleLabel) {
-  return Object.entries(overrides || {}).map(([key, val]) => {
-    const faceId = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key;
-    const product = val.productId ? products.find((p) => p.id === val.productId) : null;
-    const color = val.colorId ? colorById(val.colorId) : null;
-    const parts = [];
-    if (product) parts.push(product.label);
-    if (color) parts.push(`${color.name} (${color.code})`);
-    return `${roleLabel} Facet ${faceId}: ${parts.join(', ') || 'custom'}`;
-  });
-}
+export const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
 
 // One row per facet, always — every slope/segment gets its effective
 // product+color spelled out (default or overridden), not just the ones the

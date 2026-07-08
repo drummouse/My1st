@@ -1,12 +1,11 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
 import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { money, buildFacetTable } from './exportEstimate.js';
+import { money, buildFacetTable, ACCESSORY_LABELS } from './exportEstimate.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
 const PAGE_H = 792;
-const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
 
 function hexToRgb(hex) {
   const v = hex.replace('#', '');
