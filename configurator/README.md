@@ -132,8 +132,15 @@ centered on its own footprint and auto-stacked on top of the layers before
 it by bounding-box height, rather than merged into one seamless coordinate
 space. This is called out in the brief as an accepted MVP limitation ("house
 geometry: simplified — proof of concept") and is surfaced in the viewer's
-on-screen caption. The Layer Position Adjustment control lets you manually
-nudge any one layer if the auto-stack doesn't line it up correctly.
+on-screen caption. The **Position** control lets you manually nudge any one
+layer if the auto-stack doesn't line it up correctly — docked as a small
+overlay in the 3D view's bottom-left corner (`src/components/AssemblyAdjustment.jsx`)
+rather than a full-width panel, so it never crowds out the model itself.
+On a fine pointer (mouse/trackpad) it stays open with compact sliders; on a
+coarse pointer (touch) it starts collapsed to just its toggle and, once
+opened, swaps the sliders for tap-friendly +/- step buttons instead — no
+custom drag gesture to conflict with the 3D view's own single-finger-rotate /
+two-finger-zoom touch handling.
 
 - **Auto-updating PWA** (`src/main.jsx`) — the app installs a service worker
   (`vite-plugin-pwa`) for offline/installable use, but a plain registration

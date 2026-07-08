@@ -522,15 +522,15 @@ export default function App() {
                     onClose={() => setSelectedFacet(null)}
                   />
                 )}
+                <AssemblyAdjustment
+                  layers={house.layers}
+                  layerOffsets={layerOffsets}
+                  activeLayerId={activeLayerId}
+                  onActiveLayerChange={setActiveLayerId}
+                  onChange={handleLayerOffsetChange}
+                  onReset={handleResetLayerOffset}
+                />
               </div>
-              <AssemblyAdjustment
-                layers={house.layers}
-                layerOffsets={layerOffsets}
-                activeLayerId={activeLayerId}
-                onActiveLayerChange={setActiveLayerId}
-                onChange={handleLayerOffsetChange}
-                onReset={handleResetLayerOffset}
-              />
             </>
           )}
         </section>
