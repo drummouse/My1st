@@ -130,6 +130,59 @@ body {
 .facet-inspector .control-select { margin-bottom: 0.55rem; }
 .facet-inspector .field-label { margin-bottom: 0.2rem; }
 
+/* Docked over the 3D view (bottom-left), not stacked below it — small
+   footprint, collapsed to just the toggle on touch so nothing sits over the
+   model until asked for. */
+.assembly-dock {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  max-width: min(200px, calc(100% - 1.2rem));
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  font-size: 0.68rem;
+  overflow: hidden;
+}
+.assembly-dock-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #374151;
+  padding: 0.35rem 0.55rem;
+}
+.assembly-dock-chevron { color: #9ca3af; }
+.assembly-dock-body { padding: 0 0.55rem 0.5rem; }
+.assembly-dock-select { font-size: 0.68rem; padding: 0.15rem 0.3rem; margin-bottom: 0.4rem; }
+
+.adjust-row-compact { font-size: 0.68rem; margin-bottom: 0.3rem; gap: 0.2rem 0.35rem; }
+.adjust-row-compact input[type="range"] { height: 0.9rem; }
+.adjust-row-compact .adjust-number { width: 44px; font-size: 0.68rem; padding: 0.1rem 0.2rem; }
+
+.adjust-stepper-row { margin-bottom: 0.35rem; }
+.adjust-stepper-row label { display: block; color: #374151; margin-bottom: 0.15rem; }
+.adjust-stepper { display: flex; align-items: center; gap: 0.35rem; }
+.adjust-stepper button {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.adjust-stepper-value { flex: 1 1 auto; text-align: center; color: #111827; }
+
+.assembly-dock-reset { font-size: 0.66rem; padding: 0.25rem 0.4rem; width: 100%; margin-top: 0.15rem; }
+
 /* Minimized: collapse the viewer pane to just its toolbar, controls take the rest. */
 .app-body.viewer-minimized .viewer-pane { flex: 0 0 auto; align-self: flex-start; }
 .app-body.viewer-minimized .controls-pane { flex: 1 1 auto; }
@@ -193,6 +246,7 @@ body {
   font-size: 0.85rem;
 }
 .control-select-secondary { margin-top: 0.4rem; }
+.control-select[readonly] { background: #f3f4f6; color: #6b7280; cursor: default; }
 
 .color-series { margin-bottom: 0.35rem; }
 .color-series-label {
@@ -222,6 +276,54 @@ body {
 }
 .color-swatch.selected { border-color: var(--brand-accent); box-shadow: 0 0 0 2px #fff inset; }
 
+.color-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.color-row .control-label { margin: 0; }
+
+.color-picker-btn-wrap { position: relative; flex: 0 0 auto; }
+.color-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 148px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 7px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: #1f2937;
+}
+.color-picker-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.color-picker-btn-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  flex: 0 0 auto;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.color-picker-btn-swatch-mixed {
+  background: repeating-conic-gradient(#9ca3af 0% 25%, #e5e7eb 0% 50%) 0 0 / 10px 10px;
+}
+.color-picker-btn-label { flex: 1 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.color-picker-popover {
+  position: fixed;
+  z-index: 500;
+  width: 520px;
+  max-width: calc(100vw - 2rem);
+  max-height: 620px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+  padding: 0.9rem 1rem;
+}
+.color-picker-popover .color-grid { grid-template-columns: repeat(10, 1fr); gap: 0.5rem; }
+.color-picker-popover .color-series { margin-bottom: 0.6rem; }
+.color-picker-popover .color-series-label { font-size: 0.78rem; }
+
 .service-row {
   display: flex;
   flex-wrap: wrap;
@@ -235,7 +337,6 @@ body {
 .service-qty { width: 60px; flex: 0 0 auto; padding: 0.2rem 0.3rem; border-radius: 4px; border: 1px solid #d1d5db; }
 .service-row-main input:disabled, .service-qty:disabled, .service-row-select select:disabled { opacity: 0.5; cursor: not-allowed; }
 .service-unit { color: #6b7280; font-size: 0.72rem; flex: 0 0 auto; }
-.service-color-select { flex: 0 0 auto; max-width: 110px; padding: 0.15rem 0.25rem; border-radius: 4px; border: 1px solid #d1d5db; font-size: 0.72rem; }
 .service-note { flex: 1 0 100%; color: #0d7a3e; font-size: 0.72rem; font-weight: 600; }
 .service-lock-toggle { display: flex; align-items: center; gap: 0.2rem; font-size: 0.68rem; color: #9ca3af; flex: 0 0 auto; cursor: pointer; }
 .service-lock-toggle input { margin: 0; }
@@ -340,6 +441,11 @@ body {
 }
 .layer-visible-toggle { display: flex; align-items: center; }
 .layer-name-input { flex: 1 1 auto; margin: 0; }
+
+/* Saved-projects list is already database-backed, but an unbounded inline
+   list stretches the whole sidebar as more projects pile up — capped and
+   scrollable instead. */
+.projects-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.4rem; }
 .layer-remove-btn {
   flex: 0 0 auto;
   width: 1.7rem;

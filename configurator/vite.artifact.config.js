@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -8,6 +9,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: './',
+  resolve: {
+    alias: {
+      // This build has no VitePWA plugin (no service worker to register),
+      // unlike the real production build — aliased to a no-op so main.jsx's
+      // shared registerSW() call still resolves.
+      'virtual:pwa-register': fileURLToPath(new URL('./src/lib/noopPwaRegister.js', import.meta.url)),
+    },
+  },
   build: {
     outDir: 'dist-artifact',
     assetsInlineLimit: 200000,

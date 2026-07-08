@@ -1,27 +1,5 @@
-import { GUTTER_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
-import { RAL_COLORS } from '../data/colors.js';
-
-const SERIES_ORDER = ['Icecrystal Relief', 'Printech Woodgrain', 'Wrinkle Coating'];
-
-function AccessoryColorSelect({ label, colorId, onChange }) {
-  return (
-    <select
-      className="service-color-select"
-      value={colorId}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={`${label} color`}
-      title={`${label} color`}
-    >
-      {SERIES_ORDER.map((series) => (
-        <optgroup key={series} label={series}>
-          {RAL_COLORS.filter((c) => c.series === series).map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </optgroup>
-      ))}
-    </select>
-  );
-}
+import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
+import ColorPickerButton from './ColorPickerButton.jsx';
 
 function ServiceRow({
   label, checked, onToggle, qty, unit, onQtyChange, note, colorId, onColorChange, readOnly,
@@ -42,18 +20,22 @@ function ServiceRow({
           <span>Lock</span>
         </label>
       )}
-      <input
-        type="number"
-        min="0"
-        step="1"
-        className="service-qty"
-        value={qty}
-        disabled={!checked || readOnly}
-        onChange={(e) => onQtyChange(Number(e.target.value) || 0)}
-        aria-label={`${label} quantity in ${unit}`}
-      />
-      <span className="service-unit">{unit}</span>
-      {colorId && <AccessoryColorSelect label={label} colorId={colorId} onChange={onColorChange} />}
+      {qty !== undefined && (
+        <>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            className="service-qty"
+            value={qty}
+            disabled={!checked || readOnly}
+            onChange={(e) => onQtyChange(Number(e.target.value) || 0)}
+            aria-label={`${label} quantity in ${unit}`}
+          />
+          <span className="service-unit">{unit}</span>
+        </>
+      )}
+      {colorId && <ColorPickerButton selectedId={colorId} onChange={onColorChange} disabled={readOnly} />}
       {note && <span className="service-note">{note}</span>}
     </div>
   );
@@ -61,13 +43,13 @@ function ServiceRow({
 
 export default function ServicesPanel({
   services, onServicesChange, lockedServices, onLockedServicesChange, measurements, onMeasurementsChange,
-  gutterOptionId, onGutterOptionChange, accessoryColors, onAccessoryColorsChange, readOnlyQuantities, isCustomerView,
+  gutterOptionId, onGutterOptionChange, downspoutOptionId, onDownspoutOptionChange,
+  accessoryColors, onAccessoryColorsChange, readOnlyQuantities, isCustomerView,
 }) {
   const toggle = (key) => (val) => onServicesChange({ ...services, [key]: val });
   const setQty = (key) => (val) => onMeasurementsChange({ ...measurements, [key]: val });
   const setColor = (key) => (val) => onAccessoryColorsChange({ ...accessoryColors, [key]: val });
   const toggleLock = (key) => (val) => onLockedServicesChange({ ...lockedServices, [key]: val });
-  const gutterOption = GUTTER_OPTIONS.find((g) => g.id === gutterOptionId) || GUTTER_OPTIONS[0];
   const showLockToggle = !isCustomerView;
 
   const soffitFasciaDeal = services.soffit && services.fascia;
@@ -76,6 +58,15 @@ export default function ServicesPanel({
   return (
     <div className="control-block">
       <div className="control-label">Optional Services</div>
+
+      <ServiceRow
+        label="Roof" checked={services.roof} onToggle={toggle('roof')} readOnly={readOnlyQuantities}
+        locked={lockedServices?.roof} onToggleLock={toggleLock('roof')} showLockToggle={showLockToggle}
+      />
+      <ServiceRow
+        label="Wall" checked={services.wall} onToggle={toggle('wall')} readOnly={readOnlyQuantities}
+        locked={lockedServices?.wall} onToggleLock={toggleLock('wall')} showLockToggle={showLockToggle}
+      />
 
       <ServiceRow
         label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}
@@ -110,8 +101,22 @@ export default function ServicesPanel({
         colorId={accessoryColors.gutters} onColorChange={setColor('gutters')} readOnly={readOnlyQuantities}
         locked={lockedServices?.gutters} onToggleLock={toggleLock('gutters')} showLockToggle={showLockToggle}
       />
+
+      <div className="service-row service-row-select">
+        <label>Downspout type</label>
+        <select
+          className="control-select"
+          value={downspoutOptionId}
+          disabled={readOnlyQuantities}
+          onChange={(e) => onDownspoutOptionChange(e.target.value)}
+        >
+          {DOWNSPOUT_OPTIONS.map((d) => (
+            <option key={d.id} value={d.id}>{d.label} — ${d.pricePerLf.toFixed(2)}/LF</option>
+          ))}
+        </select>
+      </div>
       <ServiceRow
-        label={`Downspouts (${gutterOption.downspout.label})`} checked={services.downspouts} onToggle={toggle('downspouts')}
+        label="Downspouts" checked={services.downspouts} onToggle={toggle('downspouts')}
         qty={measurements.downspoutLf} unit="LF" onQtyChange={setQty('downspoutLf')}
         colorId={accessoryColors.downspouts} onColorChange={setColor('downspouts')}
         note={gutterDownspoutDeal ? 'FREE (gutters + downspouts deal)' : null} readOnly={readOnlyQuantities}

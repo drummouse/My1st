@@ -33,9 +33,17 @@ export const WALL_PROFILES = {
 };
 
 export const GUTTER_OPTIONS = [
-  { id: '5in-kstyle', label: '5" K-Style Eavestrough', pricePerLf: 10.0, downspout: { id: '5in-downspout', label: '5" Downspout', pricePerLf: 10.0 } },
-  { id: '6in-kstyle', label: '6" K-Style Eavestrough', pricePerLf: 10.0, downspout: { id: '3x3-or-round-downspout', label: '3x3 / Round Downspout', pricePerLf: 10.0 } },
-  { id: '7in-commercial', label: '7" Commercial Eavestrough', pricePerLf: 20.0, downspout: { id: '7in-downspout', label: '7" Commercial Downspout', pricePerLf: 15.0 } },
+  { id: '5in-kstyle', label: '5" K-Style Eavestrough', pricePerLf: 10.0 },
+  { id: '6in-kstyle', label: '6" K-Style Eavestrough', pricePerLf: 10.0 },
+  { id: '7in-commercial', label: '7" Commercial Eavestrough', pricePerLf: 20.0 },
+];
+
+// Independently selectable, not tied to the gutter profile — matches the
+// three real QuickBooks downspout line items.
+export const DOWNSPOUT_OPTIONS = [
+  { id: '3in-round', label: '3" Round Downspout', pricePerLf: 10.0 },
+  { id: '4in-round', label: '4" Round Downspout', pricePerLf: 10.0 },
+  { id: '3x3-square', label: '3x3 Square Downspout', pricePerLf: 10.0 },
 ];
 
 export const ACCESSORY_PRICING = {

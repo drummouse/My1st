@@ -1,65 +1,96 @@
+import { useState } from 'react';
+
 const AXES = [
   { key: 'dz', label: 'Vertical', min: -60, max: 60 },
-  { key: 'dx', label: 'Horizontal — East/West', min: -60, max: 60 },
-  { key: 'dy', label: 'Horizontal — North/South', min: -60, max: 60 },
+  { key: 'dx', label: 'East/West', min: -60, max: 60 },
+  { key: 'dy', label: 'North/South', min: -60, max: 60 },
 ];
 
 const ZERO_OFFSET = { dx: 0, dy: 0, dz: 0 };
+const STEP = 0.5;
+
+// Coarse pointer (touch/tablet) can't drag a small slider thumb reliably, and
+// a docked overlay this size has no room for a full-width drag target
+// anyway — step buttons instead, no gesture to conflict with the 3D view's
+// own single-finger-rotate/two-finger-zoom touch handling. Fine-pointer
+// (mouse/trackpad) devices keep the slider, which is faster for a mouse.
+// Also requires a narrow viewport: pointer:coarse alone also matches
+// touchscreen laptops/2-in-1s with plenty of screen space, where the mouse-
+// oriented slider is still the better fit. Computed once: pointer capability
+// and viewport class don't change mid-session in practice.
+const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse) and (max-width: 900px)').matches;
 
 export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId, onActiveLayerChange, onChange, onReset }) {
+  // Collapsed by default on touch (nothing should sit over the model until
+  // asked for); desktop has room to just leave the mini-sliders visible.
+  const [collapsed, setCollapsed] = useState(isCoarsePointer);
+
   const activeLayer = layers.find((l) => l.id === activeLayerId) || layers[0];
   if (!activeLayer) return null;
   const offset = layerOffsets?.[activeLayer.id] || ZERO_OFFSET;
   const setAxis = (key) => (val) => onChange(activeLayer.id, { ...offset, [key]: val });
+  const nudge = (key, min, max) => (delta) =>
+    setAxis(key)(Math.min(max, Math.max(min, (offset[key] || 0) + delta)));
 
   return (
-    <div className="control-block">
-      <div className="control-label">Layer Position Adjustment</div>
-      <div className="control-sublabel">
-        Each layer's RoofRuler export uses its own independent coordinate frame, so layers are
-        auto-stacked by height for preview. Pick a layer and nudge it into place if it doesn't
-        line up with the others.
-      </div>
+    <div className="assembly-dock">
+      <button type="button" className="assembly-dock-toggle" onClick={() => setCollapsed((c) => !c)}>
+        <span>⇕ Position</span>
+        <span className="assembly-dock-chevron">{collapsed ? '▸' : '▾'}</span>
+      </button>
 
-      {layers.length > 1 && (
-        <>
-          <label className="field-label" htmlFor="assembly-layer-select">Layer</label>
-          <select
-            id="assembly-layer-select"
-            className="control-select"
-            value={activeLayer.id}
-            onChange={(e) => onActiveLayerChange(e.target.value)}
-          >
-            {layers.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        </>
-      )}
+      {!collapsed && (
+        <div className="assembly-dock-body">
+          {layers.length > 1 && (
+            <select
+              className="control-select assembly-dock-select"
+              value={activeLayer.id}
+              onChange={(e) => onActiveLayerChange(e.target.value)}
+            >
+              {layers.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
 
-      {AXES.map(({ key, label, min, max }) => (
-        <div key={key} className="adjust-row">
-          <label htmlFor={`adjust-${key}`}>{label}</label>
-          <input
-            id={`adjust-${key}`}
-            type="range"
-            min={min}
-            max={max}
-            step="0.5"
-            value={offset[key] || 0}
-            onChange={(e) => setAxis(key)(Number(e.target.value))}
-          />
-          <input
-            type="number"
-            className="adjust-number"
-            value={offset[key] || 0}
-            step="0.5"
-            onChange={(e) => setAxis(key)(Number(e.target.value) || 0)}
-          />
-          <span className="service-unit">ft</span>
+          {AXES.map(({ key, label, min, max }) =>
+            isCoarsePointer ? (
+              <div key={key} className="adjust-stepper-row">
+                <label>{label}</label>
+                <div className="adjust-stepper">
+                  <button type="button" onClick={() => nudge(key, min, max)(-STEP)} aria-label={`Decrease ${label}`}>−</button>
+                  <span className="adjust-stepper-value">{(offset[key] || 0).toFixed(1)} ft</span>
+                  <button type="button" onClick={() => nudge(key, min, max)(STEP)} aria-label={`Increase ${label}`}>+</button>
+                </div>
+              </div>
+            ) : (
+              <div key={key} className="adjust-row adjust-row-compact">
+                <label htmlFor={`adjust-${key}`}>{label}</label>
+                <input
+                  id={`adjust-${key}`}
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={STEP}
+                  value={offset[key] || 0}
+                  onChange={(e) => setAxis(key)(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="adjust-number"
+                  value={offset[key] || 0}
+                  step={STEP}
+                  onChange={(e) => setAxis(key)(Number(e.target.value) || 0)}
+                />
+                <span className="service-unit">ft</span>
+              </div>
+            )
+          )}
+          <button type="button" className="btn-secondary assembly-dock-reset" onClick={() => onReset(activeLayer.id)}>
+            Reset to auto-stack
+          </button>
         </div>
-      ))}
-      <button type="button" className="btn-secondary" onClick={() => onReset(activeLayer.id)}>Reset to auto-stack</button>
+      )}
     </div>
   );
 }

@@ -3,10 +3,175 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { buildHouseScene, setMeshColor, setMeshHighlighted } from '../lib/buildScene.js';
 
+// Average of a mesh's raw (un-deduped) vertex positions, transformed to world
+// space — a fine stand-in for the true area-weighted centroid at this scale
+// (each mesh is a single facet, so vertices repeat roughly in proportion to
+// each triangle's share of the surface).
+function meshWorldCentroid(mesh) {
+  const pos = mesh.geometry.attributes.position;
+  const v = new THREE.Vector3();
+  const sum = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    sum.add(v);
+  }
+  sum.divideScalar(pos.count || 1);
+  return sum.applyMatrix4(mesh.matrixWorld);
+}
+
+// Renders the given camera's already-drawn frame plus a label at each facet
+// whose centroid projects on-screen AND isn't occluded by another facet
+// (checked via a centroid raycast) — so labels only land on facets actually
+// visible from that angle, turning a plain render into a labeled diagram.
+// `labelForMesh(mesh)` resolves the text (return a falsy value to skip that
+// facet); omit it — or pass an empty `facetMeshesByKey` — for an unlabeled
+// plain render.
+function renderLabeledFrame(renderer, camera, facetMeshesByKey, labelForMesh, dpr) {
+  const glCanvas = renderer.domElement;
+  const width = glCanvas.width;
+  const height = glCanvas.height;
+  const allMeshes = Object.values(facetMeshesByKey || {});
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector3();
+
+  const labels = [];
+  allMeshes.forEach((mesh) => {
+    const text = labelForMesh ? labelForMesh(mesh) : mesh.userData.faceId;
+    if (!text) return;
+    const centroid = meshWorldCentroid(mesh);
+    ndc.copy(centroid).project(camera);
+    if (ndc.z < -1 || ndc.z > 1) return;
+    const sx = (ndc.x * 0.5 + 0.5) * width;
+    const sy = (1 - (ndc.y * 0.5 + 0.5)) * height;
+    if (sx < 0 || sx > width || sy < 0 || sy > height) return;
+    raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
+    const hits = raycaster.intersectObjects(allMeshes, false);
+    if (!hits.length || hits[0].object !== mesh) return;
+    labels.push({ text, x: sx, y: sy });
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(glCanvas, 0, 0);
+
+  // dpr scales the label size to the backing-store resolution: for the live
+  // interactive canvas that's its real devicePixelRatio (vs. CSS size); for
+  // the dedicated ortho captures (a resolution with no on-screen CSS size to
+  // compare against) the caller passes a fixed value tuned for that fixed
+  // resolution instead.
+  const effectiveDpr = dpr ?? (width / glCanvas.clientWidth || 1);
+  const fontSize = Math.max(11 * effectiveDpr, 11);
+  ctx.font = `700 ${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  labels.forEach(({ text, x, y }) => {
+    const padX = 5 * effectiveDpr;
+    const padY = 3 * effectiveDpr;
+    const w = ctx.measureText(text).width + padX * 2;
+    const h = fontSize + padY * 2;
+    ctx.fillStyle = 'rgba(20, 24, 30, 0.72)';
+    ctx.fillRect(x - w / 2, y - h / 2, w, h);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x, y + fontSize * 0.06);
+  });
+
+  return canvas.toDataURL('image/png');
+}
+
+// Solves for the minimum camera distance (along a fixed viewing direction,
+// looking at the box's center) such that every corner of the box stays
+// within the camera's field of view — exact, not an eyeballed coefficient.
+// A camera's position only moves along `dir`, so each corner's off-axis
+// offset (relative to the right/up basis) is fixed regardless of distance;
+// only its depth changes, which is what lets this solve directly rather
+// than needing to iterate.
+function computeFramingDistance(box, dir, aspect, fovDegVertical, margin = 1.1) {
+  const center = box.getCenter(new THREE.Vector3());
+  const d = dir.clone().normalize();
+  const upHint = Math.abs(d.z) > 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+  const right = new THREE.Vector3().crossVectors(d, upHint).normalize();
+  const up = new THREE.Vector3().crossVectors(right, d).normalize();
+
+  const tanV = Math.tan((fovDegVertical * Math.PI / 180) / 2);
+  const tanH = Math.tan(Math.atan(tanV * aspect));
+
+  const corners = [];
+  [box.min.x, box.max.x].forEach((x) => [box.min.y, box.max.y].forEach((y) => [box.min.z, box.max.z].forEach((z) => {
+    corners.push(new THREE.Vector3(x, y, z));
+  })));
+
+  let distance = 0;
+  corners.forEach((corner) => {
+    const rel = corner.sub(center);
+    const f = rel.dot(d);
+    const r = Math.abs(rel.dot(right));
+    const u = Math.abs(rel.dot(up));
+    distance = Math.max(distance, f + r / tanH, f + u / tanV);
+  });
+  return { center, up, distance: Math.max(distance * margin, 10) };
+}
+
+// Same corner-projection idea as computeFramingDistance, but for an
+// orthographic camera: no perspective/distance trig needed, just the tightest
+// half-width/half-height that contains every corner along the view's own
+// right/up axes (so a narrow elevation isn't padded out to the model's
+// widest axis just because some other, perpendicular side is wider).
+function computeOrthoExtents(box, dir, margin = 1.1) {
+  const center = box.getCenter(new THREE.Vector3());
+  const d = dir.clone().normalize();
+  const upHint = Math.abs(d.z) > 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+  const right = new THREE.Vector3().crossVectors(d, upHint).normalize();
+  const up = new THREE.Vector3().crossVectors(right, d).normalize();
+
+  let halfW = 0;
+  let halfH = 0;
+  [box.min.x, box.max.x].forEach((x) => [box.min.y, box.max.y].forEach((y) => [box.min.z, box.max.z].forEach((z) => {
+    const rel = new THREE.Vector3(x, y, z).sub(center);
+    halfW = Math.max(halfW, Math.abs(rel.dot(right)));
+    halfH = Math.max(halfH, Math.abs(rel.dot(up)));
+  })));
+  return { center, up, halfW: halfW * margin, halfH: halfH * margin };
+}
+
+// Renders one orthographic capture sized to the CONTENT's own natural aspect
+// ratio (temporarily resizing the renderer) rather than forcing the ortho
+// frustum to match the interactive viewer's current (often much wider)
+// canvas aspect — that would otherwise pad the frame with a lot of empty
+// space just to avoid distorting a flat, wide elevation into a squarer slot.
+const MAX_CAPTURE_DIM = 1000;
+function captureOrthoNatural(renderer, scene, box, dir, facetMeshesByKey, labelForMesh) {
+  const { center, up, halfW, halfH } = computeOrthoExtents(box, dir);
+  const contentAspect = halfW / halfH;
+  const width = contentAspect >= 1 ? MAX_CAPTURE_DIM : Math.max(1, Math.round(MAX_CAPTURE_DIM * contentAspect));
+  const height = contentAspect >= 1 ? Math.max(1, Math.round(MAX_CAPTURE_DIM / contentAspect)) : MAX_CAPTURE_DIM;
+
+  const savedSize = renderer.getSize(new THREE.Vector2());
+  const savedPixelRatio = renderer.getPixelRatio();
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height, false);
+
+  const size = box.getSize(new THREE.Vector3());
+  const dist = Math.max(size.x, size.y, size.z) * 3 + 50;
+  const ortho = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.1, dist * 3);
+  ortho.up.copy(up);
+  ortho.position.copy(center).addScaledVector(dir, dist);
+  ortho.lookAt(center);
+  ortho.updateProjectionMatrix();
+  renderer.render(scene, ortho);
+  const dataUrl = renderLabeledFrame(renderer, ortho, facetMeshesByKey, labelForMesh, MAX_CAPTURE_DIM / 700);
+
+  renderer.setPixelRatio(savedPixelRatio);
+  renderer.setSize(savedSize.x, savedSize.y, false);
+  return dataUrl;
+}
+
 const Viewer3D = forwardRef(function Viewer3D({
   parsedLayers,
   layerOffsets,
   facetColors,
+  facetLabels,
   photoOverlay,
   facetSelectionEnabled,
   selectedFacetId,
@@ -17,6 +182,97 @@ const Viewer3D = forwardRef(function Viewer3D({
 
   useImperativeHandle(ref, () => ({
     captureSnapshot: () => sceneRef.current?.renderer?.domElement?.toDataURL('image/png') || null,
+    // Captures 4 static PNGs from each diagonal corner, close enough that the
+    // model fills most of the frame (product-shot framing, not a distant
+    // survey shot), angled slightly above ground to show some roof — for the
+    // PDF export's locked, non-interactive renderings (no live 3D in the PDF
+    // itself, just these pre-rendered images). No facet labels here — these
+    // are the "wow" renderings, not a labeled diagram.
+    captureIsoViews: () => {
+      const s = sceneRef.current;
+      if (!s?.scene || !s.camera || !s.renderer || !s.root || !s.controls) return [];
+      const { scene, camera, renderer, root, controls, grid } = s;
+      const savedCameraPos = camera.position.clone();
+      const savedTarget = controls.target.clone();
+      const gridWasVisible = grid ? grid.visible : false;
+      if (grid) grid.visible = false;
+
+      const box = new THREE.Box3().setFromObject(root);
+      const aspect = renderer.domElement.width / renderer.domElement.height;
+      // Shallow ~19° elevation ("slightly above ground, see a bit of roof"),
+      // one fixed direction per corner — computeFramingDistance solves the
+      // exact minimum distance so the whole model fits with a small margin,
+      // rather than an eyeballed distance guess that can clip the model.
+      const directions = [[1, 1, 0.35], [-1, 1, 0.35], [-1, -1, 0.35], [1, -1, 0.35]];
+      const images = directions.map(([dx, dy, dz]) => {
+        const dir = new THREE.Vector3(dx, dy, dz);
+        const { center, distance } = computeFramingDistance(box, dir, aspect, camera.fov);
+        camera.position.copy(center).addScaledVector(dir.normalize(), distance);
+        camera.lookAt(center);
+        camera.updateProjectionMatrix();
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/png');
+      });
+
+      if (grid) grid.visible = gridWasVisible;
+      camera.position.copy(savedCameraPos);
+      camera.lookAt(savedTarget);
+      renderer.render(scene, camera);
+      return images;
+    },
+    // Four orthographic elevations (Front/Right/Back/Left — relative to the
+    // model, since RoofRuler exports carry no true compass orientation).
+    // True-to-scale (no perspective foreshortening), matching an
+    // architectural elevation drawing rather than a photo — also unlabeled.
+    captureElevationViews: () => {
+      const s = sceneRef.current;
+      if (!s?.scene || !s.renderer || !s.root || !s.controls) return [];
+      const { scene, renderer, root, controls, camera: mainCamera, grid } = s;
+      const savedCameraPos = mainCamera.position.clone();
+      const savedTarget = controls.target.clone();
+      const gridWasVisible = grid ? grid.visible : false;
+      if (grid) grid.visible = false;
+
+      const box = new THREE.Box3().setFromObject(root);
+      const directions = [
+        { label: 'Front Elevation', dir: new THREE.Vector3(0, -1, 0) },
+        { label: 'Right Elevation', dir: new THREE.Vector3(1, 0, 0) },
+        { label: 'Back Elevation', dir: new THREE.Vector3(0, 1, 0) },
+        { label: 'Left Elevation', dir: new THREE.Vector3(-1, 0, 0) },
+      ];
+      const images = directions.map(({ label, dir }) => ({
+        label,
+        dataUrl: captureOrthoNatural(renderer, scene, box, dir, {}),
+      }));
+
+      if (grid) grid.visible = gridWasVisible;
+      renderer.render(scene, mainCamera);
+      mainCamera.position.copy(savedCameraPos);
+      mainCamera.lookAt(savedTarget);
+      return images;
+    },
+    // Top-down Roof Plan — the one rendering that keeps facet labels, using
+    // the clean per-type R#/F# scheme (facetLabels, keyed by facetKey)
+    // instead of the raw, collision-prone RoofRuler face id.
+    captureRoofPlanView: () => {
+      const s = sceneRef.current;
+      if (!s?.scene || !s.renderer || !s.root || !s.controls) return null;
+      const { scene, renderer, root, controls, camera: mainCamera, grid, facetMeshesByKey } = s;
+      const savedCameraPos = mainCamera.position.clone();
+      const savedTarget = controls.target.clone();
+      const gridWasVisible = grid ? grid.visible : false;
+      if (grid) grid.visible = false;
+
+      const labelForMesh = (mesh) => s.facetLabels?.[mesh.userData.key] || mesh.userData.faceId;
+      const box = new THREE.Box3().setFromObject(root);
+      const dataUrl = captureOrthoNatural(renderer, scene, box, new THREE.Vector3(0, 0, 1), facetMeshesByKey, labelForMesh);
+
+      if (grid) grid.visible = gridWasVisible;
+      renderer.render(scene, mainCamera);
+      mainCamera.position.copy(savedCameraPos);
+      mainCamera.lookAt(savedTarget);
+      return dataUrl;
+    },
   }));
   const onFacetClickRef = useRef(onFacetClick);
   onFacetClickRef.current = onFacetClick;
@@ -111,7 +367,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer };
+    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer, scene, camera, controls, boundingSphere, grid, root, facetLabels: facetLabels || {} };
 
     return () => {
       cancelAnimationFrame(raf);
@@ -133,6 +389,15 @@ const Viewer3D = forwardRef(function Viewer3D({
       setMeshColor(s.facetMeshesByKey[key], colorEntry);
     });
   }, [facetColors]);
+
+  // Cheap update: keep the Roof Plan's R#/F# label map current without
+  // rebuilding the scene — it only changes alongside facetColors anyway
+  // (both derive from the same imported layers).
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    s.facetLabels = facetLabels || {};
+  }, [facetLabels]);
 
   // Cheap update: reposition each layer group from its cached auto-computed
   // base position plus the current manual offset, without rebuilding meshes.

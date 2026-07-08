@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Viewer3D from './components/Viewer3D.jsx';
 import BrandToggle from './components/BrandToggle.jsx';
-import ColorPicker from './components/ColorPicker.jsx';
+import ColorPickerButton from './components/ColorPickerButton.jsx';
 import ProductSelector from './components/ProductSelector.jsx';
 import ServicesPanel from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
@@ -10,17 +10,20 @@ import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
-import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
+import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
+import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, encodeDesignForUrl, decodeDesignFromUrl } from './lib/designState.js';
-import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS } from './data/pricing.js';
+import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 
 const DEFAULT_SERVICES = {
+  roof: true,
+  wall: true,
   soffit: true,
   fascia: true,
   gutters: true,
@@ -42,6 +45,8 @@ const DEFAULT_ACCESSORY_COLORS = {
 // freezes its current checked state in customer view rather than forcing it
 // on — an admin can still lock a service off, if that's ever useful.
 const DEFAULT_LOCKED_SERVICES = {
+  roof: false,
+  wall: false,
   soffit: false,
   fascia: false,
   gutters: false,
@@ -49,6 +54,22 @@ const DEFAULT_LOCKED_SERVICES = {
   snowRetention: false,
   capFlashing: false,
   garageDoorCapping: false,
+};
+
+const BLANK_HOUSE = {
+  jobNumber: '',
+  customerName: '',
+  address: '',
+  layers: [],
+  measurements: {
+    soffitSqft: 0,
+    fasciaLf: 0,
+    gutterLf: 0,
+    downspoutLf: 0,
+    snowRetentionLf: 0,
+    capFlashingLf: 0,
+    garageDoorCappingLf: 0,
+  },
 };
 
 function extractProductOverrides(overrides) {
@@ -74,6 +95,7 @@ export default function App() {
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [lockedServices, setLockedServices] = useState(DEFAULT_LOCKED_SERVICES);
   const [gutterOptionId, setGutterOptionId] = useState(GUTTER_OPTIONS[0].id);
+  const [downspoutOptionId, setDownspoutOptionId] = useState(DOWNSPOUT_OPTIONS[0].id);
   const [measurements, setMeasurements] = useState(house.measurements);
   const [photoOverlay, setPhotoOverlay] = useState(null);
   const [manualDiscount, setManualDiscount] = useState(0);
@@ -101,7 +123,7 @@ export default function App() {
   const buildDesignSnapshot = () =>
     captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
-      wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId,
+      wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
       uniformFinish, facetOverrides,
     });
@@ -120,6 +142,7 @@ export default function App() {
       setServices,
       setLockedServices,
       setGutterOptionId,
+      setDownspoutOptionId,
       setMeasurements,
       setManualDiscount,
       setLayerOffsets,
@@ -213,6 +236,37 @@ export default function App() {
     return out;
   }, [parsedLayers]);
 
+  // Aggregated across every visible layer, for the PDF's Window & Door
+  // Schedule and Linear Footage/Accessories Takeoff tables.
+  const openingsSchedule = useMemo(() => {
+    const out = [];
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      collectOpenings(l.parsed).forEach((o) => out.push({ layerName: l.name, ...o }));
+    });
+    return out;
+  }, [parsedLayers]);
+
+  // Clean, collision-free per-type labels (R1/F1/W1/D1/O1) for the PDF —
+  // independent of the raw RoofRuler face ids, which can collide between a
+  // roof export and a wall export.
+  const facetLabels = useMemo(
+    () => buildFacetLabelMap(roofFacesForPricing, wallFacesForPricing),
+    [roofFacesForPricing, wallFacesForPricing]
+  );
+  const labeledOpenings = useMemo(() => labelOpenings(openingsSchedule), [openingsSchedule]);
+
+  const lineTakeoffs = useMemo(() => {
+    const out = {};
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      Object.entries(l.parsed.lineTakeoffs || {}).forEach(([type, len]) => {
+        out[type] = (out[type] || 0) + len;
+      });
+    });
+    return out;
+  }, [parsedLayers]);
+
   const estimate = useMemo(
     () =>
       calculateEstimate(measurements, {
@@ -223,9 +277,10 @@ export default function App() {
         facetOverrides: uniformFinish ? {} : extractProductOverrides(facetOverrides),
         services,
         gutterOption: gutterOptionId,
+        downspoutOption: downspoutOptionId,
         manualDiscount,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, manualDiscount]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount]
   );
 
   const facetColors = useMemo(() => {
@@ -242,6 +297,48 @@ export default function App() {
     });
     return map;
   }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish]);
+
+  // True when at least one facet has been overridden to a color different
+  // from the global default — the Roof/Siding Color button can't show a
+  // single swatch in that case, so it reads "Various Colors" instead.
+  const roofColorMixed = !uniformFinish && roofFacesForPricing.some(({ key }) => {
+    const c = facetOverrides[key]?.colorId;
+    return c && c !== roofColorId;
+  });
+  const wallColorMixed = !uniformFinish && wallFacesForPricing.some(({ key }) => {
+    const c = facetOverrides[key]?.colorId;
+    return c && c !== wallColorId;
+  });
+
+  // Resets every field back to a blank slate — job#/customer/address, all
+  // layers, product/color selections, overrides, everything — so starting a
+  // new project can't leave any stale data behind from whatever was loaded
+  // before. Also clears currentProjectId so the next "Download" creates a
+  // fresh database record instead of overwriting the previous project.
+  const handleNewProject = () => {
+    if (!window.confirm('Start a new project? Any unsaved changes to the current design will be lost.')) return;
+    setHouse(BLANK_HOUSE);
+    setRoofProductId(ROOF_PRODUCTS[0].id);
+    setRoofProfile(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
+    setRoofColorId('wk-04');
+    setWallProductId(WALL_PRODUCTS[0].id);
+    setWallProfile(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
+    setWallColorId('wk-01');
+    setServices(DEFAULT_SERVICES);
+    setLockedServices(DEFAULT_LOCKED_SERVICES);
+    setGutterOptionId(GUTTER_OPTIONS[0].id);
+    setDownspoutOptionId(DOWNSPOUT_OPTIONS[0].id);
+    setMeasurements(BLANK_HOUSE.measurements);
+    setPhotoOverlay(null);
+    setManualDiscount(0);
+    setLayerOffsets({});
+    setActiveLayerId(undefined);
+    setAccessoryColors(DEFAULT_ACCESSORY_COLORS);
+    setUniformFinish(true);
+    setFacetOverrides({});
+    setSelectedFacet(null);
+    setCurrentProjectId(null);
+  };
 
   const handleRoofProductChange = (id) => {
     setRoofProductId(id);
@@ -376,7 +473,9 @@ export default function App() {
     buildEstimatePdf({
       brand,
       house,
-      snapshotDataUrl: viewerRef.current?.captureSnapshot() || null,
+      isoSnapshots: viewerRef.current?.captureIsoViews() || [],
+      elevationViews: viewerRef.current?.captureElevationViews() || [],
+      roofPlanView: viewerRef.current?.captureRoofPlanView() || null,
       roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
       roofColorId,
       roofProfile,
@@ -390,6 +489,9 @@ export default function App() {
       facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
+      facetLabels,
+      openingsSchedule: labeledOpenings,
+      lineTakeoffs,
     });
   };
 
@@ -434,6 +536,7 @@ export default function App() {
                   parsedLayers={parsedLayers}
                   layerOffsets={layerOffsets}
                   facetColors={facetColors}
+                  facetLabels={facetLabels}
                   photoOverlay={photoOverlay}
                   facetSelectionEnabled={!uniformFinish}
                   selectedFacetId={selectedFacet?.key}
@@ -451,15 +554,15 @@ export default function App() {
                     onClose={() => setSelectedFacet(null)}
                   />
                 )}
+                <AssemblyAdjustment
+                  layers={house.layers}
+                  layerOffsets={layerOffsets}
+                  activeLayerId={activeLayerId}
+                  onActiveLayerChange={setActiveLayerId}
+                  onChange={handleLayerOffsetChange}
+                  onReset={handleResetLayerOffset}
+                />
               </div>
-              <AssemblyAdjustment
-                layers={house.layers}
-                layerOffsets={layerOffsets}
-                activeLayerId={activeLayerId}
-                onActiveLayerChange={setActiveLayerId}
-                onChange={handleLayerOffsetChange}
-                onReset={handleResetLayerOffset}
-              />
             </>
           )}
         </section>
@@ -472,11 +575,13 @@ export default function App() {
             onRemoveLayer={handleRemoveLayer}
             onToggleVisibility={handleToggleLayerVisibility}
             onRenameLayer={handleRenameLayer}
+            onNewProject={handleNewProject}
             readOnly={isCustomerView}
           />
 
           {!isCustomerView && (
             <ProjectsPanel
+              house={house}
               getCurrentDesign={buildDesignSnapshot}
               onOpenProject={(design) => applyDesignSnapshot(design, false)}
               currentProjectId={currentProjectId}
@@ -506,7 +611,10 @@ export default function App() {
             onProductChange={handleRoofProductChange}
             onProfileChange={setRoofProfile}
           />
-          <ColorPicker label="Roof Color" selectedId={roofColorId} onChange={setRoofColorId} />
+          <div className="control-block color-row">
+            <span className="control-label">Roof Color</span>
+            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} />
+          </div>
 
           <ProductSelector
             label="Siding Material"
@@ -517,7 +625,10 @@ export default function App() {
             onProductChange={handleWallProductChange}
             onProfileChange={setWallProfile}
           />
-          <ColorPicker label="Siding Color" selectedId={wallColorId} onChange={setWallColorId} />
+          <div className="control-block color-row">
+            <span className="control-label">Siding Color</span>
+            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} />
+          </div>
 
           <ServicesPanel
             services={services}
@@ -528,6 +639,8 @@ export default function App() {
             onMeasurementsChange={setMeasurements}
             gutterOptionId={gutterOptionId}
             onGutterOptionChange={setGutterOptionId}
+            downspoutOptionId={downspoutOptionId}
+            onDownspoutOptionChange={setDownspoutOptionId}
             accessoryColors={accessoryColors}
             onAccessoryColorsChange={setAccessoryColors}
             readOnlyQuantities={isCustomerView}

@@ -3,24 +3,14 @@ import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
 
 export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 
-const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
-
-export function describeFacetOverrides(overrides, products, roleLabel) {
-  return Object.entries(overrides || {}).map(([key, val]) => {
-    const faceId = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key;
-    const product = val.productId ? products.find((p) => p.id === val.productId) : null;
-    const color = val.colorId ? colorById(val.colorId) : null;
-    const parts = [];
-    if (product) parts.push(product.label);
-    if (color) parts.push(`${color.name} (${color.code})`);
-    return `${roleLabel} Facet ${faceId}: ${parts.join(', ') || 'custom'}`;
-  });
-}
+export const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
 
 // One row per facet, always — every slope/segment gets its effective
 // product+color spelled out (default or overridden), not just the ones the
-// customer changed, so a mixed-material house is fully documented.
-export function buildFacetTable(facesForPricing, overrides, products, globalProductId, globalColorId) {
+// customer changed, so a mixed-material house is fully documented. `labelMap`
+// (facetKey -> "R3"/"F12"...) gives each row the clean, collision-free PDF
+// label instead of the raw, collision-prone RoofRuler face id, when given.
+export function buildFacetTable(facesForPricing, overrides, products, globalProductId, globalColorId, labelMap) {
   return facesForPricing
     .map(({ key, sizeSf }) => {
       const faceId = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key;
@@ -29,7 +19,7 @@ export function buildFacetTable(facesForPricing, overrides, products, globalProd
       const colorId = override?.colorId || globalColorId;
       const product = products.find((p) => p.id === productId);
       return {
-        label: faceId,
+        label: labelMap?.[key] || faceId,
         productLabel: product?.label || productId,
         color: colorById(colorId),
         sizeSf,
@@ -58,10 +48,14 @@ export function buildEstimateText({
   lines.push('');
   lines.push('SELECTIONS');
   lines.push('-'.repeat(50));
-  lines.push(`Roof material: ${roofProduct.label} (${roofProfile || 'standard profile'})`);
-  lines.push(`Roof color: ${roofColor.code} — ${roofColor.name}`);
-  lines.push(`Siding material: ${wallProduct.label} (${wallProfile || 'standard profile'})`);
-  lines.push(`Siding color: ${wallColor.code} — ${wallColor.name}`);
+  if (services?.roof !== false) {
+    lines.push(`Roof material: ${roofProduct.label} (${roofProfile || 'standard profile'})`);
+    lines.push(`Roof color: ${roofColor.code} — ${roofColor.name}`);
+  }
+  if (services?.wall !== false) {
+    lines.push(`Siding material: ${wallProduct.label} (${wallProfile || 'standard profile'})`);
+    lines.push(`Siding color: ${wallColor.code} — ${wallColor.name}`);
+  }
   if (services && accessoryColors) {
     Object.entries(ACCESSORY_LABELS)
       .filter(([key]) => services[key])

@@ -29,18 +29,27 @@ function buildProjectFileHtml(id, design) {
 </html>`;
 }
 
-function downloadProjectFile(id, design) {
+function downloadProjectFile(id, design, projectName) {
   const html = buildProjectFileHtml(id, design);
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `IronWrap_Project_${design.house.jobNumber || id}.html`;
+  a.download = `${(projectName || design.house.jobNumber || id).replace(/[\\/:*?"<>|]/g, '_')}.html`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export default function ProjectsPanel({ getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
+// "JOB_NUMBER - CUSTOMER - DATE" — a simple, predictable default. Not yet
+// user-editable (that's future Settings work); for now it's always derived
+// from the current job #/customer, so there's nothing to reset by hand when
+// starting a new project.
+function defaultProjectName(house) {
+  const date = new Date().toISOString().slice(0, 10);
+  return [house.jobNumber, house.customerName, date].filter(Boolean).join(' - ');
+}
+
+export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,40 +83,29 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
     setTimeout(() => setStatus(''), 5000);
   };
 
-  const handleSaveAs = () =>
+  // A single save action: updates the already-saved record (if this design
+  // has one) instead of always creating a new one — only a genuinely new
+  // project (no currentProjectId, e.g. right after "New Project") creates a
+  // new database row. Always downloads the pointer file too.
+  const handleDownload = () =>
     withStatus('Saving...', 'Project saved — file downloaded.', async () => {
       const design = getCurrentDesign();
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      const body = JSON.stringify({
+        jobNumber: design.house.jobNumber,
+        customerName: design.house.customerName,
+        address: design.house.address,
+        design,
+      });
+      const id = currentProjectId;
+      const res = await fetch(id ? `/api/projects/${id}` : '/api/projects', {
+        method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobNumber: design.house.jobNumber,
-          customerName: design.house.customerName,
-          address: design.house.address,
-          design,
-        }),
+        body,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const saved = await res.json();
+      const saved = id ? { id } : await res.json();
       onProjectIdChange(saved.id);
-      downloadProjectFile(saved.id, design);
-      await refresh();
-    });
-
-  const handleUpdate = () =>
-    withStatus('Updating...', 'Project updated.', async () => {
-      const design = getCurrentDesign();
-      const res = await fetch(`/api/projects/${currentProjectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobNumber: design.house.jobNumber,
-          customerName: design.house.customerName,
-          address: design.house.address,
-          design,
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      downloadProjectFile(saved.id, design, defaultProjectName(house));
       await refresh();
     });
 
@@ -149,16 +147,27 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
         Save this design to the database so it can be reopened and edited later, or shared as a
         short project link — an anchor for a future rotatable 3D view in exported PDFs, unlike the
         self-contained Shareable Link above which embeds the whole design in the URL itself.
-        "Save As" also downloads a small file to your device — it's just a link back to the
-        database entry, not a frozen copy, so it always opens the latest saved version.
+        "Download" saves the design (updating this same project once it's been saved once — it
+        won't create a duplicate) and downloads a small file to your device — it's just a link back
+        to the database entry, not a frozen copy, so it always opens the latest saved version.
+        Use "+ New Project" above to start a separate, unrelated project.
       </div>
 
       <div className="export-buttons" style={{ marginTop: '0.6rem' }}>
-        <button type="button" className="btn-secondary" onClick={handleSaveAs} disabled={busy}>Save As...</button>
-        <button type="button" className="btn-primary" onClick={handleUpdate} disabled={busy || !currentProjectId}>
-          Update Saved
+        <button type="button" className="btn-primary" onClick={handleDownload} disabled={busy} style={{ width: '100%' }}>
+          Download
         </button>
       </div>
+
+      <label className="field-label" htmlFor="project-name" style={{ marginTop: '0.5rem' }}>Project Name</label>
+      <input
+        id="project-name"
+        className="control-select"
+        value={defaultProjectName(house)}
+        readOnly
+        title="Auto-generated from Job # / Customer / today's date — editable via Settings in a future update"
+      />
+
       <button
         type="button"
         className="btn-secondary"
@@ -172,7 +181,9 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
       {status && <div className="control-sublabel">{status}</div>}
 
       {projects.length > 0 && (
-        <ul className="layer-list" style={{ marginTop: '0.6rem' }}>
+        <>
+        <div className="field-label" style={{ marginTop: '0.6rem' }}>Saved Projects ({projects.length})</div>
+        <ul className="layer-list projects-list">
           {projects.map((p) => (
             <li key={p.id} className="layer-row">
               <button
@@ -189,6 +200,7 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
             </li>
           ))}
         </ul>
+        </>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
+import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
 
 // Alberta has no PST — only federal GST applies.
 export const GST_RATE = 0.05;
@@ -6,6 +6,7 @@ export const GST_RATE = 0.05;
 const findRoofProduct = (id) => ROOF_PRODUCTS.find((p) => p.id === id) || ROOF_PRODUCTS[0];
 const findWallProduct = (id) => WALL_PRODUCTS.find((p) => p.id === id) || WALL_PRODUCTS[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
+const findDownspout = (id) => DOWNSPOUT_OPTIONS.find((d) => d.id === id) || DOWNSPOUT_OPTIONS[0];
 
 // Groups facets by their effective product (per-facet override, falling back
 // to the global product) and returns one line item per distinct product —
@@ -35,7 +36,8 @@ function groupFacetsByProduct(facets, overrides, globalProductId, findProduct, l
 /**
  * @param {object} measurements - { soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
  * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, facetOverrides,
- *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
+ *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping},
+ *   gutterOption, downspoutOption, manualDiscount }
  *   roofFaces/wallFaces: [{ key, sizeSf }]; facetOverrides: { [key]: productId } (roof/wall keys are
  *   disjoint since they come from distinct layer:faceId facet keys, so the same map is used for both)
  */
@@ -43,18 +45,25 @@ export function calculateEstimate(measurements, selections) {
   const line = [];
   const services = selections.services || {};
 
-  // Package deals are mutually exclusive, not stackable: Full Wrap (all four
-  // accessory services selected) wins outright, and the two narrower deals
-  // only kick in when Full Wrap doesn't apply.
-  const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
-
-  const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
+  const roofGroups = services.roof
+    ? groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing')
+    : { items: [], total: 0 };
   line.push(...roofGroups.items);
   const roofTotal = roofGroups.total;
 
-  const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding');
+  const wallGroups = services.wall
+    ? groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding')
+    : { items: [], total: 0 };
   line.push(...wallGroups.items);
   const wallTotal = wallGroups.total;
+
+  // Package deals are mutually exclusive, not stackable: Full Wrap (roof +
+  // walls + all four accessory services) wins outright, and the two
+  // narrower deals only kick in when Full Wrap doesn't apply. Requires
+  // actual roof and wall material being estimated, not just the four
+  // accessory checkboxes — a roof-only project (no wall layer imported)
+  // isn't a "full wrap" no matter what's checked.
+  const fullWrap = !!(roofTotal > 0 && wallTotal > 0 && services.soffit && services.fascia && services.gutters && services.downspouts);
 
   let soffitTotal = 0;
   if (services.soffit) {
@@ -83,15 +92,16 @@ export function calculateEstimate(measurements, selections) {
     line.push({ key: 'gutters', label: gutterOption.label, qty: measurements.gutterLf, unit: 'LF', rate: gutterOption.pricePerLf, total: gutterTotal });
   }
 
+  const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
   const gutterDownspoutDeal = !!(services.gutters && services.downspouts && !fullWrap);
   if (services.downspouts) {
-    const base = measurements.downspoutLf * gutterOption.downspout.pricePerLf;
+    const base = measurements.downspoutLf * downspoutOption.pricePerLf;
     downspoutTotal = gutterDownspoutDeal ? 0 : base;
     line.push({
       key: 'downspouts',
-      label: gutterOption.downspout.label + (gutterDownspoutDeal ? ' (FREE — gutters + downspouts package)' : ''),
-      qty: measurements.downspoutLf, unit: 'LF', rate: gutterOption.downspout.pricePerLf, total: downspoutTotal,
+      label: downspoutOption.label + (gutterDownspoutDeal ? ' (FREE — gutters + downspouts package)' : ''),
+      qty: measurements.downspoutLf, unit: 'LF', rate: downspoutOption.pricePerLf, total: downspoutTotal,
     });
   }
 
@@ -124,7 +134,10 @@ export function calculateEstimate(measurements, selections) {
   const total = preTaxTotal + gst;
 
   return {
-    lineItems: line,
+    // A zero-quantity line (e.g. "Siding" with no wall layer imported, or an
+    // unselected accessory) isn't worth showing — but a package-deal line
+    // that's genuinely included at a discounted $0 total (qty > 0) still is.
+    lineItems: line.filter((li) => li.qty > 0),
     subtotal,
     deals: {
       soffitFasciaDeal,
