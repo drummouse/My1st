@@ -1,5 +1,45 @@
 import { useEffect, useState } from 'react';
 
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// A small downloadable "pointer" file, not a copy of the design itself — it
+// just redirects to the project's ?p= link, so opening it later always
+// loads whatever is currently saved in the database under that id.
+function buildProjectFileHtml(id, design) {
+  const url = `${window.location.origin}${window.location.pathname}?p=${id}`;
+  const job = escapeHtml(design.house.jobNumber);
+  const customer = escapeHtml(design.house.customerName);
+  const address = escapeHtml(design.house.address);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>IronWrap Project${job ? ` — ${job}` : ''}</title>
+<meta http-equiv="refresh" content="0; url=${url}" />
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 2rem; color: #1c1f24;">
+  <h1>IronWrap Project${job ? `: ${job}` : ''}</h1>
+  <p>${customer}${customer && address ? ' — ' : ''}${address}</p>
+  <p>This file is a link to a project saved in the IronWrap Configurator database — it always
+  opens whatever is currently saved, not a frozen copy.</p>
+  <p>If you are not redirected automatically, <a href="${url}">open the project</a>.</p>
+</body>
+</html>`;
+}
+
+function downloadProjectFile(id, design) {
+  const html = buildProjectFileHtml(id, design);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `IronWrap_Project_${design.house.jobNumber || id}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ProjectsPanel({ getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('');
@@ -34,8 +74,8 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
     setTimeout(() => setStatus(''), 5000);
   };
 
-  const handleSaveNew = () =>
-    withStatus('Saving...', 'Project saved.', async () => {
+  const handleSaveAs = () =>
+    withStatus('Saving...', 'Project saved — file downloaded.', async () => {
       const design = getCurrentDesign();
       const res = await fetch('/api/projects', {
         method: 'POST',
@@ -50,6 +90,7 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const saved = await res.json();
       onProjectIdChange(saved.id);
+      downloadProjectFile(saved.id, design);
       await refresh();
     });
 
@@ -108,10 +149,12 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
         Save this design to the database so it can be reopened and edited later, or shared as a
         short project link — an anchor for a future rotatable 3D view in exported PDFs, unlike the
         self-contained Shareable Link above which embeds the whole design in the URL itself.
+        "Save As" also downloads a small file to your device — it's just a link back to the
+        database entry, not a frozen copy, so it always opens the latest saved version.
       </div>
 
       <div className="export-buttons" style={{ marginTop: '0.6rem' }}>
-        <button type="button" className="btn-secondary" onClick={handleSaveNew} disabled={busy}>Save as New</button>
+        <button type="button" className="btn-secondary" onClick={handleSaveAs} disabled={busy}>Save As...</button>
         <button type="button" className="btn-primary" onClick={handleUpdate} disabled={busy || !currentProjectId}>
           Update Saved
         </button>

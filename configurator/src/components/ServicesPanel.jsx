@@ -27,7 +27,7 @@ function ServiceRow({ label, checked, onToggle, qty, unit, onQtyChange, note, co
   return (
     <div className="service-row">
       <label className="service-row-main">
-        <input type="checkbox" checked={checked} disabled={readOnly} onChange={(e) => onToggle(e.target.checked)} />
+        <input type="checkbox" checked={checked} onChange={(e) => onToggle(e.target.checked)} />
         <span>{label}</span>
       </label>
       <input

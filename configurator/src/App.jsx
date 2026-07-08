@@ -459,12 +459,14 @@ export default function App() {
             readOnly={isCustomerView}
           />
 
-          <ProjectsPanel
-            getCurrentDesign={buildDesignSnapshot}
-            onOpenProject={(design) => applyDesignSnapshot(design, false)}
-            currentProjectId={currentProjectId}
-            onProjectIdChange={setCurrentProjectId}
-          />
+          {!isCustomerView && (
+            <ProjectsPanel
+              getCurrentDesign={buildDesignSnapshot}
+              onOpenProject={(design) => applyDesignSnapshot(design, false)}
+              currentProjectId={currentProjectId}
+              onProjectIdChange={setCurrentProjectId}
+            />
+          )}
 
           <div className="control-block">
             <label className="uniform-toggle">
