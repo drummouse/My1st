@@ -23,6 +23,7 @@ export function captureDesignState(state) {
     services: state.services,
     lockedServices: state.lockedServices,
     gutterOptionId: state.gutterOptionId,
+    downspoutOptionId: state.downspoutOptionId,
     measurements: state.measurements,
     manualDiscount: state.manualDiscount,
     accessoryColors: state.accessoryColors,
@@ -99,6 +100,7 @@ export function applyDesignState(snapshot, setters) {
   if (snapshot.services) setters.setServices(snapshot.services);
   if (snapshot.lockedServices) setters.setLockedServices(snapshot.lockedServices);
   if (snapshot.gutterOptionId) setters.setGutterOptionId(snapshot.gutterOptionId);
+  if (snapshot.downspoutOptionId) setters.setDownspoutOptionId(snapshot.downspoutOptionId);
   if (snapshot.measurements) setters.setMeasurements(snapshot.measurements);
   if (typeof snapshot.manualDiscount === 'number') setters.setManualDiscount(snapshot.manualDiscount);
   if (snapshot.accessoryColors) setters.setAccessoryColors(snapshot.accessoryColors);

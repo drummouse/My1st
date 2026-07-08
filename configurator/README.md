@@ -27,6 +27,20 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   Printech Woodgrain, Wrinkle Coating) — sourced from the company's Google
   Drive color folders, used as both swatch thumbnails and tiled 3D texture
   maps (`src/data/textures/`, `src/data/colors.js`).
+- **Color picker button** (`src/components/ColorPickerButton.jsx`) — every
+  colorable component (Roof, Siding, Soffit, Fascia, Gutters, Downspouts) gets
+  the same compact button showing a swatch plus the current color, instead of
+  a permanently-expanded swatch grid or a plain text dropdown. Clicking it
+  opens the full swatch palette (grouped by series, same picker for all six);
+  picking a color closes the popover and relabels the button — `Wrinkle
+  RAL 7024` / `Crystal RAL 8019` for the two RAL-coded finishes, or just the
+  name (e.g. `Rustic Wenge`) for Printech Woodgrain, which has no RAL code.
+  Positioned via a fixed-position rect computed from the button itself so it
+  floats above the scrollable sidebar instead of being clipped by it.
+- **Downspouts** are their own independent product selector (`Downspout
+  type`), matching the three real QuickBooks line items — 3" Round, 4" Round,
+  3x3 Square — instead of being implicitly tied to whichever gutter profile
+  was selected.
 - **Per-facet customization** — every roof slope and wall segment is its own
   mesh (`src/lib/buildScene.js`) so it can be clicked in the 3D viewer and
   given its own material/color, overriding the global selection. Governed by

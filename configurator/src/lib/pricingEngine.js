@@ -1,4 +1,4 @@
-import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
+import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
 
 // Alberta has no PST — only federal GST applies.
 export const GST_RATE = 0.05;
@@ -6,6 +6,7 @@ export const GST_RATE = 0.05;
 const findRoofProduct = (id) => ROOF_PRODUCTS.find((p) => p.id === id) || ROOF_PRODUCTS[0];
 const findWallProduct = (id) => WALL_PRODUCTS.find((p) => p.id === id) || WALL_PRODUCTS[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
+const findDownspout = (id) => DOWNSPOUT_OPTIONS.find((d) => d.id === id) || DOWNSPOUT_OPTIONS[0];
 
 // Groups facets by their effective product (per-facet override, falling back
 // to the global product) and returns one line item per distinct product —
@@ -35,7 +36,8 @@ function groupFacetsByProduct(facets, overrides, globalProductId, findProduct, l
 /**
  * @param {object} measurements - { soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
  * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, facetOverrides,
- *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping}, gutterOption, manualDiscount }
+ *   services: {soffit,fascia,gutters,downspouts,snowRetention,capFlashing,garageDoorCapping},
+ *   gutterOption, downspoutOption, manualDiscount }
  *   roofFaces/wallFaces: [{ key, sizeSf }]; facetOverrides: { [key]: productId } (roof/wall keys are
  *   disjoint since they come from distinct layer:faceId facet keys, so the same map is used for both)
  */
@@ -83,15 +85,16 @@ export function calculateEstimate(measurements, selections) {
     line.push({ key: 'gutters', label: gutterOption.label, qty: measurements.gutterLf, unit: 'LF', rate: gutterOption.pricePerLf, total: gutterTotal });
   }
 
+  const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
   const gutterDownspoutDeal = !!(services.gutters && services.downspouts && !fullWrap);
   if (services.downspouts) {
-    const base = measurements.downspoutLf * gutterOption.downspout.pricePerLf;
+    const base = measurements.downspoutLf * downspoutOption.pricePerLf;
     downspoutTotal = gutterDownspoutDeal ? 0 : base;
     line.push({
       key: 'downspouts',
-      label: gutterOption.downspout.label + (gutterDownspoutDeal ? ' (FREE — gutters + downspouts package)' : ''),
-      qty: measurements.downspoutLf, unit: 'LF', rate: gutterOption.downspout.pricePerLf, total: downspoutTotal,
+      label: downspoutOption.label + (gutterDownspoutDeal ? ' (FREE — gutters + downspouts package)' : ''),
+      qty: measurements.downspoutLf, unit: 'LF', rate: downspoutOption.pricePerLf, total: downspoutTotal,
     });
   }
 

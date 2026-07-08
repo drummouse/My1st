@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Viewer3D from './components/Viewer3D.jsx';
 import BrandToggle from './components/BrandToggle.jsx';
-import ColorPicker from './components/ColorPicker.jsx';
+import ColorPickerButton from './components/ColorPickerButton.jsx';
 import ProductSelector from './components/ProductSelector.jsx';
 import ServicesPanel from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
@@ -15,7 +15,7 @@ import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, encodeDesignForUrl, decodeDesignFromUrl } from './lib/designState.js';
-import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS } from './data/pricing.js';
+import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
@@ -90,6 +90,7 @@ export default function App() {
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [lockedServices, setLockedServices] = useState(DEFAULT_LOCKED_SERVICES);
   const [gutterOptionId, setGutterOptionId] = useState(GUTTER_OPTIONS[0].id);
+  const [downspoutOptionId, setDownspoutOptionId] = useState(DOWNSPOUT_OPTIONS[0].id);
   const [measurements, setMeasurements] = useState(house.measurements);
   const [photoOverlay, setPhotoOverlay] = useState(null);
   const [manualDiscount, setManualDiscount] = useState(0);
@@ -117,7 +118,7 @@ export default function App() {
   const buildDesignSnapshot = () =>
     captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
-      wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId,
+      wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
       uniformFinish, facetOverrides,
     });
@@ -136,6 +137,7 @@ export default function App() {
       setServices,
       setLockedServices,
       setGutterOptionId,
+      setDownspoutOptionId,
       setMeasurements,
       setManualDiscount,
       setLayerOffsets,
@@ -261,9 +263,10 @@ export default function App() {
         facetOverrides: uniformFinish ? {} : extractProductOverrides(facetOverrides),
         services,
         gutterOption: gutterOptionId,
+        downspoutOption: downspoutOptionId,
         manualDiscount,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, manualDiscount]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount]
   );
 
   const facetColors = useMemo(() => {
@@ -298,6 +301,7 @@ export default function App() {
     setServices(DEFAULT_SERVICES);
     setLockedServices(DEFAULT_LOCKED_SERVICES);
     setGutterOptionId(GUTTER_OPTIONS[0].id);
+    setDownspoutOptionId(DOWNSPOUT_OPTIONS[0].id);
     setMeasurements(BLANK_HOUSE.measurements);
     setPhotoOverlay(null);
     setManualDiscount(0);
@@ -578,7 +582,10 @@ export default function App() {
             onProductChange={handleRoofProductChange}
             onProfileChange={setRoofProfile}
           />
-          <ColorPicker label="Roof Color" selectedId={roofColorId} onChange={setRoofColorId} />
+          <div className="control-block color-row">
+            <span className="control-label">Roof Color</span>
+            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} />
+          </div>
 
           <ProductSelector
             label="Siding Material"
@@ -589,7 +596,10 @@ export default function App() {
             onProductChange={handleWallProductChange}
             onProfileChange={setWallProfile}
           />
-          <ColorPicker label="Siding Color" selectedId={wallColorId} onChange={setWallColorId} />
+          <div className="control-block color-row">
+            <span className="control-label">Siding Color</span>
+            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} />
+          </div>
 
           <ServicesPanel
             services={services}
@@ -600,6 +610,8 @@ export default function App() {
             onMeasurementsChange={setMeasurements}
             gutterOptionId={gutterOptionId}
             onGutterOptionChange={setGutterOptionId}
+            downspoutOptionId={downspoutOptionId}
+            onDownspoutOptionChange={setDownspoutOptionId}
             accessoryColors={accessoryColors}
             onAccessoryColorsChange={setAccessoryColors}
             readOnlyQuantities={isCustomerView}
