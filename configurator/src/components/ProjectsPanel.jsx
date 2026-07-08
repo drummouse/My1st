@@ -74,40 +74,29 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
     setTimeout(() => setStatus(''), 5000);
   };
 
-  const handleSaveAs = () =>
+  // A single save action: updates the already-saved record (if this design
+  // has one) instead of always creating a new one — only a genuinely new
+  // project (no currentProjectId, e.g. right after "New Project") creates a
+  // new database row. Always downloads the pointer file too.
+  const handleDownload = () =>
     withStatus('Saving...', 'Project saved — file downloaded.', async () => {
       const design = getCurrentDesign();
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      const body = JSON.stringify({
+        jobNumber: design.house.jobNumber,
+        customerName: design.house.customerName,
+        address: design.house.address,
+        design,
+      });
+      const id = currentProjectId;
+      const res = await fetch(id ? `/api/projects/${id}` : '/api/projects', {
+        method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobNumber: design.house.jobNumber,
-          customerName: design.house.customerName,
-          address: design.house.address,
-          design,
-        }),
+        body,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const saved = await res.json();
+      const saved = id ? { id } : await res.json();
       onProjectIdChange(saved.id);
       downloadProjectFile(saved.id, design);
-      await refresh();
-    });
-
-  const handleUpdate = () =>
-    withStatus('Updating...', 'Project updated.', async () => {
-      const design = getCurrentDesign();
-      const res = await fetch(`/api/projects/${currentProjectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobNumber: design.house.jobNumber,
-          customerName: design.house.customerName,
-          address: design.house.address,
-          design,
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await refresh();
     });
 
@@ -149,14 +138,15 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
         Save this design to the database so it can be reopened and edited later, or shared as a
         short project link — an anchor for a future rotatable 3D view in exported PDFs, unlike the
         self-contained Shareable Link above which embeds the whole design in the URL itself.
-        "Save As" also downloads a small file to your device — it's just a link back to the
-        database entry, not a frozen copy, so it always opens the latest saved version.
+        "Download" saves the design (updating this same project once it's been saved once — it
+        won't create a duplicate) and downloads a small file to your device — it's just a link back
+        to the database entry, not a frozen copy, so it always opens the latest saved version.
+        Use "+ New Project" above to start a separate, unrelated project.
       </div>
 
       <div className="export-buttons" style={{ marginTop: '0.6rem' }}>
-        <button type="button" className="btn-secondary" onClick={handleSaveAs} disabled={busy}>Save As...</button>
-        <button type="button" className="btn-primary" onClick={handleUpdate} disabled={busy || !currentProjectId}>
-          Update Saved
+        <button type="button" className="btn-primary" onClick={handleDownload} disabled={busy} style={{ width: '100%' }}>
+          Download
         </button>
       </div>
       <button

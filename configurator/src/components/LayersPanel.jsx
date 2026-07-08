@@ -11,7 +11,7 @@ function makeLayerId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `layer-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer, readOnly }) {
+export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer, onNewProject, readOnly }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -24,6 +24,17 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
   return (
     <div className="control-block">
       <div className="control-label">House / Project</div>
+
+      {!readOnly && (
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={onNewProject}
+          style={{ width: '100%', marginBottom: '0.6rem' }}
+        >
+          + New Project
+        </button>
+      )}
 
       <label className="field-label" htmlFor="job-number">Job #</label>
       <input id="job-number" className="control-select" value={house.jobNumber} onChange={(e) => onMetaChange({ jobNumber: e.target.value })} />

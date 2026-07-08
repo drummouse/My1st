@@ -107,14 +107,20 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   Vercel's marketplace integration and the HTTP-based
   `@neondatabase/serverless` driver) and reopened, updated, or deleted later
   from the **Projects** panel (admin/internal use only — hidden entirely in
-  the customer-facing HTML export and shareable link). "Save As" both saves
-  to the database and downloads a small HTML file to your device — the file
-  is just a redirect to the project's `?p=<id>` link, not a frozen copy, so
-  opening it later always loads whatever is currently saved. "Copy Project
-  Link" gives the same short `?p=<id>` URL directly, by reference instead of
-  embedding the whole design — this is meant to eventually anchor a rotatable 3D view linked
-  from an exported PDF (see "Not yet built" below). API routes:
-  `api/projects/index.js` (list, create), `api/projects/[id].js`
+  the customer-facing HTML export and shareable link). A single
+  **Download** button both saves to the database and downloads a small
+  pointer HTML file to your device — a redirect to the project's `?p=<id>`
+  link, not a frozen copy, so opening it later always loads whatever is
+  currently saved. It's an upsert: once a design has been saved, clicking
+  Download again updates that same record instead of creating a duplicate —
+  only **+ New Project** (top of the House/Project panel; resets job #,
+  customer, address, layers, and every selection/override back to blank, so
+  nothing from the previous design can leak into the next one) clears the
+  saved-project link and starts a genuinely new record. "Copy Project Link"
+  gives the same short `?p=<id>` URL directly, by reference instead of
+  embedding the whole design — this is meant to eventually anchor a rotatable
+  3D view linked from an exported PDF (see "Not yet built" below). API
+  routes: `api/projects/index.js` (list, create), `api/projects/[id].js`
   (get/update/delete); schema is created automatically on first request (see
   `db/schema.sql`).
 
@@ -128,6 +134,14 @@ space. This is called out in the brief as an accepted MVP limitation ("house
 geometry: simplified — proof of concept") and is surfaced in the viewer's
 on-screen caption. The Layer Position Adjustment control lets you manually
 nudge any one layer if the auto-stack doesn't line it up correctly.
+
+- **Auto-updating PWA** (`src/main.jsx`) — the app installs a service worker
+  (`vite-plugin-pwa`) for offline/installable use, but a plain registration
+  can leave an already-open tab running a stale cached bundle even after a
+  new deploy. `registerSW({ immediate: true, onRegisteredSW, onNeedRefresh })`
+  checks for a new deploy every 60 seconds and reloads automatically the
+  moment one's found, so a redeploy always reaches whatever's already open,
+  not just new tabs.
 
 ## Run it
 

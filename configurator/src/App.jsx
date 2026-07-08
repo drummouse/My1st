@@ -51,6 +51,22 @@ const DEFAULT_LOCKED_SERVICES = {
   garageDoorCapping: false,
 };
 
+const BLANK_HOUSE = {
+  jobNumber: '',
+  customerName: '',
+  address: '',
+  layers: [],
+  measurements: {
+    soffitSqft: 0,
+    fasciaLf: 0,
+    gutterLf: 0,
+    downspoutLf: 0,
+    snowRetentionLf: 0,
+    capFlashingLf: 0,
+    garageDoorCappingLf: 0,
+  },
+};
+
 function extractProductOverrides(overrides) {
   const result = {};
   Object.entries(overrides).forEach(([key, val]) => {
@@ -264,6 +280,35 @@ export default function App() {
     });
     return map;
   }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish]);
+
+  // Resets every field back to a blank slate — job#/customer/address, all
+  // layers, product/color selections, overrides, everything — so starting a
+  // new project can't leave any stale data behind from whatever was loaded
+  // before. Also clears currentProjectId so the next "Download" creates a
+  // fresh database record instead of overwriting the previous project.
+  const handleNewProject = () => {
+    if (!window.confirm('Start a new project? Any unsaved changes to the current design will be lost.')) return;
+    setHouse(BLANK_HOUSE);
+    setRoofProductId(ROOF_PRODUCTS[0].id);
+    setRoofProfile(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
+    setRoofColorId('wk-04');
+    setWallProductId(WALL_PRODUCTS[0].id);
+    setWallProfile(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
+    setWallColorId('wk-01');
+    setServices(DEFAULT_SERVICES);
+    setLockedServices(DEFAULT_LOCKED_SERVICES);
+    setGutterOptionId(GUTTER_OPTIONS[0].id);
+    setMeasurements(BLANK_HOUSE.measurements);
+    setPhotoOverlay(null);
+    setManualDiscount(0);
+    setLayerOffsets({});
+    setActiveLayerId(undefined);
+    setAccessoryColors(DEFAULT_ACCESSORY_COLORS);
+    setUniformFinish(true);
+    setFacetOverrides({});
+    setSelectedFacet(null);
+    setCurrentProjectId(null);
+  };
 
   const handleRoofProductChange = (id) => {
     setRoofProductId(id);
@@ -498,6 +543,7 @@ export default function App() {
             onRemoveLayer={handleRemoveLayer}
             onToggleVisibility={handleToggleLayerVisibility}
             onRenameLayer={handleRenameLayer}
+            onNewProject={handleNewProject}
             readOnly={isCustomerView}
           />
 
