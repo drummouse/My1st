@@ -10,7 +10,7 @@ import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
-import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
+import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
@@ -213,6 +213,28 @@ export default function App() {
     return out;
   }, [parsedLayers]);
 
+  // Aggregated across every visible layer, for the PDF's Window & Door
+  // Schedule and Linear Footage/Accessories Takeoff tables.
+  const openingsSchedule = useMemo(() => {
+    const out = [];
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      collectOpenings(l.parsed).forEach((o) => out.push({ layerName: l.name, ...o }));
+    });
+    return out;
+  }, [parsedLayers]);
+
+  const lineTakeoffs = useMemo(() => {
+    const out = {};
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      Object.entries(l.parsed.lineTakeoffs || {}).forEach(([type, len]) => {
+        out[type] = (out[type] || 0) + len;
+      });
+    });
+    return out;
+  }, [parsedLayers]);
+
   const estimate = useMemo(
     () =>
       calculateEstimate(measurements, {
@@ -377,6 +399,8 @@ export default function App() {
       brand,
       house,
       isoSnapshots: viewerRef.current?.captureIsoViews() || [],
+      elevationViews: viewerRef.current?.captureElevationViews() || [],
+      roofPlanView: viewerRef.current?.captureRoofPlanView() || null,
       roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
       roofColorId,
       roofProfile,
@@ -390,6 +414,8 @@ export default function App() {
       facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
+      openingsSchedule,
+      lineTakeoffs,
     });
   };
 

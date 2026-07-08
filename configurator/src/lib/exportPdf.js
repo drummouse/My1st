@@ -244,6 +244,182 @@ function drawIsoAndSummaryPage(doc, {
   }
 }
 
+function drawElevationsPage(doc, { brand, elevationViews }) {
+  if (!elevationViews?.length) return;
+  doc.addPage();
+  drawPageHeader(doc, brand, 'Elevations');
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(140);
+  doc.text('Labels are relative to the model orientation, not true compass direction.', MARGIN, 46);
+  doc.setTextColor(0);
+
+  const top = 56;
+  const bottom = PAGE_H - MARGIN;
+  const gap = 16;
+  const colW = (PAGE_W - MARGIN * 2 - gap) / 2;
+  const rowH = (bottom - top - gap) / 2;
+  const captionH = 16;
+  const positions = [
+    [MARGIN, top], [MARGIN + colW + gap, top],
+    [MARGIN, top + rowH + gap], [MARGIN + colW + gap, top + rowH + gap],
+  ];
+  elevationViews.slice(0, 4).forEach(({ label, dataUrl }, i) => {
+    const [x, y] = positions[i];
+    try {
+      doc.setDrawColor(225);
+      doc.roundedRect(x, y, colW, rowH - captionH, 4, 4, 'S');
+      drawImageContained(doc, dataUrl, x + 3, y + 3, colW - 6, rowH - captionH - 6);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(60);
+      doc.text(label, x + colW / 2, y + rowH - 4, { align: 'center' });
+      doc.setTextColor(0);
+    } catch {
+      // Capture failed for this angle — skip it, keep the rest of the report.
+    }
+  });
+}
+
+function drawRoofPlanPage(doc, { brand, roofPlanView }) {
+  if (!roofPlanView) return;
+  doc.addPage();
+  drawPageHeader(doc, brand, 'Roof Plan');
+  const top = 50;
+  const bottom = PAGE_H - MARGIN;
+  try {
+    doc.setDrawColor(225);
+    doc.roundedRect(MARGIN, top, PAGE_W - MARGIN * 2, bottom - top, 4, 4, 'S');
+    drawImageContained(doc, roofPlanView, MARGIN + 6, top + 6, PAGE_W - MARGIN * 2 - 12, bottom - top - 12);
+  } catch {
+    // Capture failed — skip, keep the rest of the report.
+  }
+}
+
+const LINE_TYPE_LABELS = {
+  FASCIA: 'Fascia',
+  GUTTER: 'Gutter / Eavestrough',
+  RIDGE: 'Ridge',
+  HIP: 'Hip',
+  VALLEY: 'Valley',
+  GABLE: 'Gable / Rake',
+  EAVE: 'Eave',
+  APRON: 'Apron / Flashing',
+  STEP: 'Step Flashing',
+  'TUCK-UNDER': 'Tuck-Under Flashing',
+};
+
+// Window/Door Schedule and Linear Footage/Accessories Takeoff — the two
+// tables the reference RoofRuler reports carry for elements (soffit, fascia,
+// gutters, downspouts, openings) that this app doesn't model as their own 3D
+// geometry, so there's no photorealistic "view" to render for them, only the
+// measurements themselves.
+function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
+  let y = MARGIN;
+  let pageOpen = false;
+  const ensureRoom = (needed, title) => {
+    if (!pageOpen || y + needed > PAGE_H - MARGIN) {
+      doc.addPage();
+      drawPageHeader(doc, brand, title);
+      y = 50;
+      pageOpen = true;
+    }
+  };
+
+  if (openingsSchedule?.length) {
+    const title = 'Window & Door Schedule';
+    ensureRoom(60, title);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text(title, MARGIN, y); y += 6;
+    const windowCount = openingsSchedule.filter((o) => o.kind === 'window').length;
+    const doorCount = openingsSchedule.filter((o) => o.kind === 'door').length;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(
+      `${windowCount} window${windowCount === 1 ? '' : 's'}, ${doorCount} door${doorCount === 1 ? '' : 's'} detected from the imported wall report (approximate sizes).`,
+      MARGIN, y + 8, { maxWidth: PAGE_W - MARGIN * 2 }
+    );
+    doc.setTextColor(0);
+    y += 22;
+
+    const col = { wall: MARGIN, kind: MARGIN + 90, width: PAGE_W - MARGIN - 150, height: PAGE_W - MARGIN - 80, area: PAGE_W - MARGIN };
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(110);
+    doc.text('Wall Facet', col.wall, y);
+    doc.text('Type', col.kind, y);
+    doc.text('Width', col.width, y, { align: 'right' });
+    doc.text('Height', col.height, y, { align: 'right' });
+    doc.text('Approx. Sqft', col.area, y, { align: 'right' });
+    doc.setTextColor(0);
+    y += 5;
+    doc.setDrawColor(200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 11;
+
+    openingsSchedule
+      .slice()
+      .sort((a, b) => String(a.faceId).localeCompare(String(b.faceId), undefined, { numeric: true }))
+      .forEach((o) => {
+        ensureRoom(13, title);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(0);
+        doc.text(String(o.faceId), col.wall, y);
+        doc.text(o.kind === 'door' ? 'Door' : 'Window', col.kind, y);
+        doc.text(`${o.widthFt.toFixed(1)} ft`, col.width, y, { align: 'right' });
+        doc.text(`${o.heightFt.toFixed(1)} ft`, col.height, y, { align: 'right' });
+        doc.text((o.widthFt * o.heightFt).toFixed(1), col.area, y, { align: 'right' });
+        y += 13;
+      });
+    y += 12;
+  }
+
+  const relevantTypes = Object.keys(lineTakeoffs || {}).filter((t) => LINE_TYPE_LABELS[t]);
+  if (relevantTypes.length) {
+    const title = 'Linear Footage & Accessories Takeoff';
+    ensureRoom(60, title);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text(title, MARGIN, y); y += 6;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text('Measured directly from the imported roof/wall report geometry.', MARGIN, y + 8);
+    doc.setTextColor(0);
+    y += 22;
+
+    const col = { label: MARGIN, lf: PAGE_W - MARGIN };
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(110);
+    doc.text('Component', col.label, y);
+    doc.text('Linear Feet', col.lf, y, { align: 'right' });
+    doc.setTextColor(0);
+    y += 5;
+    doc.setDrawColor(200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 11;
+
+    relevantTypes
+      .sort((a, b) => LINE_TYPE_LABELS[a].localeCompare(LINE_TYPE_LABELS[b]))
+      .forEach((type) => {
+        ensureRoom(13, title);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(0);
+        doc.text(LINE_TYPE_LABELS[type], col.label, y);
+        doc.text(`${lineTakeoffs[type].toFixed(1)} ft`, col.lf, y, { align: 'right' });
+        y += 13;
+      });
+  }
+}
+
 function drawFacetDetailPages(doc, {
   brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
   roofFacesForPricing, wallFacesForPricing,
@@ -338,9 +514,9 @@ function stampFootersAndPageNumbers(doc, house) {
 }
 
 export function buildEstimatePdf({
-  brand, house, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
+  brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   services, accessoryColors, uniformFinish, facetOverrides,
-  roofFacesForPricing, wallFacesForPricing,
+  roofFacesForPricing, wallFacesForPricing, openingsSchedule, lineTakeoffs,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
@@ -350,6 +526,10 @@ export function buildEstimatePdf({
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
     estimate, services, accessoryColors,
   });
+
+  drawElevationsPage(doc, { brand, elevationViews });
+  drawRoofPlanPage(doc, { brand, roofPlanView });
+  drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs });
 
   drawFacetDetailPages(doc, {
     brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,

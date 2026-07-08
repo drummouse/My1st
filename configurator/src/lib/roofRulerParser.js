@@ -70,9 +70,57 @@ function resolveLoops(pathTokens, lines, points) {
   if (current.length) loops.push(current);
 
   return loops
-    .map((lineIds) => buildLoopFromLineIds(lineIds, lines))
-    .map((pointIds) => pointIds.map((id) => points[id]).filter(Boolean))
-    .filter((loop) => loop.length >= 3);
+    .map((lineIds) => ({
+      lineIds,
+      points: buildLoopFromLineIds(lineIds, lines).map((id) => points[id]).filter(Boolean),
+    }))
+    .filter((loop) => loop.points.length >= 3);
+}
+
+// Classifies a hole loop (a window/door cutout inside a wall face) by the
+// RoofRuler line "type" tags on its edges (WINDOW-EDGE/HEAD/SILL vs
+// DOOR-EDGE/HEAD), and estimates its plan-view width and height from its 3D
+// bounding box — good enough for a schedule table, not precision millwork.
+function classifyOpening(lineIds, lines) {
+  let windowVotes = 0;
+  let doorVotes = 0;
+  lineIds.forEach((id) => {
+    const type = lines[id]?.type || '';
+    if (type.startsWith('WINDOW-')) windowVotes += 1;
+    else if (type.startsWith('DOOR-')) doorVotes += 1;
+  });
+  if (doorVotes === 0 && windowVotes === 0) return null;
+  return doorVotes >= windowVotes ? 'door' : 'window';
+}
+
+function loopDimensions(loopPoints) {
+  const xs = loopPoints.map((p) => p[0]);
+  const ys = loopPoints.map((p) => p[1]);
+  const zs = loopPoints.map((p) => p[2]);
+  const planSpan = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const heightSpan = Math.max(...zs) - Math.min(...zs);
+  return { widthFt: planSpan, heightFt: heightSpan };
+}
+
+// Unlike a window, a door usually reaches the floor — so it isn't a separate
+// hole loop (a fully enclosed sub-boundary), it's a notch cut directly into
+// the wall's OUTER boundary, sharing its bottom edge with the wall base. This
+// walks the outer loop's line sequence for contiguous DOOR-EDGE/DOOR-HEAD
+// runs and measures each one directly (doesn't handle a run that wraps
+// around the array boundary, a rare edge case given the arbitrary start
+// point of the exported polygon path).
+function findOuterLoopDoors(lineIds, lines) {
+  const doors = [];
+  let i = 0;
+  while (i < lineIds.length) {
+    const isDoorLine = (lines[lineIds[i]]?.type || '').startsWith('DOOR-');
+    if (!isDoorLine) { i += 1; continue; }
+    let j = i;
+    while (j < lineIds.length && (lines[lineIds[j]]?.type || '').startsWith('DOOR-')) j += 1;
+    doors.push(lineIds.slice(i, j));
+    i = j;
+  }
+  return doors;
 }
 
 /**
@@ -93,8 +141,33 @@ export function parseAppliCadXML(xmlText, defaultType = 'Roof') {
     const polyEl = faceEl.querySelector('POLYGON');
     if (!polyEl) return;
     const pathTokens = polyEl.getAttribute('path').split(',');
-    const loops = resolveLoops(pathTokens, lines, points);
-    if (!loops.length) return;
+    const resolvedLoops = resolveLoops(pathTokens, lines, points);
+    if (!resolvedLoops.length) return;
+
+    // Sub-loops after the first (holes cut into the outer boundary) are
+    // window/door cutouts — classify each by its edges' RoofRuler line types.
+    const openings = resolvedLoops
+      .slice(1)
+      .map(({ lineIds, points: loopPoints }) => {
+        const kind = classifyOpening(lineIds, lines);
+        if (!kind) return null;
+        return { kind, ...loopDimensions(loopPoints) };
+      })
+      .filter(Boolean);
+
+    // Doors that reach the floor are notches in the outer boundary itself,
+    // not a separate hole loop — found by walking the outer loop's own line
+    // sequence for contiguous DOOR-EDGE/DOOR-HEAD runs.
+    findOuterLoopDoors(resolvedLoops[0].lineIds, lines).forEach((runIds) => {
+      const runPoints = buildLoopFromLineIds(runIds, lines).map((id) => points[id]).filter(Boolean);
+      if (runPoints.length < 2) return;
+      const dims = loopDimensions(runPoints);
+      // A stray isolated door-tagged fragment (no real width or height) is
+      // parsing noise, not an actual opening — skip it rather than list a
+      // fake "0.0 x 3.0 ft door".
+      if (dims.widthFt < 0.5 || dims.heightFt < 0.5) return;
+      openings.push({ kind: 'door', ...dims });
+    });
 
     faces.push({
       id: faceEl.getAttribute('id'),
@@ -103,7 +176,8 @@ export function parseAppliCadXML(xmlText, defaultType = 'Roof') {
       orientation: parseFloat(polyEl.getAttribute('orientation')) || 0,
       type: polyEl.getAttribute('type') || defaultType,
       material: polyEl.getAttribute('mat') || '',
-      loops,
+      loops: resolvedLoops.map((l) => l.points),
+      openings,
     });
   });
 
@@ -123,6 +197,16 @@ export function roofSqft(parsed) {
 
 export function wallSqft(parsed) {
   return parsed.faces.filter((f) => f.type === 'Wall').reduce((sum, f) => sum + f.sizeSf, 0);
+}
+
+// Every window/door cutout found across a layer's wall faces, for the PDF's
+// Window & Door Schedule table.
+export function collectOpenings(parsed) {
+  const openings = [];
+  parsed.faces.forEach((f) => {
+    (f.openings || []).forEach((o) => openings.push({ faceId: f.id, ...o }));
+  });
+  return openings;
 }
 
 export function boundingBox(parsed) {

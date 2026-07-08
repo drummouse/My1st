@@ -33,24 +33,42 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   an "all same" checkbox (default on); `pricingEngine.js` groups facets by
   their effective product so the price breakdown reflects any per-facet
   material changes.
-- **PDF & text export** (`src/lib/exportPdf.js`, `src/lib/exportEstimate.js`)
-  — a structured, multi-page report modeled on the company's existing
-  RoofRuler Wall/Roof Reports:
+- **PDF & text export** (`src/lib/exportPdf.js`, `src/lib/exportEstimate.js`,
+  `src/lib/roofRulerParser.js`) — a structured, multi-page report modeled on
+  the company's existing RoofRuler Wall/Roof Reports:
   1. **Cover page** — branding, job number, customer, address, date prepared.
   2. **Renderings & Estimate Summary** — four auto-captured isometric
-     screenshots of the 3D model (one from each diagonal corner, framed back
-     far enough to show the whole building and angled slightly above ground
-     to read the roof), stacked down the left half of the page, next to a
-     Selections list and the full Materials/Services price breakdown
+     screenshots of the 3D model (one from each diagonal corner, framed
+     tight enough that the model fills the frame, angled slightly above
+     ground to read the roof), stacked down the left half of the page, next
+     to a Selections list and the full Materials/Services price breakdown
      (Subtotal, package discounts, GST, Total) on the right half.
-  3. **Facet detail pages** — every roof slope and wall segment gets its own
+  3. **Elevations** — four true-to-scale orthographic views (Front/Right/
+     Back/Left, relative to the model — the XML carries no compass bearing),
+     one per quadrant of the page.
+  4. **Roof Plan** — a single top-down orthographic view of the roof.
+  5. **Window & Door Schedule** and **Linear Footage & Accessories
+     Takeoff** — soffit, fascia, gutters, and downspouts aren't modeled as
+     their own 3D geometry (only as linear-footage line items), so instead of
+     a fabricated "view" of them, these tables report the actual measurements:
+     every window/door opening (facet, type, approximate width/height/sqft)
+     and every relevant line takeoff (Fascia, Gutter, Ridge, Hip, Valley,
+     Gable, Apron, Step/Tuck-Under flashing) in linear feet.
+  6. **Facet detail pages** — every roof slope and wall segment gets its own
      row (Facet/Product/Color/Sqft), always, not just the customized ones,
      paginating automatically as needed.
-  Every report covers exactly one building. The four isometric renderings
-  are captured via `Viewer3D`'s `captureIsoViews()` (hides the ground grid,
-  frames the model from each corner, restores the live camera afterward) —
-  static PNGs baked into the PDF, not an interactive 3D object; see "Not yet
-  built" below for why a truly embedded rotatable 3D model isn't possible.
+  Every report covers exactly one building. All renderings/elevations/plan
+  views have their facet IDs burned directly into the image (only where
+  actually visible from that angle — checked via a raycast against every
+  other facet) so they read as labeled diagrams, not just pretty pictures.
+  Window/door detection classifies each wall face's cutouts by the RoofRuler
+  line types on their edges (`WINDOW-EDGE/HEAD/SILL` vs. `DOOR-EDGE/HEAD`);
+  a door usually reaches the floor, so it shows up as a notch in the wall's
+  outer boundary rather than a fully enclosed hole, and is detected
+  separately by walking that boundary for contiguous door-tagged runs.
+  Every capture is a static PNG baked into the PDF, not an interactive 3D
+  object — see "Not yet built" below for why a truly embedded rotatable 3D
+  model isn't possible.
 - **Export HTML** — downloads a single self-contained interactive file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
