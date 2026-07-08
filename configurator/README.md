@@ -56,6 +56,12 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   type`), matching the three real QuickBooks line items — 3" Round, 4" Round,
   3x3 Square — instead of being implicitly tied to whichever gutter profile
   was selected.
+- **Roof and Wall are optional services too** (`services.roof`/`services.wall`),
+  same checkbox + admin Lock pattern as Soffit/Fascia/Gutters/Downspouts —
+  unchecking one drops it from the price breakdown (and the Selections list)
+  entirely, e.g. for an estimate covering only siding work with no roofing.
+  Full Wrap requires both to be included (and actually priced — nonzero
+  totals) in addition to the four accessory services.
 - **Per-facet customization** — every roof slope and wall segment is its own
   mesh (`src/lib/buildScene.js`) so it can be clicked in the 3D viewer and
   given its own material/color, overriding the global selection. Governed by
@@ -80,24 +86,34 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
      Takeoff** — soffit, fascia, gutters, and downspouts aren't modeled as
      their own 3D geometry (only as linear-footage line items), so instead of
      a fabricated "view" of them, these tables report the actual measurements:
-     every window/door opening (facet, type, approximate width/height/sqft)
-     and every relevant line takeoff (Fascia, Gutter, Ridge, Hip, Valley,
-     Gable, Apron, Step/Tuck-Under flashing) in linear feet.
+     every opening (ID, wall facet, type, approximate width/height/sqft) and
+     every relevant line takeoff (Fascia, Gutter, Ridge, Hip, Valley, Gable,
+     Apron, Step/Tuck-Under flashing) in linear feet.
   6. **Facet detail pages** — every roof slope and wall segment gets its own
      row (Facet/Product/Color/Sqft), always, not just the customized ones,
      paginating automatically as needed.
-  Every report covers exactly one building. All renderings/elevations/plan
-  views have their facet IDs burned directly into the image (only where
-  actually visible from that angle — checked via a raycast against every
-  other facet) so they read as labeled diagrams, not just pretty pictures.
-  Window/door detection classifies each wall face's cutouts by the RoofRuler
-  line types on their edges (`WINDOW-EDGE/HEAD/SILL` vs. `DOOR-EDGE/HEAD`);
-  a door usually reaches the floor, so it shows up as a notch in the wall's
-  outer boundary rather than a fully enclosed hole, and is detected
-  separately by walking that boundary for contiguous door-tagged runs.
-  Every capture is a static PNG baked into the PDF, not an interactive 3D
-  object — see "Not yet built" below for why a truly embedded rotatable 3D
-  model isn't possible.
+  Every report covers exactly one building. Every facet and opening gets a
+  clean, collision-free label (`src/lib/facetLabels.js`) instead of the raw
+  RoofRuler face id (which can collide between a roof export and a wall
+  export): **R1, R2...** for roof slopes, **F1, F2...** for wall segments,
+  **W1, W2...** for windows, **D1, D2...** for doors, **O1, O2...** for any
+  other opening/penetration that isn't tagged as either (previously silently
+  dropped — now a real, labeled row). Only the **Roof Plan** burns these
+  labels into the image itself (only where a facet is actually visible from
+  directly above, checked via a raycast against every other facet); the
+  isometric renderings and elevations are intentionally left unlabeled —
+  clean "wow" shots and true-to-scale elevation drawings, not diagrams. The
+  Window & Door Schedule and the Roof Slopes/Wall Segments tables use the
+  same labels, so a reader can cross-reference an opening or facet between
+  the plan drawing and the tables. Window/door/other detection classifies
+  each wall face's cutouts by the RoofRuler line types on their edges
+  (`WINDOW-EDGE/HEAD/SILL` vs. `DOOR-EDGE/HEAD`, falling back to "other" for
+  anything untagged); a door usually reaches the floor, so it shows up as a
+  notch in the wall's outer boundary rather than a fully enclosed hole, and
+  is detected separately by walking that boundary for contiguous
+  door-tagged runs. Every capture is a static PNG baked into the PDF, not an
+  interactive 3D object — see "Not yet built" below for why a truly embedded
+  rotatable 3D model isn't possible.
 - **Export HTML** — downloads a single self-contained interactive file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
@@ -156,7 +172,9 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   3D view linked from an exported PDF (see "Not yet built" below). API
   routes: `api/projects/index.js` (list, create), `api/projects/[id].js`
   (get/update/delete); schema is created automatically on first request (see
-  `db/schema.sql`).
+  `db/schema.sql`). The saved-projects list below the buttons is capped at a
+  fixed height and scrolls internally once it grows past a handful of
+  entries, instead of stretching the whole sidebar taller as more get saved.
 
 ## Known simplification
 

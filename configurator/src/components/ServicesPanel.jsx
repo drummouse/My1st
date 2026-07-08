@@ -20,17 +20,21 @@ function ServiceRow({
           <span>Lock</span>
         </label>
       )}
-      <input
-        type="number"
-        min="0"
-        step="1"
-        className="service-qty"
-        value={qty}
-        disabled={!checked || readOnly}
-        onChange={(e) => onQtyChange(Number(e.target.value) || 0)}
-        aria-label={`${label} quantity in ${unit}`}
-      />
-      <span className="service-unit">{unit}</span>
+      {qty !== undefined && (
+        <>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            className="service-qty"
+            value={qty}
+            disabled={!checked || readOnly}
+            onChange={(e) => onQtyChange(Number(e.target.value) || 0)}
+            aria-label={`${label} quantity in ${unit}`}
+          />
+          <span className="service-unit">{unit}</span>
+        </>
+      )}
       {colorId && <ColorPickerButton selectedId={colorId} onChange={onColorChange} disabled={readOnly} />}
       {note && <span className="service-note">{note}</span>}
     </div>
@@ -54,6 +58,15 @@ export default function ServicesPanel({
   return (
     <div className="control-block">
       <div className="control-label">Optional Services</div>
+
+      <ServiceRow
+        label="Roof" checked={services.roof} onToggle={toggle('roof')} readOnly={readOnlyQuantities}
+        locked={lockedServices?.roof} onToggleLock={toggleLock('roof')} showLockToggle={showLockToggle}
+      />
+      <ServiceRow
+        label="Wall" checked={services.wall} onToggle={toggle('wall')} readOnly={readOnlyQuantities}
+        locked={lockedServices?.wall} onToggleLock={toggleLock('wall')} showLockToggle={showLockToggle}
+      />
 
       <ServiceRow
         label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}

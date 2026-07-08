@@ -181,7 +181,9 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
       {status && <div className="control-sublabel">{status}</div>}
 
       {projects.length > 0 && (
-        <ul className="layer-list" style={{ marginTop: '0.6rem' }}>
+        <>
+        <div className="field-label" style={{ marginTop: '0.6rem' }}>Saved Projects ({projects.length})</div>
+        <ul className="layer-list projects-list">
           {projects.map((p) => (
             <li key={p.id} className="layer-row">
               <button
@@ -198,6 +200,7 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
             </li>
           ))}
         </ul>
+        </>
       )}
     </div>
   );

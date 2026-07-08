@@ -77,10 +77,13 @@ function resolveLoops(pathTokens, lines, points) {
     .filter((loop) => loop.points.length >= 3);
 }
 
-// Classifies a hole loop (a window/door cutout inside a wall face) by the
-// RoofRuler line "type" tags on its edges (WINDOW-EDGE/HEAD/SILL vs
+// Classifies a hole loop (a window/door/other cutout inside a wall face) by
+// the RoofRuler line "type" tags on its edges (WINDOW-EDGE/HEAD/SILL vs
 // DOOR-EDGE/HEAD), and estimates its plan-view width and height from its 3D
 // bounding box — good enough for a schedule table, not precision millwork.
+// A hole with no window/door edge tags at all (a vent, a decorative recess,
+// any other penetration) is still a real cutout — classified as 'other'
+// rather than silently dropped.
 function classifyOpening(lineIds, lines) {
   let windowVotes = 0;
   let doorVotes = 0;
@@ -89,7 +92,7 @@ function classifyOpening(lineIds, lines) {
     if (type.startsWith('WINDOW-')) windowVotes += 1;
     else if (type.startsWith('DOOR-')) doorVotes += 1;
   });
-  if (doorVotes === 0 && windowVotes === 0) return null;
+  if (doorVotes === 0 && windowVotes === 0) return 'other';
   return doorVotes >= windowVotes ? 'door' : 'window';
 }
 
@@ -145,13 +148,15 @@ export function parseAppliCadXML(xmlText, defaultType = 'Roof') {
     if (!resolvedLoops.length) return;
 
     // Sub-loops after the first (holes cut into the outer boundary) are
-    // window/door cutouts — classify each by its edges' RoofRuler line types.
+    // window/door/other cutouts — classify each by its edges' RoofRuler line
+    // types. A degenerate (near-zero) hole is parsing noise, not a real
+    // opening — skip it rather than list a fake "0.0 x 0.0 ft" penetration.
     const openings = resolvedLoops
       .slice(1)
       .map(({ lineIds, points: loopPoints }) => {
-        const kind = classifyOpening(lineIds, lines);
-        if (!kind) return null;
-        return { kind, ...loopDimensions(loopPoints) };
+        const dims = loopDimensions(loopPoints);
+        if (dims.widthFt < 0.5 || dims.heightFt < 0.5) return null;
+        return { kind: classifyOpening(lineIds, lines), ...dims };
       })
       .filter(Boolean);
 

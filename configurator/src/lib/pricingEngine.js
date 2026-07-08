@@ -45,11 +45,15 @@ export function calculateEstimate(measurements, selections) {
   const line = [];
   const services = selections.services || {};
 
-  const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
+  const roofGroups = services.roof
+    ? groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing')
+    : { items: [], total: 0 };
   line.push(...roofGroups.items);
   const roofTotal = roofGroups.total;
 
-  const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding');
+  const wallGroups = services.wall
+    ? groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding')
+    : { items: [], total: 0 };
   line.push(...wallGroups.items);
   const wallTotal = wallGroups.total;
 

@@ -441,6 +441,11 @@ body {
 }
 .layer-visible-toggle { display: flex; align-items: center; }
 .layer-name-input { flex: 1 1 auto; margin: 0; }
+
+/* Saved-projects list is already database-backed, but an unbounded inline
+   list stretches the whole sidebar as more projects pile up — capped and
+   scrollable instead. */
+.projects-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.4rem; }
 .layer-remove-btn {
   flex: 0 0 auto;
   width: 1.7rem;

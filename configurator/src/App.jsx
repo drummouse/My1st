@@ -11,6 +11,7 @@ import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
+import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
@@ -21,6 +22,8 @@ import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 
 const DEFAULT_SERVICES = {
+  roof: true,
+  wall: true,
   soffit: true,
   fascia: true,
   gutters: true,
@@ -42,6 +45,8 @@ const DEFAULT_ACCESSORY_COLORS = {
 // freezes its current checked state in customer view rather than forcing it
 // on — an admin can still lock a service off, if that's ever useful.
 const DEFAULT_LOCKED_SERVICES = {
+  roof: false,
+  wall: false,
   soffit: false,
   fascia: false,
   gutters: false,
@@ -241,6 +246,15 @@ export default function App() {
     });
     return out;
   }, [parsedLayers]);
+
+  // Clean, collision-free per-type labels (R1/F1/W1/D1/O1) for the PDF —
+  // independent of the raw RoofRuler face ids, which can collide between a
+  // roof export and a wall export.
+  const facetLabels = useMemo(
+    () => buildFacetLabelMap(roofFacesForPricing, wallFacesForPricing),
+    [roofFacesForPricing, wallFacesForPricing]
+  );
+  const labeledOpenings = useMemo(() => labelOpenings(openingsSchedule), [openingsSchedule]);
 
   const lineTakeoffs = useMemo(() => {
     const out = {};
@@ -475,7 +489,8 @@ export default function App() {
       facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
-      openingsSchedule,
+      facetLabels,
+      openingsSchedule: labeledOpenings,
       lineTakeoffs,
     });
   };
@@ -521,6 +536,7 @@ export default function App() {
                   parsedLayers={parsedLayers}
                   layerOffsets={layerOffsets}
                   facetColors={facetColors}
+                  facetLabels={facetLabels}
                   photoOverlay={photoOverlay}
                   facetSelectionEnabled={!uniformFinish}
                   selectedFacetId={selectedFacet?.key}

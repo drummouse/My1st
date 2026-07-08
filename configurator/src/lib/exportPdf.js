@@ -159,10 +159,14 @@ function drawIsoAndSummaryPage(doc, {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   const selectionLines = [
-    `Roof: ${roofProduct.label} (${roofProfile || 'standard profile'})`,
-    `Roof color: ${roofColor.code} — ${roofColor.name}`,
-    `Siding: ${wallProduct.label} (${wallProfile || 'standard profile'})`,
-    `Siding color: ${wallColor.code} — ${wallColor.name}`,
+    ...(services?.roof !== false ? [
+      `Roof: ${roofProduct.label} (${roofProfile || 'standard profile'})`,
+      `Roof color: ${roofColor.code} — ${roofColor.name}`,
+    ] : []),
+    ...(services?.wall !== false ? [
+      `Siding: ${wallProduct.label} (${wallProfile || 'standard profile'})`,
+      `Siding color: ${wallColor.code} — ${wallColor.name}`,
+    ] : []),
     ...Object.entries(ACCESSORY_LABELS)
       .filter(([key]) => services?.[key])
       .map(([key, label]) => {
@@ -336,20 +340,24 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
     doc.text(title, MARGIN, y); y += 6;
     const windowCount = openingsSchedule.filter((o) => o.kind === 'window').length;
     const doorCount = openingsSchedule.filter((o) => o.kind === 'door').length;
+    const otherCount = openingsSchedule.filter((o) => o.kind === 'other').length;
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(140);
     doc.text(
-      `${windowCount} window${windowCount === 1 ? '' : 's'}, ${doorCount} door${doorCount === 1 ? '' : 's'} detected from the imported wall report (approximate sizes).`,
+      `${windowCount} window${windowCount === 1 ? '' : 's'}, ${doorCount} door${doorCount === 1 ? '' : 's'}`
+      + (otherCount ? `, ${otherCount} other opening${otherCount === 1 ? '' : 's'}/penetration${otherCount === 1 ? '' : 's'}` : '')
+      + ' detected from the imported wall report (approximate sizes).',
       MARGIN, y + 8, { maxWidth: PAGE_W - MARGIN * 2 }
     );
     doc.setTextColor(0);
     y += 22;
 
-    const col = { wall: MARGIN, kind: MARGIN + 90, width: PAGE_W - MARGIN - 150, height: PAGE_W - MARGIN - 80, area: PAGE_W - MARGIN };
+    const col = { id: MARGIN, wall: MARGIN + 35, kind: MARGIN + 110, width: PAGE_W - MARGIN - 150, height: PAGE_W - MARGIN - 80, area: PAGE_W - MARGIN };
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(110);
+    doc.text('ID', col.id, y);
     doc.text('Wall Facet', col.wall, y);
     doc.text('Type', col.kind, y);
     doc.text('Width', col.width, y, { align: 'right' });
@@ -361,16 +369,18 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
     doc.line(MARGIN, y, PAGE_W - MARGIN, y);
     y += 11;
 
+    const kindLabel = { window: 'Window', door: 'Door', other: 'Other' };
     openingsSchedule
       .slice()
-      .sort((a, b) => String(a.faceId).localeCompare(String(b.faceId), undefined, { numeric: true }))
+      .sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }))
       .forEach((o) => {
         ensureRoom(13, title);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(0);
+        doc.text(String(o.label || ''), col.id, y);
         doc.text(String(o.faceId), col.wall, y);
-        doc.text(o.kind === 'door' ? 'Door' : 'Window', col.kind, y);
+        doc.text(kindLabel[o.kind] || 'Other', col.kind, y);
         doc.text(`${o.widthFt.toFixed(1)} ft`, col.width, y, { align: 'right' });
         doc.text(`${o.heightFt.toFixed(1)} ft`, col.height, y, { align: 'right' });
         doc.text((o.widthFt * o.heightFt).toFixed(1), col.area, y, { align: 'right' });
@@ -422,7 +432,7 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
 
 function drawFacetDetailPages(doc, {
   brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
-  roofFacesForPricing, wallFacesForPricing,
+  roofFacesForPricing, wallFacesForPricing, facetLabels,
 }) {
   let y = MARGIN;
   let pageOpen = false;
@@ -490,10 +500,10 @@ function drawFacetDetailPages(doc, {
   };
 
   const roofFacetRows = roofFacesForPricing?.length
-    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId)
+    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId, facetLabels)
     : [];
   const wallFacetRows = wallFacesForPricing?.length
-    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId)
+    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId, facetLabels)
     : [];
 
   if (roofFacetRows.length) renderFacetTable('Roof Slopes', roofFacetRows);
@@ -516,7 +526,7 @@ function stampFootersAndPageNumbers(doc, house) {
 export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   services, accessoryColors, uniformFinish, facetOverrides,
-  roofFacesForPricing, wallFacesForPricing, openingsSchedule, lineTakeoffs,
+  roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
@@ -533,7 +543,7 @@ export function buildEstimatePdf({
 
   drawFacetDetailPages(doc, {
     brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
-    roofFacesForPricing, wallFacesForPricing,
+    roofFacesForPricing, wallFacesForPricing, facetLabels,
   });
 
   stampFootersAndPageNumbers(doc, house);

@@ -19,12 +19,14 @@ function meshWorldCentroid(mesh) {
   return sum.applyMatrix4(mesh.matrixWorld);
 }
 
-// Renders the given camera's already-drawn frame plus a facet-ID label at
-// each facet whose centroid projects on-screen AND isn't occluded by another
-// facet (checked via a centroid raycast) — so labels only land on facets
-// actually visible from that angle, turning a plain render into a labeled
-// diagram like the RoofRuler reference reports.
-function renderLabeledFrame(renderer, camera, facetMeshesByKey, dpr) {
+// Renders the given camera's already-drawn frame plus a label at each facet
+// whose centroid projects on-screen AND isn't occluded by another facet
+// (checked via a centroid raycast) — so labels only land on facets actually
+// visible from that angle, turning a plain render into a labeled diagram.
+// `labelForMesh(mesh)` resolves the text (return a falsy value to skip that
+// facet); omit it — or pass an empty `facetMeshesByKey` — for an unlabeled
+// plain render.
+function renderLabeledFrame(renderer, camera, facetMeshesByKey, labelForMesh, dpr) {
   const glCanvas = renderer.domElement;
   const width = glCanvas.width;
   const height = glCanvas.height;
@@ -34,6 +36,8 @@ function renderLabeledFrame(renderer, camera, facetMeshesByKey, dpr) {
 
   const labels = [];
   allMeshes.forEach((mesh) => {
+    const text = labelForMesh ? labelForMesh(mesh) : mesh.userData.faceId;
+    if (!text) return;
     const centroid = meshWorldCentroid(mesh);
     ndc.copy(centroid).project(camera);
     if (ndc.z < -1 || ndc.z > 1) return;
@@ -43,7 +47,7 @@ function renderLabeledFrame(renderer, camera, facetMeshesByKey, dpr) {
     raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
     const hits = raycaster.intersectObjects(allMeshes, false);
     if (!hits.length || hits[0].object !== mesh) return;
-    labels.push({ text: mesh.userData.faceId, x: sx, y: sy });
+    labels.push({ text, x: sx, y: sy });
   });
 
   const canvas = document.createElement('canvas');
@@ -137,7 +141,7 @@ function computeOrthoExtents(box, dir, margin = 1.1) {
 // canvas aspect — that would otherwise pad the frame with a lot of empty
 // space just to avoid distorting a flat, wide elevation into a squarer slot.
 const MAX_CAPTURE_DIM = 1000;
-function captureOrthoNatural(renderer, scene, box, dir, facetMeshesByKey) {
+function captureOrthoNatural(renderer, scene, box, dir, facetMeshesByKey, labelForMesh) {
   const { center, up, halfW, halfH } = computeOrthoExtents(box, dir);
   const contentAspect = halfW / halfH;
   const width = contentAspect >= 1 ? MAX_CAPTURE_DIM : Math.max(1, Math.round(MAX_CAPTURE_DIM * contentAspect));
@@ -156,7 +160,7 @@ function captureOrthoNatural(renderer, scene, box, dir, facetMeshesByKey) {
   ortho.lookAt(center);
   ortho.updateProjectionMatrix();
   renderer.render(scene, ortho);
-  const dataUrl = renderLabeledFrame(renderer, ortho, facetMeshesByKey, MAX_CAPTURE_DIM / 700);
+  const dataUrl = renderLabeledFrame(renderer, ortho, facetMeshesByKey, labelForMesh, MAX_CAPTURE_DIM / 700);
 
   renderer.setPixelRatio(savedPixelRatio);
   renderer.setSize(savedSize.x, savedSize.y, false);
@@ -167,6 +171,7 @@ const Viewer3D = forwardRef(function Viewer3D({
   parsedLayers,
   layerOffsets,
   facetColors,
+  facetLabels,
   photoOverlay,
   facetSelectionEnabled,
   selectedFacetId,
@@ -181,12 +186,12 @@ const Viewer3D = forwardRef(function Viewer3D({
     // model fills most of the frame (product-shot framing, not a distant
     // survey shot), angled slightly above ground to show some roof — for the
     // PDF export's locked, non-interactive renderings (no live 3D in the PDF
-    // itself, just these pre-rendered images). Facet IDs are burned into each
-    // image so they read as labeled diagrams, not just pretty pictures.
+    // itself, just these pre-rendered images). No facet labels here — these
+    // are the "wow" renderings, not a labeled diagram.
     captureIsoViews: () => {
       const s = sceneRef.current;
       if (!s?.scene || !s.camera || !s.renderer || !s.root || !s.controls) return [];
-      const { scene, camera, renderer, root, controls, grid, facetMeshesByKey } = s;
+      const { scene, camera, renderer, root, controls, grid } = s;
       const savedCameraPos = camera.position.clone();
       const savedTarget = controls.target.clone();
       const gridWasVisible = grid ? grid.visible : false;
@@ -206,7 +211,7 @@ const Viewer3D = forwardRef(function Viewer3D({
         camera.lookAt(center);
         camera.updateProjectionMatrix();
         renderer.render(scene, camera);
-        return renderLabeledFrame(renderer, camera, facetMeshesByKey);
+        return renderer.domElement.toDataURL('image/png');
       });
 
       if (grid) grid.visible = gridWasVisible;
@@ -216,14 +221,13 @@ const Viewer3D = forwardRef(function Viewer3D({
       return images;
     },
     // Four orthographic elevations (Front/Right/Back/Left — relative to the
-    // model, since RoofRuler exports carry no true compass orientation) plus
-    // a top-down Roof Plan, all with facet IDs labeled. True-to-scale (no
-    // perspective foreshortening), matching an architectural elevation/plan
-    // drawing rather than a photo.
+    // model, since RoofRuler exports carry no true compass orientation).
+    // True-to-scale (no perspective foreshortening), matching an
+    // architectural elevation drawing rather than a photo — also unlabeled.
     captureElevationViews: () => {
       const s = sceneRef.current;
       if (!s?.scene || !s.renderer || !s.root || !s.controls) return [];
-      const { scene, renderer, root, controls, camera: mainCamera, grid, facetMeshesByKey } = s;
+      const { scene, renderer, root, controls, camera: mainCamera, grid } = s;
       const savedCameraPos = mainCamera.position.clone();
       const savedTarget = controls.target.clone();
       const gridWasVisible = grid ? grid.visible : false;
@@ -238,7 +242,7 @@ const Viewer3D = forwardRef(function Viewer3D({
       ];
       const images = directions.map(({ label, dir }) => ({
         label,
-        dataUrl: captureOrthoNatural(renderer, scene, box, dir, facetMeshesByKey),
+        dataUrl: captureOrthoNatural(renderer, scene, box, dir, {}),
       }));
 
       if (grid) grid.visible = gridWasVisible;
@@ -247,6 +251,9 @@ const Viewer3D = forwardRef(function Viewer3D({
       mainCamera.lookAt(savedTarget);
       return images;
     },
+    // Top-down Roof Plan — the one rendering that keeps facet labels, using
+    // the clean per-type R#/F# scheme (facetLabels, keyed by facetKey)
+    // instead of the raw, collision-prone RoofRuler face id.
     captureRoofPlanView: () => {
       const s = sceneRef.current;
       if (!s?.scene || !s.renderer || !s.root || !s.controls) return null;
@@ -256,8 +263,9 @@ const Viewer3D = forwardRef(function Viewer3D({
       const gridWasVisible = grid ? grid.visible : false;
       if (grid) grid.visible = false;
 
+      const labelForMesh = (mesh) => s.facetLabels?.[mesh.userData.key] || mesh.userData.faceId;
       const box = new THREE.Box3().setFromObject(root);
-      const dataUrl = captureOrthoNatural(renderer, scene, box, new THREE.Vector3(0, 0, 1), facetMeshesByKey);
+      const dataUrl = captureOrthoNatural(renderer, scene, box, new THREE.Vector3(0, 0, 1), facetMeshesByKey, labelForMesh);
 
       if (grid) grid.visible = gridWasVisible;
       renderer.render(scene, mainCamera);
@@ -359,7 +367,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer, scene, camera, controls, boundingSphere, grid, root };
+    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer, scene, camera, controls, boundingSphere, grid, root, facetLabels: facetLabels || {} };
 
     return () => {
       cancelAnimationFrame(raf);
@@ -381,6 +389,15 @@ const Viewer3D = forwardRef(function Viewer3D({
       setMeshColor(s.facetMeshesByKey[key], colorEntry);
     });
   }, [facetColors]);
+
+  // Cheap update: keep the Roof Plan's R#/F# label map current without
+  // rebuilding the scene — it only changes alongside facetColors anyway
+  // (both derive from the same imported layers).
+  useEffect(() => {
+    const s = sceneRef.current;
+    if (!s) return;
+    s.facetLabels = facetLabels || {};
+  }, [facetLabels]);
 
   // Cheap update: reposition each layer group from its cached auto-computed
   // base position plus the current manual offset, without rebuilding meshes.
