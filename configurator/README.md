@@ -47,10 +47,17 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   presenter/viewer for a customer, not an editor: the manual/override
   discount field, every quantity that feeds the subtotal (sqft/LF
   measurements, eavestrough profile — but not the service on/off checkboxes
-  themselves, which stay interactive), the Layers panel's structure
-  (visibility, rename, remove, import), and the entire Projects panel (no
-  loading a different saved project) are all locked/hidden. Automatic
-  package-deal discounts still recalculate live as services are toggled.
+  themselves, which stay interactive by default), the Layers panel's
+  structure (visibility, rename, remove, import), the entire Projects panel
+  (no loading a different saved project), and the whole export/share button
+  row itself (no re-exporting or generating a new link from an already-
+  exported file) are all locked/hidden. Automatic package-deal discounts
+  still recalculate live as services are toggled.
+  Per-service **Lock** checkboxes in the admin's Optional Services panel
+  freeze a specific service's on/off state for customer-facing views (e.g.
+  lock Fascia always-included) while every other, unlocked service stays
+  toggleable by the client — `lockedServices` travels with the design the
+  same way `services` does.
 - **Shareable design link** — "Copy Shareable Link" encodes the whole design
   (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
   works even if any third-party service is down. Same locked-down
