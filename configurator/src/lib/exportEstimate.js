@@ -41,7 +41,7 @@ export function buildFacetTable(facesForPricing, overrides, products, globalProd
 
 export function buildEstimateText({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
-  services, accessoryColors, uniformFinish, roofOverrides, wallOverrides,
+  services, accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing,
 }) {
   const roofColor = colorById(roofColorId);
@@ -84,8 +84,8 @@ export function buildEstimateText({
       );
     });
   };
-  renderFacetRows('ROOF SLOPES (* = customized, differs from default above)', roofFacesForPricing, roofOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId);
-  renderFacetRows('WALL SEGMENTS (* = customized, differs from default above)', wallFacesForPricing, wallOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId);
+  renderFacetRows('ROOF SLOPES (* = customized, differs from default above)', roofFacesForPricing, facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId);
+  renderFacetRows('WALL SEGMENTS (* = customized, differs from default above)', wallFacesForPricing, facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId);
 
   lines.push('');
   lines.push('PRICE BREAKDOWN');

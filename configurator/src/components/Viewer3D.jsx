@@ -4,12 +4,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { buildHouseScene, setMeshColor, setMeshHighlighted } from '../lib/buildScene.js';
 
 const Viewer3D = forwardRef(function Viewer3D({
-  roofParsed,
-  wallParsed,
-  roofFaceColors,
-  wallFaceColors,
+  parsedLayers,
+  layerOffsets,
+  facetColors,
   photoOverlay,
-  roofOffset,
   facetSelectionEnabled,
   selectedFacetId,
   onFacetClick,
@@ -25,7 +23,9 @@ const Viewer3D = forwardRef(function Viewer3D({
   const facetSelectionEnabledRef = useRef(facetSelectionEnabled);
   facetSelectionEnabledRef.current = facetSelectionEnabled;
 
-  // One-time scene setup + rebuild whenever the house data changes.
+  // One-time scene setup + rebuild whenever the set of layers (content or
+  // visibility) changes. Layer offsets are handled by a cheap separate effect
+  // below so dragging a position slider doesn't rebuild the whole scene.
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
@@ -48,8 +48,9 @@ const Viewer3D = forwardRef(function Viewer3D({
     sun.position.set(80, -120, 160);
     scene.add(sun);
 
-    const { root, roofFaceMeshes, wallFaceMeshes, wallRoofFaceMeshes, roofGroup, boundingSphere, roofBasePosition } =
-      buildHouseScene(roofParsed, wallParsed);
+    const { root, layerGroups, layerBasePositions, facetMeshesByKey, boundingSphere } = buildHouseScene(
+      (parsedLayers || []).map((l) => ({ ...l, offset: layerOffsets?.[l.id] }))
+    );
     scene.add(root);
 
     const grid = new THREE.GridHelper(Math.max(boundingSphere.radius * 3, 100), 20, 0x8899aa, 0xaabbcc);
@@ -89,7 +90,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     // pointer travel distance rather than relying on the native 'click'
     // event, since OrbitControls' own listeners can interfere with it.
     const raycaster = new THREE.Raycaster();
-    const allFacetMeshes = [...Object.values(roofFaceMeshes), ...Object.values(wallFaceMeshes), ...Object.values(wallRoofFaceMeshes)];
+    const allFacetMeshes = Object.values(facetMeshesByKey);
     let downPos = null;
     const onPointerDown = (e) => { downPos = [e.clientX, e.clientY]; };
     const onPointerUp = (e) => {
@@ -110,14 +111,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    sceneRef.current = { roofFaceMeshes, wallFaceMeshes, wallRoofFaceMeshes, roofGroup, roofBasePosition, highlightedMesh: null, renderer };
-    if (roofOffset) {
-      roofGroup.position.set(
-        roofBasePosition.x + (roofOffset.dx || 0),
-        roofBasePosition.y + (roofOffset.dy || 0),
-        roofBasePosition.z + (roofOffset.dz || 0)
-      );
-    }
+    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer };
 
     return () => {
       cancelAnimationFrame(raf);
@@ -129,43 +123,35 @@ const Viewer3D = forwardRef(function Viewer3D({
       mount.innerHTML = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roofParsed, wallParsed]);
+  }, [parsedLayers]);
 
-  // Cheap updates: recolor existing facet meshes without rebuilding the scene.
+  // Cheap update: recolor existing facet meshes without rebuilding the scene.
   useEffect(() => {
     const s = sceneRef.current;
-    if (!s || !roofFaceColors) return;
-    Object.entries(roofFaceColors).forEach(([faceId, colorEntry]) => {
-      setMeshColor(s.roofFaceMeshes[faceId] || s.wallRoofFaceMeshes[faceId], colorEntry);
+    if (!s || !facetColors) return;
+    Object.entries(facetColors).forEach(([key, colorEntry]) => {
+      setMeshColor(s.facetMeshesByKey[key], colorEntry);
     });
-  }, [roofFaceColors]);
+  }, [facetColors]);
 
-  useEffect(() => {
-    const s = sceneRef.current;
-    if (!s || !wallFaceColors) return;
-    Object.entries(wallFaceColors).forEach(([faceId, colorEntry]) => {
-      setMeshColor(s.wallFaceMeshes[faceId], colorEntry);
-    });
-  }, [wallFaceColors]);
-
+  // Cheap update: reposition each layer group from its cached auto-computed
+  // base position plus the current manual offset, without rebuilding meshes.
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
-    s.roofGroup.position.set(
-      s.roofBasePosition.x + (roofOffset?.dx || 0),
-      s.roofBasePosition.y + (roofOffset?.dy || 0),
-      s.roofBasePosition.z + (roofOffset?.dz || 0)
-    );
-  }, [roofOffset]);
+    Object.entries(s.layerGroups).forEach(([id, group]) => {
+      const base = s.layerBasePositions[id];
+      const offset = layerOffsets?.[id] || {};
+      group.position.set(base.x + (offset.dx || 0), base.y + (offset.dy || 0), base.z + (offset.dz || 0));
+    });
+  }, [layerOffsets]);
 
   // Highlight the selected facet (used when per-facet override mode is on).
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
     if (s.highlightedMesh) setMeshHighlighted(s.highlightedMesh, false);
-    const mesh = selectedFacetId
-      ? s.roofFaceMeshes[selectedFacetId] || s.wallFaceMeshes[selectedFacetId] || s.wallRoofFaceMeshes[selectedFacetId]
-      : null;
+    const mesh = selectedFacetId ? s.facetMeshesByKey[selectedFacetId] : null;
     if (mesh) setMeshHighlighted(mesh, true);
     s.highlightedMesh = mesh || null;
   }, [selectedFacetId]);
@@ -182,7 +168,7 @@ const Viewer3D = forwardRef(function Viewer3D({
       )}
       <div ref={mountRef} className="viewer3d-canvas" />
       <div className="viewer3d-note">
-        Preview model: roof + wall RoofRuler exports rendered independently and stacked for display.
+        Preview model: each imported layer's RoofRuler export rendered independently and stacked for display.
       </div>
     </div>
   );

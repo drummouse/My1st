@@ -233,6 +233,7 @@ body {
 }
 .service-row-main { display: flex; align-items: center; gap: 0.4rem; flex: 1 1 auto; min-width: 100px; }
 .service-qty { width: 60px; flex: 0 0 auto; padding: 0.2rem 0.3rem; border-radius: 4px; border: 1px solid #d1d5db; }
+.service-row-main input:disabled, .service-qty:disabled, .service-row-select select:disabled { opacity: 0.5; cursor: not-allowed; }
 .service-unit { color: #6b7280; font-size: 0.72rem; flex: 0 0 auto; }
 .service-color-select { flex: 0 0 auto; max-width: 110px; padding: 0.15rem 0.25rem; border-radius: 4px; border: 1px solid #d1d5db; font-size: 0.72rem; }
 .service-note { flex: 1 0 100%; color: #0d7a3e; font-size: 0.72rem; font-weight: 600; }
@@ -260,6 +261,8 @@ body {
   cursor: pointer;
 }
 .btn-primary:hover { background: var(--brand-accent-dark); }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary:disabled:hover { background: var(--brand-accent); }
 
 .adjust-row {
   display: flex;
@@ -318,6 +321,55 @@ body {
   text-align: center;
   display: inline-block;
 }
+
+.layer-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.layer-visible-toggle { display: flex; align-items: center; }
+.layer-name-input { flex: 1 1 auto; margin: 0; }
+.layer-remove-btn {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #6b7280;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.layer-remove-btn:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.layer-remove-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.layer-name-input:disabled, .layer-visible-toggle input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.project-open-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 0.82rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-open-btn:hover:not(:disabled) { background: #f7f8fa; }
+.project-open-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.project-open-btn-active { border-color: var(--brand-accent); background: #fff4ee; }
 
 .uniform-toggle {
   display: flex;

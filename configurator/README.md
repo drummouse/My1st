@@ -42,22 +42,49 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
 - **Export HTML** — downloads a single self-contained interactive file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
-  Still fully explorable — rotate the 3D view, try other colors/profiles —
-  but the manual/override discount field is locked (colors/profiles/products
-  stay live, and automatic package-deal discounts still recalculate).
+  Still fully explorable — rotate the 3D view, try other colors/profiles/
+  materials — but it's a presenter/viewer, not an editor: the manual/override
+  discount field, every quantity that feeds the subtotal (service on/off
+  toggles, sqft/LF measurements, eavestrough profile), and the Layers panel's
+  structure (visibility, rename, remove, import) are all locked read-only.
+  Automatic package-deal discounts still recalculate live.
 - **Shareable design link** — "Copy Shareable Link" encodes the whole design
   (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
-  works even if any third-party service is down. Same discount lock as the
-  HTML export. (`src/lib/designState.js`)
+  works even if any third-party service is down. Same locked-down
+  presenter/viewer behavior as the HTML export. (`src/lib/designState.js`)
+- **Layers** — import any number of RoofRuler/AppliCAD XML reports (roof,
+  wall, a garage roof, a second building, anything); each import becomes its
+  own layer with a visibility checkbox, an editable name, and a remove
+  button (`src/components/LayersPanel.jsx`). Every facet is keyed by
+  `layerId:faceId` (`facetKey()`, generalized from the original fixed
+  roof/wall tags), so per-facet material/color overrides, pricing, and
+  export reporting all aggregate across however many layers are loaded,
+  bucketed by each facet's own `type` (Roof/Wall) rather than by which file
+  it came from.
+- **Projects (save/load/edit)** — the whole design state (job #, customer,
+  address, layers, product/color selections, overrides, everything
+  `designState.js` captures) can be saved to a Postgres database (Neon, via
+  Vercel's marketplace integration and the HTTP-based
+  `@neondatabase/serverless` driver) and reopened, updated, or deleted later
+  from the **Projects** panel. "Copy Project Link" gives a short `?p=<id>`
+  URL that loads a saved project the same way the self-contained `?d=`
+  shareable link does, but by reference instead of embedding the whole
+  design — this is meant to eventually anchor a rotatable 3D view linked
+  from an exported PDF (see "Not yet built" below). API routes:
+  `api/projects/index.js` (list, create), `api/projects/[id].js`
+  (get/update/delete); schema is created automatically on first request (see
+  `db/schema.sql`).
 
 ## Known simplification
 
-The roof and wall RoofRuler exports use independent local coordinate frames
-(confirmed against the source files), so the two structures are centered on
-their own footprints and stacked by bounding-box height rather than merged
-into one seamless coordinate space. This is called out in the brief as an
-accepted MVP limitation ("house geometry: simplified — proof of concept") and
-is surfaced in the viewer's on-screen caption.
+Each imported layer's RoofRuler export uses its own independent local
+coordinate frame (confirmed against the source files), so every layer is
+centered on its own footprint and auto-stacked on top of the layers before
+it by bounding-box height, rather than merged into one seamless coordinate
+space. This is called out in the brief as an accepted MVP limitation ("house
+geometry: simplified — proof of concept") and is surfaced in the viewer's
+on-screen caption. The Layer Position Adjustment control lets you manually
+nudge any one layer if the auto-stack doesn't line it up correctly.
 
 ## Run it
 
@@ -85,4 +112,11 @@ npm run build      # production build to dist/
   stays a static screenshot + full facet report, with Export HTML and the
   shareable link as the two genuinely rotatable options. A clickable
   link/QR code in the PDF pointing to the live rotatable view is the
-  next-best alternative, on request.
+  next-best alternative, on request — now that Projects gives every design a
+  stable short `?p=<id>` URL, that link is a natural fit for this, but it
+  hasn't been wired into `exportPdf.js` yet.
+- Projects database (`db/schema.sql`, `api/projects/*`) is built but not yet
+  live-tested end-to-end: this sandbox's network egress allowlist blocks the
+  Neon HTTP endpoint (`*.neon.tech`), so it's untested against a running
+  database — pending the environment's network allowance being added
+  (desktop-only setting) and a fresh session.

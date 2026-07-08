@@ -1,20 +1,42 @@
 const AXES = [
-  { key: 'dz', label: 'Vertical (roof height)', min: -60, max: 60 },
+  { key: 'dz', label: 'Vertical', min: -60, max: 60 },
   { key: 'dx', label: 'Horizontal — East/West', min: -60, max: 60 },
   { key: 'dy', label: 'Horizontal — North/South', min: -60, max: 60 },
 ];
 
-export default function AssemblyAdjustment({ offset, onChange, onReset }) {
-  const setAxis = (key) => (val) => onChange({ ...offset, [key]: val });
+const ZERO_OFFSET = { dx: 0, dy: 0, dz: 0 };
+
+export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId, onActiveLayerChange, onChange, onReset }) {
+  const activeLayer = layers.find((l) => l.id === activeLayerId) || layers[0];
+  if (!activeLayer) return null;
+  const offset = layerOffsets?.[activeLayer.id] || ZERO_OFFSET;
+  const setAxis = (key) => (val) => onChange(activeLayer.id, { ...offset, [key]: val });
 
   return (
     <div className="control-block">
-      <div className="control-label">Roof/Wall Assembly Adjustment</div>
+      <div className="control-label">Layer Position Adjustment</div>
       <div className="control-sublabel">
-        The roof and wall RoofRuler exports use independent coordinate frames, so they're
-        auto-stacked by height for preview. Nudge the roof into place if it doesn't line up
-        with these walls.
+        Each layer's RoofRuler export uses its own independent coordinate frame, so layers are
+        auto-stacked by height for preview. Pick a layer and nudge it into place if it doesn't
+        line up with the others.
       </div>
+
+      {layers.length > 1 && (
+        <>
+          <label className="field-label" htmlFor="assembly-layer-select">Layer</label>
+          <select
+            id="assembly-layer-select"
+            className="control-select"
+            value={activeLayer.id}
+            onChange={(e) => onActiveLayerChange(e.target.value)}
+          >
+            {layers.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        </>
+      )}
+
       {AXES.map(({ key, label, min, max }) => (
         <div key={key} className="adjust-row">
           <label htmlFor={`adjust-${key}`}>{label}</label>
@@ -37,7 +59,7 @@ export default function AssemblyAdjustment({ offset, onChange, onReset }) {
           <span className="service-unit">ft</span>
         </div>
       ))}
-      <button type="button" className="btn-secondary" onClick={onReset}>Reset to auto-stack</button>
+      <button type="button" className="btn-secondary" onClick={() => onReset(activeLayer.id)}>Reset to auto-stack</button>
     </div>
   );
 }

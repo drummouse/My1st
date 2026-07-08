@@ -15,7 +15,7 @@ function hexToRgb(hex) {
 
 export function buildEstimatePdf({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
-  services, accessoryColors, uniformFinish, roofOverrides, wallOverrides, snapshotDataUrl,
+  services, accessoryColors, uniformFinish, facetOverrides, snapshotDataUrl,
   roofFacesForPricing, wallFacesForPricing,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -140,10 +140,10 @@ export function buildEstimatePdf({
   };
 
   const roofFacetRows = roofFacesForPricing?.length
-    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : roofOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId)
+    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId)
     : [];
   const wallFacetRows = wallFacesForPricing?.length
-    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : wallOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId)
+    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId)
     : [];
 
   if (roofFacetRows.length) renderFacetTable('Roof Slopes (bold = customized, differs from default above)', roofFacetRows);

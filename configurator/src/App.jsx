@@ -7,7 +7,8 @@ import ServicesPanel from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
-import HouseImport from './components/HouseImport.jsx';
+import LayersPanel from './components/LayersPanel.jsx';
+import ProjectsPanel from './components/ProjectsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey } from './lib/roofRulerParser.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -36,16 +37,6 @@ const DEFAULT_ACCESSORY_COLORS = {
   downspouts: 'wk-04',
 };
 
-const ZERO_MEASUREMENTS = {
-  soffitSqft: 0,
-  fasciaLf: 0,
-  gutterLf: 0,
-  downspoutLf: 0,
-  snowRetentionLf: 0,
-  capFlashingLf: 0,
-  garageDoorCappingLf: 0,
-};
-
 function extractProductOverrides(overrides) {
   const result = {};
   Object.entries(overrides).forEach(([key, val]) => {
@@ -71,50 +62,63 @@ export default function App() {
   const [measurements, setMeasurements] = useState(house.measurements);
   const [photoOverlay, setPhotoOverlay] = useState(null);
   const [manualDiscount, setManualDiscount] = useState(0);
-  const [roofOffset, setRoofOffset] = useState({ dx: 0, dy: 0, dz: 0 });
+  const [layerOffsets, setLayerOffsets] = useState({}); // layerId -> { dx, dy, dz }
+  const [activeLayerId, setActiveLayerId] = useState(house.layers[0]?.id);
   const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
   const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
   const [shareStatus, setShareStatus] = useState('');
 
   const [uniformFinish, setUniformFinish] = useState(true);
-  const [roofOverrides, setRoofOverrides] = useState({}); // key -> { productId?, colorId? }
-  const [wallOverrides, setWallOverrides] = useState({});
-  const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, sizeSf, pitch, orientation }
+  const [facetOverrides, setFacetOverrides] = useState({}); // key -> { productId?, colorId? }
+  const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, layerId, sizeSf, pitch, orientation }
+  const [currentProjectId, setCurrentProjectId] = useState(null);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
 
-  // True when this load came from an exported HTML file or a shared link —
-  // both open the full editable app for a customer, so the manual/override
-  // discount field gets locked (they can still explore colors/profiles and
-  // see any automatic package-deal discounts recalculate live).
+  // True when this load came from an exported HTML file or a shared/project
+  // link — all open the full editable app for a customer, so the
+  // manual/override discount field gets locked (they can still explore
+  // colors/profiles and see any automatic package-deal discounts
+  // recalculate live).
   const [isCustomerView, setIsCustomerView] = useState(false);
+
+  const buildDesignSnapshot = () =>
+    captureDesignState({
+      brandId, house, roofProductId, roofProfile, roofColorId,
+      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
+      measurements, manualDiscount, layerOffsets, accessoryColors,
+      uniformFinish, facetOverrides,
+    });
+
+  const applyDesignSnapshot = (snapshot, lock) => {
+    if (lock) setIsCustomerView(true);
+    applyDesignState(snapshot, {
+      setBrandId,
+      setHouse,
+      setRoofProductId,
+      setRoofProfile,
+      setRoofColorId,
+      setWallProductId,
+      setWallProfile,
+      setWallColorId,
+      setServices,
+      setGutterOptionId,
+      setMeasurements,
+      setManualDiscount,
+      setLayerOffsets,
+      setAccessoryColors,
+      setUniformFinish,
+      setFacetOverrides,
+    });
+  };
 
   // Standalone HTML exports embed a frozen design as
   // window.__IRONWRAP_DESIGN__ before this bundle runs; load it once on
   // mount so the exported file opens showing that customer's exact design.
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
-      setIsCustomerView(true);
-      applyDesignState(window.__IRONWRAP_DESIGN__, {
-        setBrandId,
-        setHouse,
-        setRoofProductId,
-        setRoofProfile,
-        setRoofColorId,
-        setWallProductId,
-        setWallProfile,
-        setWallColorId,
-        setServices,
-        setGutterOptionId,
-        setMeasurements,
-        setManualDiscount,
-        setRoofOffset,
-        setAccessoryColors,
-        setUniformFinish,
-        setRoofOverrides,
-        setWallOverrides,
-      });
+      applyDesignSnapshot(window.__IRONWRAP_DESIGN__, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -124,55 +128,74 @@ export default function App() {
   useEffect(() => {
     const encoded = new URLSearchParams(window.location.search).get('d');
     if (!encoded) return;
-    setIsCustomerView(true);
     decodeDesignFromUrl(encoded)
-      .then((snapshot) => {
-        applyDesignState(snapshot, {
-          setBrandId,
-          setHouse,
-          setRoofProductId,
-          setRoofProfile,
-          setRoofColorId,
-          setWallProductId,
-          setWallProfile,
-          setWallColorId,
-          setServices,
-          setGutterOptionId,
-          setMeasurements,
-          setManualDiscount,
-          setRoofOffset,
-          setAccessoryColors,
-          setUniformFinish,
-          setRoofOverrides,
-          setWallOverrides,
-        });
-      })
+      .then((snapshot) => applyDesignSnapshot(snapshot, true))
       .catch((err) => console.error('Failed to load shared design link:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const roofParsed = useMemo(() => parseAppliCadXML(house.roofXml, 'Roof'), [house.roofXml]);
-  const wallParsed = useMemo(() => parseAppliCadXML(house.wallXml, 'Wall'), [house.wallXml]);
-
-  // Face ids are only unique within a single RoofRuler export, so imports of
-  // a new house (or the sample resetting) invalidate any per-facet overrides
-  // and the current selection.
+  // Project links (?p=<id>) reference a design saved to the Projects
+  // database rather than embedding it directly — load it once on mount if
+  // present.
   useEffect(() => {
-    setRoofOverrides({});
-    setWallOverrides({});
+    const projectId = new URLSearchParams(window.location.search).get('p');
+    if (!projectId) return;
+    fetch(`/api/projects/${projectId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((row) => {
+        applyDesignSnapshot(row.design, true);
+        setCurrentProjectId(projectId);
+      })
+      .catch((err) => console.error('Failed to load project link:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-parses only when a layer's content/visibility/order changes (offset
+  // nudges are tracked separately in layerOffsets so dragging a slider never
+  // re-parses XML or rebuilds the mesh scene).
+  const parsedLayers = useMemo(
+    () => house.layers.map((l) => ({ id: l.id, name: l.name, visible: l.visible, parsed: parseAppliCadXML(l.xml) })),
+    [house.layers]
+  );
+
+  // Keep the Assembly Adjustment layer selector pointed at a layer that
+  // still exists after an add/remove.
+  useEffect(() => {
+    if (!house.layers.some((l) => l.id === activeLayerId)) {
+      setActiveLayerId(house.layers[0]?.id);
+    }
+  }, [house.layers, activeLayerId]);
+
+  // Facet ids are only unique within a single RoofRuler export, but keys are
+  // namespaced by layer id, so an override/selection can only ever apply to
+  // a face from the layer it was set on. Still, when layer content changes
+  // (import/remove/reorder) any stored overrides could reference stale
+  // faces — reset to be safe.
+  useEffect(() => {
+    setFacetOverrides({});
     setSelectedFacet(null);
-  }, [roofParsed, wallParsed]);
+  }, [parsedLayers]);
 
   const roofFacesForPricing = useMemo(() => {
-    const primary = roofParsed.faces.filter((f) => f.type === 'Roof').map((f) => ({ key: facetKey('roof', f.id), sizeSf: f.sizeSf }));
-    const stray = wallParsed.faces.filter((f) => f.type === 'Roof').map((f) => ({ key: facetKey('wallxml-roof', f.id), sizeSf: f.sizeSf }));
-    return [...primary, ...stray];
-  }, [roofParsed, wallParsed]);
+    const out = [];
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      l.parsed.faces.filter((f) => f.type === 'Roof').forEach((f) => out.push({ key: facetKey(l.id, f.id), sizeSf: f.sizeSf }));
+    });
+    return out;
+  }, [parsedLayers]);
 
-  const wallFacesForPricing = useMemo(
-    () => wallParsed.faces.filter((f) => f.type === 'Wall').map((f) => ({ key: facetKey('wall', f.id), sizeSf: f.sizeSf })),
-    [wallParsed]
-  );
+  const wallFacesForPricing = useMemo(() => {
+    const out = [];
+    parsedLayers.forEach((l) => {
+      if (!l.visible) return;
+      l.parsed.faces.filter((f) => f.type === 'Wall').forEach((f) => out.push({ key: facetKey(l.id, f.id), sizeSf: f.sizeSf }));
+    });
+    return out;
+  }, [parsedLayers]);
 
   const estimate = useMemo(
     () =>
@@ -181,34 +204,28 @@ export default function App() {
         wallProduct: wallProductId,
         roofFaces: roofFacesForPricing,
         wallFaces: wallFacesForPricing,
-        roofOverrides: uniformFinish ? {} : extractProductOverrides(roofOverrides),
-        wallOverrides: uniformFinish ? {} : extractProductOverrides(wallOverrides),
+        facetOverrides: uniformFinish ? {} : extractProductOverrides(facetOverrides),
         services,
         gutterOption: gutterOptionId,
         manualDiscount,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, roofOverrides, wallOverrides, services, gutterOptionId, manualDiscount]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, manualDiscount]
   );
 
-  const roofFaceColors = useMemo(() => {
-    const globalColor = colorById(roofColorId);
+  const facetColors = useMemo(() => {
     const map = {};
+    const roofColor = colorById(roofColorId);
     roofFacesForPricing.forEach(({ key }) => {
-      const override = !uniformFinish && roofOverrides[key];
-      map[key] = override?.colorId ? colorById(override.colorId) : globalColor;
+      const override = !uniformFinish && facetOverrides[key];
+      map[key] = override?.colorId ? colorById(override.colorId) : roofColor;
     });
-    return map;
-  }, [roofFacesForPricing, roofOverrides, roofColorId, uniformFinish]);
-
-  const wallFaceColors = useMemo(() => {
-    const globalColor = colorById(wallColorId);
-    const map = {};
+    const wallColor = colorById(wallColorId);
     wallFacesForPricing.forEach(({ key }) => {
-      const override = !uniformFinish && wallOverrides[key];
-      map[key] = override?.colorId ? colorById(override.colorId) : globalColor;
+      const override = !uniformFinish && facetOverrides[key];
+      map[key] = override?.colorId ? colorById(override.colorId) : wallColor;
     });
     return map;
-  }, [wallFacesForPricing, wallOverrides, wallColorId, uniformFinish]);
+  }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish]);
 
   const handleRoofProductChange = (id) => {
     setRoofProductId(id);
@@ -220,32 +237,59 @@ export default function App() {
   };
 
   const handleHouseMetaChange = (patch) => setHouse((h) => ({ ...h, ...patch }));
-  const handleHouseXmlImport = (kind, xmlText) => {
-    setHouse((h) => ({ ...h, [kind]: xmlText }));
-    setMeasurements(ZERO_MEASUREMENTS);
+
+  const handleAddLayer = (layer) => setHouse((h) => ({ ...h, layers: [...h.layers, layer] }));
+
+  const handleRemoveLayer = (id) => {
+    setHouse((h) => (h.layers.length <= 1 ? h : { ...h, layers: h.layers.filter((l) => l.id !== id) }));
+    setLayerOffsets((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setFacetOverrides((prev) => {
+      const next = {};
+      Object.entries(prev).forEach(([key, val]) => {
+        if (!key.startsWith(`${id}:`)) next[key] = val;
+      });
+      return next;
+    });
+    setSelectedFacet((sf) => (sf?.layerId === id ? null : sf));
   };
+
+  const handleToggleLayerVisibility = (id, visible) =>
+    setHouse((h) => ({ ...h, layers: h.layers.map((l) => (l.id === id ? { ...l, visible } : l)) }));
+
+  const handleRenameLayer = (id, name) =>
+    setHouse((h) => ({ ...h, layers: h.layers.map((l) => (l.id === id ? { ...l, name } : l)) }));
+
+  const handleLayerOffsetChange = (id, offset) => setLayerOffsets((prev) => ({ ...prev, [id]: offset }));
+  const handleResetLayerOffset = (id) =>
+    setLayerOffsets((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
 
   const handleFacetClick = (payload) => {
     if (uniformFinish) return;
     setSelectedFacet(payload);
   };
 
-  const facetOverrideState = selectedFacet
-    ? (selectedFacet.role === 'roof' ? roofOverrides : wallOverrides)[selectedFacet.key]
-    : null;
+  const facetOverrideState = selectedFacet ? facetOverrides[selectedFacet.key] : null;
   const facetGlobalProductId = selectedFacet?.role === 'roof' ? roofProductId : wallProductId;
   const facetGlobalColorId = selectedFacet?.role === 'roof' ? roofColorId : wallColorId;
 
   const setFacetOverride = (patch) => {
     if (!selectedFacet) return;
-    const setOverrides = selectedFacet.role === 'roof' ? setRoofOverrides : setWallOverrides;
-    setOverrides((prev) => ({ ...prev, [selectedFacet.key]: { ...prev[selectedFacet.key], ...patch } }));
+    setFacetOverrides((prev) => ({ ...prev, [selectedFacet.key]: { ...prev[selectedFacet.key], ...patch } }));
   };
 
   const clearFacetOverride = () => {
     if (!selectedFacet) return;
-    const setOverrides = selectedFacet.role === 'roof' ? setRoofOverrides : setWallOverrides;
-    setOverrides((prev) => {
+    setFacetOverrides((prev) => {
       const next = { ...prev };
       delete next[selectedFacet.key];
       return next;
@@ -266,8 +310,7 @@ export default function App() {
       services,
       accessoryColors,
       uniformFinish,
-      roofOverrides,
-      wallOverrides,
+      facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
     });
@@ -284,12 +327,7 @@ export default function App() {
       alert('Could not load the export template. Please try again.');
       return;
     }
-    const state = captureDesignState({
-      brandId, house, roofProductId, roofProfile, roofColorId,
-      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
-      measurements, manualDiscount, roofOffset, accessoryColors,
-      uniformFinish, roofOverrides, wallOverrides,
-    });
+    const state = buildDesignSnapshot();
     // Escape "</script>" sequences that could appear inside string values
     // (e.g. a customer name) so they can't break out of the inline script.
     const stateJson = JSON.stringify(state).replace(/</g, '\\u003c');
@@ -306,12 +344,7 @@ export default function App() {
 
   const handleCopyShareLink = async () => {
     try {
-      const state = captureDesignState({
-        brandId, house, roofProductId, roofProfile, roofColorId,
-        wallProductId, wallProfile, wallColorId, services, gutterOptionId,
-        measurements, manualDiscount, roofOffset, accessoryColors,
-        uniformFinish, roofOverrides, wallOverrides,
-      });
+      const state = buildDesignSnapshot();
       const encoded = await encodeDesignForUrl(state);
       const url = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
       await navigator.clipboard.writeText(url);
@@ -338,8 +371,7 @@ export default function App() {
       services,
       accessoryColors,
       uniformFinish,
-      roofOverrides,
-      wallOverrides,
+      facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
     });
@@ -383,12 +415,10 @@ export default function App() {
               <div className="viewer3d-canvas-wrap">
                 <Viewer3D
                   ref={viewerRef}
-                  roofParsed={roofParsed}
-                  wallParsed={wallParsed}
-                  roofFaceColors={roofFaceColors}
-                  wallFaceColors={wallFaceColors}
+                  parsedLayers={parsedLayers}
+                  layerOffsets={layerOffsets}
+                  facetColors={facetColors}
                   photoOverlay={photoOverlay}
-                  roofOffset={roofOffset}
                   facetSelectionEnabled={!uniformFinish}
                   selectedFacetId={selectedFacet?.key}
                   onFacetClick={handleFacetClick}
@@ -407,16 +437,34 @@ export default function App() {
                 )}
               </div>
               <AssemblyAdjustment
-                offset={roofOffset}
-                onChange={setRoofOffset}
-                onReset={() => setRoofOffset({ dx: 0, dy: 0, dz: 0 })}
+                layers={house.layers}
+                layerOffsets={layerOffsets}
+                activeLayerId={activeLayerId}
+                onActiveLayerChange={setActiveLayerId}
+                onChange={handleLayerOffsetChange}
+                onReset={handleResetLayerOffset}
               />
             </>
           )}
         </section>
 
         <aside className="controls-pane">
-          <HouseImport house={house} onMetaChange={handleHouseMetaChange} onXmlImport={handleHouseXmlImport} />
+          <LayersPanel
+            house={house}
+            onMetaChange={handleHouseMetaChange}
+            onAddLayer={handleAddLayer}
+            onRemoveLayer={handleRemoveLayer}
+            onToggleVisibility={handleToggleLayerVisibility}
+            onRenameLayer={handleRenameLayer}
+            readOnly={isCustomerView}
+          />
+
+          <ProjectsPanel
+            getCurrentDesign={buildDesignSnapshot}
+            onOpenProject={(design) => applyDesignSnapshot(design, false)}
+            currentProjectId={currentProjectId}
+            onProjectIdChange={setCurrentProjectId}
+          />
 
           <div className="control-block">
             <label className="uniform-toggle">
@@ -426,9 +474,7 @@ export default function App() {
             {!uniformFinish && (
               <div className="control-sublabel">
                 Click a roof slope or wall segment in the 3D model to set its own material and color.
-                {Object.keys(roofOverrides).length + Object.keys(wallOverrides).length > 0
-                  ? ` ${Object.keys(roofOverrides).length + Object.keys(wallOverrides).length} facet(s) customized.`
-                  : ''}
+                {Object.keys(facetOverrides).length > 0 ? ` ${Object.keys(facetOverrides).length} facet(s) customized.` : ''}
               </div>
             )}
           </div>
@@ -464,6 +510,7 @@ export default function App() {
             onGutterOptionChange={setGutterOptionId}
             accessoryColors={accessoryColors}
             onAccessoryColorsChange={setAccessoryColors}
+            readOnlyQuantities={isCustomerView}
           />
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
