@@ -17,6 +17,38 @@ const Viewer3D = forwardRef(function Viewer3D({
 
   useImperativeHandle(ref, () => ({
     captureSnapshot: () => sceneRef.current?.renderer?.domElement?.toDataURL('image/png') || null,
+    // Captures 4 static PNGs from each diagonal corner, far enough back to
+    // frame the whole model and angled slightly above ground to show some
+    // roof — for the PDF export's locked, non-interactive renderings (no
+    // live 3D in the PDF itself, just these pre-rendered images).
+    captureIsoViews: () => {
+      const s = sceneRef.current;
+      if (!s?.scene || !s.camera || !s.renderer || !s.boundingSphere || !s.controls) return [];
+      const { scene, camera, renderer, boundingSphere, controls, grid } = s;
+      const savedCameraPos = camera.position.clone();
+      const savedTarget = controls.target.clone();
+      const gridWasVisible = grid ? grid.visible : false;
+      if (grid) grid.visible = false;
+
+      // ~30° elevation, distance tuned so the bounding sphere fills most of
+      // the 45°-FOV frame with a small margin (no grid — a clean render).
+      const dist = boundingSphere.radius * 1.7;
+      const elevation = dist * 0.8;
+      const corners = [[dist, dist], [-dist, dist], [-dist, -dist], [dist, -dist]];
+      const images = corners.map(([dx, dy]) => {
+        camera.position.set(boundingSphere.center.x + dx, boundingSphere.center.y + dy, boundingSphere.center.z + elevation);
+        camera.lookAt(boundingSphere.center);
+        camera.updateProjectionMatrix();
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/png');
+      });
+
+      if (grid) grid.visible = gridWasVisible;
+      camera.position.copy(savedCameraPos);
+      camera.lookAt(savedTarget);
+      renderer.render(scene, camera);
+      return images;
+    },
   }));
   const onFacetClickRef = useRef(onFacetClick);
   onFacetClickRef.current = onFacetClick;
@@ -111,7 +143,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer };
+    sceneRef.current = { layerGroups, layerBasePositions, facetMeshesByKey, highlightedMesh: null, renderer, scene, camera, controls, boundingSphere, grid };
 
     return () => {
       cancelAnimationFrame(raf);

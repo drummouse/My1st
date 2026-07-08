@@ -34,11 +34,23 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   their effective product so the price breakdown reflects any per-facet
   material changes.
 - **PDF & text export** (`src/lib/exportPdf.js`, `src/lib/exportEstimate.js`)
-  — full itemized estimate (selections, price breakdown, package discounts,
-  GST) plus a snapshot of the current 3D view. Every roof slope and wall
-  segment gets its own row (product, color, sqft) in both formats — always,
-  not just the customized ones — matching the Label/Material/Color/Area
-  table style of the company's existing RoofRuler Wall/Roof Reports.
+  — a structured, multi-page report modeled on the company's existing
+  RoofRuler Wall/Roof Reports:
+  1. **Cover page** — branding, job number, customer, address, date prepared.
+  2. **Renderings & Estimate Summary** — four auto-captured isometric
+     screenshots of the 3D model (one from each diagonal corner, framed back
+     far enough to show the whole building and angled slightly above ground
+     to read the roof), stacked down the left half of the page, next to a
+     Selections list and the full Materials/Services price breakdown
+     (Subtotal, package discounts, GST, Total) on the right half.
+  3. **Facet detail pages** — every roof slope and wall segment gets its own
+     row (Facet/Product/Color/Sqft), always, not just the customized ones,
+     paginating automatically as needed.
+  Every report covers exactly one building. The four isometric renderings
+  are captured via `Viewer3D`'s `captureIsoViews()` (hides the ground grid,
+  frames the model from each corner, restores the live camera afterward) —
+  static PNGs baked into the PDF, not an interactive 3D object; see "Not yet
+  built" below for why a truly embedded rotatable 3D model isn't possible.
 - **Export HTML** — downloads a single self-contained interactive file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.

@@ -376,7 +376,7 @@ export default function App() {
     buildEstimatePdf({
       brand,
       house,
-      snapshotDataUrl: viewerRef.current?.captureSnapshot() || null,
+      isoSnapshots: viewerRef.current?.captureIsoViews() || [],
       roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
       roofColorId,
       roofProfile,
