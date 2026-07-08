@@ -14,8 +14,11 @@ const STEP = 0.5;
 // anyway — step buttons instead, no gesture to conflict with the 3D view's
 // own single-finger-rotate/two-finger-zoom touch handling. Fine-pointer
 // (mouse/trackpad) devices keep the slider, which is faster for a mouse.
-// Computed once: pointer capability doesn't change mid-session in practice.
-const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+// Also requires a narrow viewport: pointer:coarse alone also matches
+// touchscreen laptops/2-in-1s with plenty of screen space, where the mouse-
+// oriented slider is still the better fit. Computed once: pointer capability
+// and viewport class don't change mid-session in practice.
+const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse) and (max-width: 900px)').matches;
 
 export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId, onActiveLayerChange, onChange, onReset }) {
   // Collapsed by default on touch (nothing should sit over the model until

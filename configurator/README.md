@@ -17,8 +17,17 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   (see `src/data/pricing.js`, sourced from `BookIPI_Items_QuickBooks_Import.csv`)
   and the three package-deal rules from the project brief:
   1. Soffit + Fascia → 50% off fascia
-  2. Full Wrap (roof + walls + soffit + fascia + gutters + downspouts) → 7% off total
+  2. Full Wrap (roof + walls + soffit + fascia + gutters + downspouts) → 7% off
+     total — requires actual roof AND wall material being estimated (nonzero
+     totals), not just the four accessory checkboxes, so a roof-only project
+     (no wall layer imported) never qualifies no matter what's checked
   3. Gutters + Downspouts → downspouts free
+
+  Only line items with a nonzero quantity are shown in the Estimate Summary
+  and PDF/text export — an unselected accessory or a material with no
+  matching layer imported (e.g. "Siding" with no wall XML loaded) doesn't
+  clutter the breakdown with a $0 row. A package-deal line discounted to $0
+  (e.g. "Downspouts ... FREE") still shows, since its quantity is real.
 - **Test house**: Rakievich Residence, Job 26-180-ER (`src/data/sample/*.xml`).
   Parsed roof/wall square footage matches the source RoofRuler reports almost
   exactly (9,394 sqft roof vs. 9,397 reported; 6,775.43 sqft wall — exact match).
@@ -36,7 +45,13 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   RAL 7024` / `Crystal RAL 8019` for the two RAL-coded finishes, or just the
   name (e.g. `Rustic Wenge`) for Printech Woodgrain, which has no RAL code.
   Positioned via a fixed-position rect computed from the button itself so it
-  floats above the scrollable sidebar instead of being clipped by it.
+  floats above the scrollable sidebar instead of being clipped by it. All
+  three series are expanded by default (no accordion click needed to see the
+  full palette), and the popover is sized to comfortably fit all of them.
+  For Roof/Siding specifically, when per-facet overrides mean not every
+  facet shares the same effective color, the button reads "Various Colors"
+  (with a checkered swatch) instead of showing one facet's color as if it
+  were the color for the whole roof/wall.
 - **Downspouts** are their own independent product selector (`Downspout
   type`), matching the three real QuickBooks line items — 3" Round, 4" Round,
   3x3 Square — instead of being implicitly tied to whichever gutter profile
@@ -130,7 +145,12 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   only **+ New Project** (top of the House/Project panel; resets job #,
   customer, address, layers, and every selection/override back to blank, so
   nothing from the previous design can leak into the next one) clears the
-  saved-project link and starts a genuinely new record. "Copy Project Link"
+  saved-project link and starts a genuinely new record. A **Project Name**
+  field under the Download button shows `JOB_NUMBER - CUSTOMER - DATE`
+  (also used as the downloaded file's name) — purely derived from the
+  current Job #/Customer for now, not yet independently editable (planned
+  for a future Settings panel), which also means it can't go stale: it's
+  never a separate piece of state to forget to reset. "Copy Project Link"
   gives the same short `?p=<id>` URL directly, by reference instead of
   embedding the whole design — this is meant to eventually anchor a rotatable
   3D view linked from an exported PDF (see "Not yet built" below). API

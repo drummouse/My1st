@@ -284,6 +284,18 @@ export default function App() {
     return map;
   }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish]);
 
+  // True when at least one facet has been overridden to a color different
+  // from the global default — the Roof/Siding Color button can't show a
+  // single swatch in that case, so it reads "Various Colors" instead.
+  const roofColorMixed = !uniformFinish && roofFacesForPricing.some(({ key }) => {
+    const c = facetOverrides[key]?.colorId;
+    return c && c !== roofColorId;
+  });
+  const wallColorMixed = !uniformFinish && wallFacesForPricing.some(({ key }) => {
+    const c = facetOverrides[key]?.colorId;
+    return c && c !== wallColorId;
+  });
+
   // Resets every field back to a blank slate — job#/customer/address, all
   // layers, product/color selections, overrides, everything — so starting a
   // new project can't leave any stale data behind from whatever was loaded
@@ -553,6 +565,7 @@ export default function App() {
 
           {!isCustomerView && (
             <ProjectsPanel
+              house={house}
               getCurrentDesign={buildDesignSnapshot}
               onOpenProject={(design) => applyDesignSnapshot(design, false)}
               currentProjectId={currentProjectId}
@@ -584,7 +597,7 @@ export default function App() {
           />
           <div className="control-block color-row">
             <span className="control-label">Roof Color</span>
-            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} />
+            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} />
           </div>
 
           <ProductSelector
@@ -598,7 +611,7 @@ export default function App() {
           />
           <div className="control-block color-row">
             <span className="control-label">Siding Color</span>
-            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} />
+            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} />
           </div>
 
           <ServicesPanel

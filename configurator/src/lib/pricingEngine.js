@@ -45,11 +45,6 @@ export function calculateEstimate(measurements, selections) {
   const line = [];
   const services = selections.services || {};
 
-  // Package deals are mutually exclusive, not stackable: Full Wrap (all four
-  // accessory services selected) wins outright, and the two narrower deals
-  // only kick in when Full Wrap doesn't apply.
-  const fullWrap = !!(services.soffit && services.fascia && services.gutters && services.downspouts);
-
   const roofGroups = groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing');
   line.push(...roofGroups.items);
   const roofTotal = roofGroups.total;
@@ -57,6 +52,14 @@ export function calculateEstimate(measurements, selections) {
   const wallGroups = groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding');
   line.push(...wallGroups.items);
   const wallTotal = wallGroups.total;
+
+  // Package deals are mutually exclusive, not stackable: Full Wrap (roof +
+  // walls + all four accessory services) wins outright, and the two
+  // narrower deals only kick in when Full Wrap doesn't apply. Requires
+  // actual roof and wall material being estimated, not just the four
+  // accessory checkboxes — a roof-only project (no wall layer imported)
+  // isn't a "full wrap" no matter what's checked.
+  const fullWrap = !!(roofTotal > 0 && wallTotal > 0 && services.soffit && services.fascia && services.gutters && services.downspouts);
 
   let soffitTotal = 0;
   if (services.soffit) {
@@ -127,7 +130,10 @@ export function calculateEstimate(measurements, selections) {
   const total = preTaxTotal + gst;
 
   return {
-    lineItems: line,
+    // A zero-quantity line (e.g. "Siding" with no wall layer imported, or an
+    // unselected accessory) isn't worth showing — but a package-deal line
+    // that's genuinely included at a discounted $0 total (qty > 0) still is.
+    lineItems: line.filter((li) => li.qty > 0),
     subtotal,
     deals: {
       soffitFasciaDeal,

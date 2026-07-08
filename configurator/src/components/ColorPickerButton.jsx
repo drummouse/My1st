@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { RAL_COLORS, colorById } from '../data/colors.js';
 
 const SERIES_ORDER = ['Icecrystal Relief', 'Printech Woodgrain', 'Wrinkle Coating'];
-const POPOVER_WIDTH = 260;
+const POPOVER_WIDTH = 520;
 
 // Wrinkle/Icecrystal are both real RAL-coded finishes, so the code reads
 // clearly on its own; Printech Woodgrain has no RAL code (just a supplier
@@ -13,7 +13,11 @@ function formatColorLabel(color) {
   return color.name;
 }
 
-export default function ColorPickerButton({ selectedId, onChange, disabled }) {
+// `mixed`: when different facets of this component (e.g. some roof slopes
+// overridden to their own color) don't all share the same effective color,
+// there's no single color to show — the button reads "Various Colors"
+// instead of just whatever the global default happens to be.
+export default function ColorPickerButton({ selectedId, onChange, disabled, mixed }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
   const wrapRef = useRef(null);
@@ -60,29 +64,33 @@ export default function ColorPickerButton({ selectedId, onChange, disabled }) {
         className="color-picker-btn"
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
-        title={`${selected.name} — ${selected.code} (${selected.series})`}
+        title={mixed ? 'Various colors across facets' : `${selected.name} — ${selected.code} (${selected.series})`}
       >
-        <span
-          className="color-picker-btn-swatch"
-          style={selected.thumbnail ? { backgroundImage: `url(${selected.thumbnail})` } : { background: selected.hex }}
-        />
-        <span className="color-picker-btn-label">{formatColorLabel(selected)}</span>
+        {mixed ? (
+          <span className="color-picker-btn-swatch color-picker-btn-swatch-mixed" />
+        ) : (
+          <span
+            className="color-picker-btn-swatch"
+            style={selected.thumbnail ? { backgroundImage: `url(${selected.thumbnail})` } : { background: selected.hex }}
+          />
+        )}
+        <span className="color-picker-btn-label">{mixed ? 'Various Colors' : formatColorLabel(selected)}</span>
       </button>
 
       {open && pos && (
         <div className="color-picker-popover" style={{ top: pos.top, left: pos.left }}>
           {SERIES_ORDER.map((series) => (
-            <details key={series} className="color-series" open={selected.series === series}>
+            <details key={series} className="color-series" open>
               <summary className="color-series-label">
                 {series}
-                {selected.series === series && <span className="color-series-current"> — {selected.name}</span>}
+                {!mixed && selected.series === series && <span className="color-series-current"> — {selected.name}</span>}
               </summary>
               <div className="color-grid">
                 {RAL_COLORS.filter((c) => c.series === series).map((c) => (
                   <button
                     key={c.id}
                     type="button"
-                    className={`color-swatch${selectedId === c.id ? ' selected' : ''}`}
+                    className={`color-swatch${!mixed && selectedId === c.id ? ' selected' : ''}`}
                     style={c.thumbnail ? { backgroundImage: `url(${c.thumbnail})` } : { background: c.hex }}
                     title={`${c.name} — ${c.code}`}
                     aria-label={`${c.name} ${c.code}`}

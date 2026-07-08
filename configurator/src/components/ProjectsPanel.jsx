@@ -29,18 +29,27 @@ function buildProjectFileHtml(id, design) {
 </html>`;
 }
 
-function downloadProjectFile(id, design) {
+function downloadProjectFile(id, design, projectName) {
   const html = buildProjectFileHtml(id, design);
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `IronWrap_Project_${design.house.jobNumber || id}.html`;
+  a.download = `${(projectName || design.house.jobNumber || id).replace(/[\\/:*?"<>|]/g, '_')}.html`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export default function ProjectsPanel({ getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
+// "JOB_NUMBER - CUSTOMER - DATE" — a simple, predictable default. Not yet
+// user-editable (that's future Settings work); for now it's always derived
+// from the current job #/customer, so there's nothing to reset by hand when
+// starting a new project.
+function defaultProjectName(house) {
+  const date = new Date().toISOString().slice(0, 10);
+  return [house.jobNumber, house.customerName, date].filter(Boolean).join(' - ');
+}
+
+export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -96,7 +105,7 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const saved = id ? { id } : await res.json();
       onProjectIdChange(saved.id);
-      downloadProjectFile(saved.id, design);
+      downloadProjectFile(saved.id, design, defaultProjectName(house));
       await refresh();
     });
 
@@ -149,6 +158,16 @@ export default function ProjectsPanel({ getCurrentDesign, onOpenProject, current
           Download
         </button>
       </div>
+
+      <label className="field-label" htmlFor="project-name" style={{ marginTop: '0.5rem' }}>Project Name</label>
+      <input
+        id="project-name"
+        className="control-select"
+        value={defaultProjectName(house)}
+        readOnly
+        title="Auto-generated from Job # / Customer / today's date — editable via Settings in a future update"
+      />
+
       <button
         type="button"
         className="btn-secondary"
