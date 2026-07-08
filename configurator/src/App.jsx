@@ -37,6 +37,20 @@ const DEFAULT_ACCESSORY_COLORS = {
   downspouts: 'wk-04',
 };
 
+// Admin-only: which optional services the client can't opt out of when
+// viewing an HTML export / shareable link / project link. Locking a service
+// freezes its current checked state in customer view rather than forcing it
+// on — an admin can still lock a service off, if that's ever useful.
+const DEFAULT_LOCKED_SERVICES = {
+  soffit: false,
+  fascia: false,
+  gutters: false,
+  downspouts: false,
+  snowRetention: false,
+  capFlashing: false,
+  garageDoorCapping: false,
+};
+
 function extractProductOverrides(overrides) {
   const result = {};
   Object.entries(overrides).forEach(([key, val]) => {
@@ -58,6 +72,7 @@ export default function App() {
   const [wallColorId, setWallColorId] = useState('wk-01'); // Jet Black (Wrinkle Coating)
 
   const [services, setServices] = useState(DEFAULT_SERVICES);
+  const [lockedServices, setLockedServices] = useState(DEFAULT_LOCKED_SERVICES);
   const [gutterOptionId, setGutterOptionId] = useState(GUTTER_OPTIONS[0].id);
   const [measurements, setMeasurements] = useState(house.measurements);
   const [photoOverlay, setPhotoOverlay] = useState(null);
@@ -86,7 +101,7 @@ export default function App() {
   const buildDesignSnapshot = () =>
     captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
-      wallProductId, wallProfile, wallColorId, services, gutterOptionId,
+      wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
       uniformFinish, facetOverrides,
     });
@@ -103,6 +118,7 @@ export default function App() {
       setWallProfile,
       setWallColorId,
       setServices,
+      setLockedServices,
       setGutterOptionId,
       setMeasurements,
       setManualDiscount,
@@ -459,12 +475,14 @@ export default function App() {
             readOnly={isCustomerView}
           />
 
-          <ProjectsPanel
-            getCurrentDesign={buildDesignSnapshot}
-            onOpenProject={(design) => applyDesignSnapshot(design, false)}
-            currentProjectId={currentProjectId}
-            onProjectIdChange={setCurrentProjectId}
-          />
+          {!isCustomerView && (
+            <ProjectsPanel
+              getCurrentDesign={buildDesignSnapshot}
+              onOpenProject={(design) => applyDesignSnapshot(design, false)}
+              currentProjectId={currentProjectId}
+              onProjectIdChange={setCurrentProjectId}
+            />
+          )}
 
           <div className="control-block">
             <label className="uniform-toggle">
@@ -504,6 +522,8 @@ export default function App() {
           <ServicesPanel
             services={services}
             onServicesChange={setServices}
+            lockedServices={lockedServices}
+            onLockedServicesChange={setLockedServices}
             measurements={measurements}
             onMeasurementsChange={setMeasurements}
             gutterOptionId={gutterOptionId}
@@ -511,6 +531,7 @@ export default function App() {
             accessoryColors={accessoryColors}
             onAccessoryColorsChange={setAccessoryColors}
             readOnlyQuantities={isCustomerView}
+            isCustomerView={isCustomerView}
           />
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
@@ -522,15 +543,19 @@ export default function App() {
             readOnlyDiscount={isCustomerView}
           />
 
-          <div className="export-buttons">
-            <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
-            <button type="button" className="btn-secondary" onClick={handleExportHtml}>Export HTML</button>
-            <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
-          </div>
-          <div className="export-buttons">
-            <button type="button" className="btn-secondary" onClick={handleCopyShareLink}>Copy Shareable Link</button>
-          </div>
-          {shareStatus && <div className="control-sublabel">{shareStatus}</div>}
+          {!isCustomerView && (
+            <>
+              <div className="export-buttons">
+                <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
+                <button type="button" className="btn-secondary" onClick={handleExportHtml}>Export HTML</button>
+                <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
+              </div>
+              <div className="export-buttons">
+                <button type="button" className="btn-secondary" onClick={handleCopyShareLink}>Copy Shareable Link</button>
+              </div>
+              {shareStatus && <div className="control-sublabel">{shareStatus}</div>}
+            </>
+          )}
         </aside>
       </main>
     </div>

@@ -21,6 +21,7 @@ export function captureDesignState(state) {
     wallProfile: state.wallProfile,
     wallColorId: state.wallColorId,
     services: state.services,
+    lockedServices: state.lockedServices,
     gutterOptionId: state.gutterOptionId,
     measurements: state.measurements,
     manualDiscount: state.manualDiscount,
@@ -96,6 +97,7 @@ export function applyDesignState(snapshot, setters) {
   if (snapshot.wallProfile) setters.setWallProfile(snapshot.wallProfile);
   if (snapshot.wallColorId) setters.setWallColorId(snapshot.wallColorId);
   if (snapshot.services) setters.setServices(snapshot.services);
+  if (snapshot.lockedServices) setters.setLockedServices(snapshot.lockedServices);
   if (snapshot.gutterOptionId) setters.setGutterOptionId(snapshot.gutterOptionId);
   if (snapshot.measurements) setters.setMeasurements(snapshot.measurements);
   if (typeof snapshot.manualDiscount === 'number') setters.setManualDiscount(snapshot.manualDiscount);

@@ -43,11 +43,21 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
   Still fully explorable — rotate the 3D view, try other colors/profiles/
-  materials — but it's a presenter/viewer, not an editor: the manual/override
-  discount field, every quantity that feeds the subtotal (service on/off
-  toggles, sqft/LF measurements, eavestrough profile), and the Layers panel's
-  structure (visibility, rename, remove, import) are all locked read-only.
-  Automatic package-deal discounts still recalculate live.
+  materials, check/uncheck which optional services are included — but it's a
+  presenter/viewer for a customer, not an editor: the manual/override
+  discount field, every quantity that feeds the subtotal (sqft/LF
+  measurements, eavestrough profile — but not the service on/off checkboxes
+  themselves, which stay interactive by default), the Layers panel's
+  structure (visibility, rename, remove, import), the entire Projects panel
+  (no loading a different saved project), and the whole export/share button
+  row itself (no re-exporting or generating a new link from an already-
+  exported file) are all locked/hidden. Automatic package-deal discounts
+  still recalculate live as services are toggled.
+  Per-service **Lock** checkboxes in the admin's Optional Services panel
+  freeze a specific service's on/off state for customer-facing views (e.g.
+  lock Fascia always-included) while every other, unlocked service stays
+  toggleable by the client — `lockedServices` travels with the design the
+  same way `services` does.
 - **Shareable design link** — "Copy Shareable Link" encodes the whole design
   (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
   works even if any third-party service is down. Same locked-down
@@ -66,10 +76,13 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   `designState.js` captures) can be saved to a Postgres database (Neon, via
   Vercel's marketplace integration and the HTTP-based
   `@neondatabase/serverless` driver) and reopened, updated, or deleted later
-  from the **Projects** panel. "Copy Project Link" gives a short `?p=<id>`
-  URL that loads a saved project the same way the self-contained `?d=`
-  shareable link does, but by reference instead of embedding the whole
-  design — this is meant to eventually anchor a rotatable 3D view linked
+  from the **Projects** panel (admin/internal use only — hidden entirely in
+  the customer-facing HTML export and shareable link). "Save As" both saves
+  to the database and downloads a small HTML file to your device — the file
+  is just a redirect to the project's `?p=<id>` link, not a frozen copy, so
+  opening it later always loads whatever is currently saved. "Copy Project
+  Link" gives the same short `?p=<id>` URL directly, by reference instead of
+  embedding the whole design — this is meant to eventually anchor a rotatable 3D view linked
   from an exported PDF (see "Not yet built" below). API routes:
   `api/projects/index.js` (list, create), `api/projects/[id].js`
   (get/update/delete); schema is created automatically on first request (see
