@@ -42,13 +42,16 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
 - **Export HTML** — downloads a single self-contained interactive file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
-  Still fully explorable — rotate the 3D view, try other colors/profiles —
-  but the manual/override discount field is locked (colors/profiles/products
-  stay live, and automatic package-deal discounts still recalculate).
+  Still fully explorable — rotate the 3D view, try other colors/profiles/
+  materials — but it's a presenter/viewer, not an editor: the manual/override
+  discount field, every quantity that feeds the subtotal (service on/off
+  toggles, sqft/LF measurements, eavestrough profile), and the Layers panel's
+  structure (visibility, rename, remove, import) are all locked read-only.
+  Automatic package-deal discounts still recalculate live.
 - **Shareable design link** — "Copy Shareable Link" encodes the whole design
   (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
-  works even if any third-party service is down. Same discount lock as the
-  HTML export. (`src/lib/designState.js`)
+  works even if any third-party service is down. Same locked-down
+  presenter/viewer behavior as the HTML export. (`src/lib/designState.js`)
 - **Layers** — import any number of RoofRuler/AppliCAD XML reports (roof,
   wall, a garage roof, a second building, anything); each import becomes its
   own layer with a visibility checkbox, an editable name, and a remove

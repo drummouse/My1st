@@ -456,6 +456,7 @@ export default function App() {
             onRemoveLayer={handleRemoveLayer}
             onToggleVisibility={handleToggleLayerVisibility}
             onRenameLayer={handleRenameLayer}
+            readOnly={isCustomerView}
           />
 
           <ProjectsPanel
@@ -509,6 +510,7 @@ export default function App() {
             onGutterOptionChange={setGutterOptionId}
             accessoryColors={accessoryColors}
             onAccessoryColorsChange={setAccessoryColors}
+            readOnlyQuantities={isCustomerView}
           />
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />

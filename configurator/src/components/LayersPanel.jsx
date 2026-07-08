@@ -11,7 +11,7 @@ function makeLayerId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `layer-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer }) {
+export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer, readOnly }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -36,10 +36,9 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
 
       <div className="control-label" style={{ marginTop: '0.75rem' }}>Layers</div>
       <div className="control-sublabel">
-        Import one RoofRuler/AppliCAD XML report per structure — roof, wall, a garage roof, a
-        second building, anything. Each import becomes its own layer: toggle it on/off, rename
-        it, or remove it any time. Layers stack automatically for preview; nudge one into place
-        below the 3D model if it doesn't line up.
+        {readOnly
+          ? 'Layers making up this design — visibility, structure, and import are locked in this view.'
+          : "Import one RoofRuler/AppliCAD XML report per structure — roof, wall, a garage roof, a second building, anything. Each import becomes its own layer: toggle it on/off, rename it, or remove it any time. Layers stack automatically for preview; nudge one into place below the 3D model if it doesn't line up."}
       </div>
 
       <ul className="layer-list">
@@ -49,34 +48,42 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
               <input
                 type="checkbox"
                 checked={layer.visible}
+                disabled={readOnly}
                 onChange={(e) => onToggleVisibility(layer.id, e.target.checked)}
               />
             </label>
             <input
               className="control-select layer-name-input"
               value={layer.name}
+              disabled={readOnly}
               onChange={(e) => onRenameLayer(layer.id, e.target.value)}
             />
-            <button
-              type="button"
-              className="layer-remove-btn"
-              onClick={() => onRemoveLayer(layer.id)}
-              disabled={house.layers.length <= 1}
-              title={house.layers.length <= 1 ? 'At least one layer is required' : 'Remove layer'}
-              aria-label={`Remove ${layer.name}`}
-            >
-              ×
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="layer-remove-btn"
+                onClick={() => onRemoveLayer(layer.id)}
+                disabled={house.layers.length <= 1}
+                title={house.layers.length <= 1 ? 'At least one layer is required' : 'Remove layer'}
+                aria-label={`Remove ${layer.name}`}
+              >
+                ×
+              </button>
+            )}
           </li>
         ))}
       </ul>
 
-      <label className="btn-secondary import-file-btn" htmlFor="import-layer-xml">Import Layer (XML)</label>
-      <input id="import-layer-xml" type="file" accept=".xml" onChange={handleFile} className="visually-hidden" />
-      <div className="control-sublabel">
-        Soffit/fascia/gutter/downspout totals below aren't in these XML exports and stay editable
-        as manual entries.
-      </div>
+      {!readOnly && (
+        <>
+          <label className="btn-secondary import-file-btn" htmlFor="import-layer-xml">Import Layer (XML)</label>
+          <input id="import-layer-xml" type="file" accept=".xml" onChange={handleFile} className="visually-hidden" />
+          <div className="control-sublabel">
+            Soffit/fascia/gutter/downspout totals below aren't in these XML exports and stay editable
+            as manual entries.
+          </div>
+        </>
+      )}
     </div>
   );
 }
