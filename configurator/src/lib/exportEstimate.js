@@ -5,6 +5,13 @@ export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', curre
 
 export const ACCESSORY_LABELS = { soffit: 'Soffit', fascia: 'Fascia', gutters: 'Gutters', downspouts: 'Downspouts' };
 
+// True when the estimate actually carries quantity for a service — a checked
+// accessory with 0 LF/sqft measured was never counted and shouldn't be
+// mentioned in reports. Roof/wall line keys are "roofing-<productId>" /
+// "siding-<productId>", accessories use their bare service key.
+export const estimateHasItem = (estimate, keyPrefix) =>
+  estimate.lineItems.some((li) => li.key === keyPrefix || li.key.startsWith(`${keyPrefix}-`));
+
 // One row per facet, always — every slope/segment gets its effective
 // product+color spelled out (default or overridden), not just the ones the
 // customer changed, so a mixed-material house is fully documented. `labelMap`
@@ -31,7 +38,7 @@ export function buildFacetTable(facesForPricing, overrides, products, globalProd
 
 export function buildEstimateText({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
-  services, accessoryColors, uniformFinish, facetOverrides,
+  accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing,
 }) {
   const roofColor = colorById(roofColorId);
@@ -48,17 +55,17 @@ export function buildEstimateText({
   lines.push('');
   lines.push('SELECTIONS');
   lines.push('-'.repeat(50));
-  if (services?.roof !== false) {
+  if (estimateHasItem(estimate, 'roofing')) {
     lines.push(`Roof material: ${roofProduct.label} (${roofProfile || 'standard profile'})`);
     lines.push(`Roof color: ${roofColor.code} — ${roofColor.name}`);
   }
-  if (services?.wall !== false) {
+  if (estimateHasItem(estimate, 'siding')) {
     lines.push(`Siding material: ${wallProduct.label} (${wallProfile || 'standard profile'})`);
     lines.push(`Siding color: ${wallColor.code} — ${wallColor.name}`);
   }
-  if (services && accessoryColors) {
+  if (accessoryColors) {
     Object.entries(ACCESSORY_LABELS)
-      .filter(([key]) => services[key])
+      .filter(([key]) => estimateHasItem(estimate, key))
       .forEach(([key, label]) => {
         const c = colorById(accessoryColors[key]);
         lines.push(`${label} color: ${c.code} — ${c.name}`);

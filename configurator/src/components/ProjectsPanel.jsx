@@ -145,8 +145,7 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
       <div className="control-label">Projects</div>
       <div className="control-sublabel">
         Save this design to the database so it can be reopened and edited later, or shared as a
-        short project link — an anchor for a future rotatable 3D view in exported PDFs, unlike the
-        self-contained Shareable Link above which embeds the whole design in the URL itself.
+        short project link — an anchor for a future rotatable 3D view in exported PDFs.
         "Download" saves the design (updating this same project once it's been saved once — it
         won't create a duplicate) and downloads a small file to your device — it's just a link back
         to the database entry, not a frozen copy, so it always opens the latest saved version.

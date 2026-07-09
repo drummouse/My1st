@@ -32,22 +32,10 @@ export function captureDesignState(state) {
   };
 }
 
-async function gzipCompress(text) {
-  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
-  const buf = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buf);
-}
-
 async function gzipDecompress(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   const buf = await new Response(stream).arrayBuffer();
   return new TextDecoder().decode(buf);
-}
-
-function bytesToBase64Url(bytes) {
-  let binary = '';
-  bytes.forEach((b) => { binary += String.fromCharCode(b); });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function base64UrlToBytes(str) {
@@ -58,19 +46,9 @@ function base64UrlToBytes(str) {
   return bytes;
 }
 
-// Encodes a design snapshot for a shareable URL — no backend involved, the
-// whole design (including layer XML) round-trips through the link itself.
-// Gzip-compressed when the browser supports it (XML compresses well), with a
-// plain-base64 fallback for older browsers.
-export async function encodeDesignForUrl(state) {
-  const json = JSON.stringify(state);
-  if (typeof CompressionStream !== 'undefined') {
-    const bytes = await gzipCompress(json);
-    return 'z' + bytesToBase64Url(bytes);
-  }
-  return 'p' + bytesToBase64Url(new TextEncoder().encode(json));
-}
-
+// Decodes a design embedded in a legacy ?d= shareable URL. The UI for
+// creating these links was removed, but previously copied links keep
+// working through this decode path.
 export async function decodeDesignFromUrl(encoded) {
   const marker = encoded[0];
   const bytes = base64UrlToBytes(encoded.slice(1));
