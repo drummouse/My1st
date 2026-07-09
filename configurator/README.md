@@ -114,7 +114,7 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   door-tagged runs. Every capture is a static PNG baked into the PDF, not an
   interactive 3D object — see "Not yet built" below for why a truly embedded
   rotatable 3D model isn't possible.
-- **Export HTML** — downloads a single self-contained interactive file
+- **Share Design** — downloads a single self-contained interactive HTML file
   (`vite.artifact.config.js` build, inlined via
   `scripts/build-snapshot-template.mjs`) with the current design loaded in.
   Still fully explorable — rotate the 3D view, try other colors/profiles/
@@ -133,10 +133,10 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   lock Fascia always-included) while every other, unlocked service stays
   toggleable by the client — `lockedServices` travels with the design the
   same way `services` does.
-- **Shareable design link** — "Copy Shareable Link" encodes the whole design
-  (gzip-compressed, base64url) directly into a `?d=` URL param — no backend,
-  works even if any third-party service is down. Same locked-down
-  presenter/viewer behavior as the HTML export. (`src/lib/designState.js`)
+- **Legacy `?d=` design links** — the "Copy Shareable Link" button was
+  removed, but previously copied links (whole design gzip-encoded into the
+  URL) still decode and open in the same locked-down presenter/viewer mode
+  as the HTML export. (`src/lib/designState.js`)
 - **Layers** — import any number of RoofRuler/AppliCAD XML reports (roof,
   wall, a garage roof, a second building, anything); each import becomes its
   own layer with a visibility checkbox, an editable name, and a remove
@@ -225,8 +225,8 @@ npm run build      # production build to dist/
   to a flat screenshot) — investigated; the only vendor built for this
   (PDF3D) shut down in 2023, and no free/open path exists to convert a
   Three.js scene to the required U3D/PRC format. Current fallback: the PDF
-  stays a static screenshot + full facet report, with Export HTML and the
-  shareable link as the two genuinely rotatable options. A clickable
+  stays a static screenshot + full facet report, with Share Design (HTML
+  export) as the genuinely rotatable option. A clickable
   link/QR code in the PDF pointing to the live rotatable view is the
   next-best alternative, on request — now that Projects gives every design a
   stable short `?p=<id>` URL, that link is a natural fit for this, but it

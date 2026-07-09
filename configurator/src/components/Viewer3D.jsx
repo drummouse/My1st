@@ -335,12 +335,17 @@ const Viewer3D = forwardRef(function Viewer3D({
     animate();
 
     const handleResize = () => {
-      if (!mount) return;
+      if (!mount || !mount.clientWidth || !mount.clientHeight) return;
       camera.aspect = mount.clientWidth / mount.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(mount.clientWidth, mount.clientHeight);
     };
     window.addEventListener('resize', handleResize);
+    // The pane also resizes without a window resize (Full Screen / Restore
+    // toggles swap CSS classes) — without this, the canvas buffer keeps its
+    // old aspect ratio and the browser stretches the image to the new box.
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(mount);
 
     // Click-to-select a facet: distinguish a click from an orbit-drag by
     // pointer travel distance rather than relying on the native 'click'
@@ -372,6 +377,7 @@ const Viewer3D = forwardRef(function Viewer3D({
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
       controls.dispose();

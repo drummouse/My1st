@@ -15,7 +15,7 @@ import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
-import { captureDesignState, applyDesignState, encodeDesignForUrl, decodeDesignFromUrl } from './lib/designState.js';
+import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib/designState.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -103,7 +103,6 @@ export default function App() {
   const [activeLayerId, setActiveLayerId] = useState(house.layers[0]?.id);
   const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
   const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
-  const [shareStatus, setShareStatus] = useState('');
 
   const [uniformFinish, setUniformFinish] = useState(true);
   const [facetOverrides, setFacetOverrides] = useState({}); // key -> { productId?, colorId? }
@@ -420,7 +419,6 @@ export default function App() {
       wallColorId,
       wallProfile,
       estimate,
-      services,
       accessoryColors,
       uniformFinish,
       facetOverrides,
@@ -455,20 +453,6 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleCopyShareLink = async () => {
-    try {
-      const state = buildDesignSnapshot();
-      const encoded = await encodeDesignForUrl(state);
-      const url = `${window.location.origin}${window.location.pathname}?d=${encoded}`;
-      await navigator.clipboard.writeText(url);
-      setShareStatus('Link copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to build share link:', err);
-      setShareStatus('Could not create link — please try again.');
-    }
-    setTimeout(() => setShareStatus(''), 4000);
-  };
-
   const handleExportPdf = () => {
     buildEstimatePdf({
       brand,
@@ -483,7 +467,6 @@ export default function App() {
       wallColorId,
       wallProfile,
       estimate,
-      services,
       accessoryColors,
       uniformFinish,
       facetOverrides,
@@ -657,17 +640,11 @@ export default function App() {
           />
 
           {!isCustomerView && (
-            <>
-              <div className="export-buttons">
-                <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
-                <button type="button" className="btn-secondary" onClick={handleExportHtml}>Export HTML</button>
-                <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
-              </div>
-              <div className="export-buttons">
-                <button type="button" className="btn-secondary" onClick={handleCopyShareLink}>Copy Shareable Link</button>
-              </div>
-              {shareStatus && <div className="control-sublabel">{shareStatus}</div>}
-            </>
+            <div className="export-buttons">
+              <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
+              <button type="button" className="btn-secondary" onClick={handleExportHtml}>Share Design</button>
+              <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
+            </div>
           )}
         </aside>
       </main>

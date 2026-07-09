@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
 import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { money, buildFacetTable, ACCESSORY_LABELS } from './exportEstimate.js';
+import { money, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
@@ -118,7 +118,7 @@ function drawImageContained(doc, dataUrl, x, y, slotW, slotH) {
 
 function drawIsoAndSummaryPage(doc, {
   brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
-  estimate, services, accessoryColors,
+  estimate, accessoryColors,
 }) {
   doc.addPage();
   drawPageHeader(doc, brand, 'Renderings & Estimate Summary');
@@ -158,16 +158,16 @@ function drawIsoAndSummaryPage(doc, {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   const selectionLines = [
-    ...(services?.roof !== false ? [
+    ...(estimateHasItem(estimate, 'roofing') ? [
       `Roof: ${roofProduct.label} (${roofProfile || 'standard profile'})`,
       `Roof color: ${roofColor.code} — ${roofColor.name}`,
     ] : []),
-    ...(services?.wall !== false ? [
+    ...(estimateHasItem(estimate, 'siding') ? [
       `Siding: ${wallProduct.label} (${wallProfile || 'standard profile'})`,
       `Siding color: ${wallColor.code} — ${wallColor.name}`,
     ] : []),
     ...Object.entries(ACCESSORY_LABELS)
-      .filter(([key]) => services?.[key])
+      .filter(([key]) => estimateHasItem(estimate, key))
       .map(([key, label]) => {
         const c = colorById(accessoryColors?.[key]);
         return `${label} color: ${c.code} — ${c.name}`;
@@ -524,7 +524,7 @@ function stampFootersAndPageNumbers(doc, house) {
 
 export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
-  services, accessoryColors, uniformFinish, facetOverrides,
+  accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -533,7 +533,7 @@ export function buildEstimatePdf({
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
-    estimate, services, accessoryColors,
+    estimate, accessoryColors,
   });
 
   drawElevationsPage(doc, { brand, elevationViews });
