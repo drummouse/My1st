@@ -14,6 +14,20 @@ export function ensureSchema() {
   if (!schemaReady) {
     schemaReady = (async () => {
       await sql`create extension if not exists pgcrypto`;
+
+      // One row per signed-up contractor/company — the tenant boundary every
+      // other table's owner_id points at. No shared multi-seat accounts in
+      // v1 (one login = one owner), by design, kept deliberately simple.
+      await sql`
+        create table if not exists users (
+          id uuid primary key default gen_random_uuid(),
+          email text unique not null,
+          password_hash text not null,
+          company_name text,
+          created_at timestamptz not null default now()
+        )
+      `;
+
       await sql`
         create table if not exists projects (
           id uuid primary key default gen_random_uuid(),
@@ -30,12 +44,22 @@ export function ensureSchema() {
       // already there.
       await sql`alter table projects add column if not exists approved_at timestamptz`;
       await sql`alter table projects add column if not exists approved_by_name text`;
+      // Multi-tenancy: which signed-up user this project belongs to. Nullable
+      // so projects saved before accounts existed don't become orphaned by
+      // the migration; ownerless rows just aren't returned by the
+      // authenticated list route anymore.
+      await sql`alter table projects add column if not exists owner_id uuid references users(id)`;
+      await sql`create index if not exists projects_owner_id_idx on projects (owner_id)`;
 
-      // Single-row company-wide defaults (GST rate, package-deal
-      // percentages, new-project defaults) — deliberately separate from the
-      // per-project `design` JSONB, since these apply across every project
-      // rather than describing one design. `singleton` is always true and
-      // uniquely constrained so there can only ever be one row.
+      // Company-wide defaults (GST rate, package-deal percentages,
+      // new-project defaults) — deliberately separate from the per-project
+      // `design` JSONB, since these apply across every project rather than
+      // describing one design. Originally a single global row (`singleton`
+      // primary key); now one row per owner instead. The `singleton` column
+      // is left in place for any table created by that earlier shape rather
+      // than dropped (this codebase never does destructive migrations) —
+      // it's simply unused going forward, and every real query filters by
+      // `owner_id` via its own unique index, not by `singleton`.
       await sql`
         create table if not exists settings (
           singleton boolean primary key default true check (singleton),
@@ -52,6 +76,9 @@ export function ensureSchema() {
           updated_at timestamptz not null default now()
         )
       `;
+      await sql`alter table settings add column if not exists id uuid default gen_random_uuid()`;
+      await sql`alter table settings add column if not exists owner_id uuid references users(id)`;
+      await sql`create unique index if not exists settings_owner_id_key on settings (owner_id)`;
     })();
   }
   return schemaReady;

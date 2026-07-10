@@ -1,24 +1,27 @@
 import { sql, ensureSchema } from '../_lib/db.js';
+import { requireUserId } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
   try {
+    const ownerId = await requireUserId(req, res);
+    if (!ownerId) return;
     await ensureSchema();
 
     if (req.method === 'GET') {
-      const [row] = await sql`select * from settings where singleton = true`;
+      const [row] = await sql`select * from settings where owner_id = ${ownerId}`;
       if (row) {
         res.status(200).json(row);
         return;
       }
-      // First read ever — seed the single row with the defaults the app
-      // already used before Settings existed, so nothing changes until an
-      // admin actually edits something.
+      // First read ever for this owner — seed a row with the defaults the
+      // app already used before Settings existed, so nothing changes until
+      // this owner actually edits something.
       const [seeded] = await sql`
-        insert into settings (singleton) values (true)
-        on conflict (singleton) do nothing
+        insert into settings (owner_id) values (${ownerId})
+        on conflict (owner_id) do nothing
         returning *
       `;
-      res.status(200).json(seeded || (await sql`select * from settings where singleton = true`)[0]);
+      res.status(200).json(seeded || (await sql`select * from settings where owner_id = ${ownerId}`)[0]);
       return;
     }
 
@@ -30,16 +33,16 @@ export default async function handler(req, res) {
       } = req.body || {};
       const [row] = await sql`
         insert into settings (
-          singleton, gst_rate, full_wrap_discount_pct, soffit_fascia_discount_pct, gutter_downspout_free,
+          owner_id, gst_rate, full_wrap_discount_pct, soffit_fascia_discount_pct, gutter_downspout_free,
           default_services, default_locked_services, default_accessory_colors,
           default_roof_color_id, default_wall_color_id, report_footer_note, updated_at
         )
         values (
-          true, ${gstRate}, ${fullWrapDiscountPct}, ${soffitFasciaDiscountPct}, ${gutterDownspoutFree},
+          ${ownerId}, ${gstRate}, ${fullWrapDiscountPct}, ${soffitFasciaDiscountPct}, ${gutterDownspoutFree},
           ${JSON.stringify(defaultServices)}::jsonb, ${JSON.stringify(defaultLockedServices)}::jsonb, ${JSON.stringify(defaultAccessoryColors)}::jsonb,
           ${defaultRoofColorId || null}, ${defaultWallColorId || null}, ${reportFooterNote || null}, now()
         )
-        on conflict (singleton) do update set
+        on conflict (owner_id) do update set
           gst_rate = excluded.gst_rate,
           full_wrap_discount_pct = excluded.full_wrap_discount_pct,
           soffit_fascia_discount_pct = excluded.soffit_fascia_discount_pct,

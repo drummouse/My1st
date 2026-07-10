@@ -173,20 +173,46 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   list below the buttons is capped at a fixed height and scrolls internally
   once it grows past a handful of entries, instead of stretching the whole
   sidebar taller as more get saved.
+- **Accounts** (`src/components/AuthGate.jsx`, `api/auth/*`, `api/_lib/auth.js`) —
+  simple email+password login gates the bare app URL (an admin/salesperson's
+  own workspace); one signed-up user is one tenant boundary (`owner_id`),
+  no shared multi-seat company accounts in v1. Sessions are a signed JWT in
+  an httpOnly cookie (`jose` + `bcryptjs`, no server-side session table —
+  fits a stateless serverless deploy). Critically, the three customer-facing
+  entry points (`?p=<id>` project link, the legacy `?d=` link, and an opened
+  Share Design HTML export) all bypass the login gate entirely — a customer
+  viewing a shared design never needs an account — detected directly via
+  `window.__IRONWRAP_DESIGN__` / the URL's query params rather than app
+  state, since that state hasn't committed yet this early in the mount.
+  `projects` and `settings` rows now carry `owner_id`; the public single-project
+  `GET api/projects/[id].js` and the approve route stay unauthenticated,
+  everything else (list/create/update/delete, all of Settings) requires the
+  session cookie. A project saved before accounts existed (`owner_id` null)
+  is auto-claimed by whichever authenticated user edits it first, rather than
+  becoming permanently unownable.
 - **Company Settings** (`src/components/SettingsPanel.jsx`, admin-only —
   hidden along with everything else in customer view) — a "Settings" button
   in the header opens a modal for GST rate, the Full Wrap / Soffit+Fascia
   package-deal percentages, whether Downspouts are free with the Gutters
   package, New Project's default services/locks/colors, and a PDF footer
-  note. Stored in its own single-row `settings` table (`api/settings/index.js`),
-  deliberately separate from the per-project `design` JSONB in `projects`
-  since these apply company-wide rather than to one design.
-  `src/lib/pricingEngine.js`'s `calculateEstimate` accepts each rate as an
-  optional override (`selections.gstRate` etc.) and falls back to today's
-  hardcoded values when Settings hasn't loaded or been changed yet, so
-  nothing changes until an admin actually edits something. If the Settings
-  database isn't reachable, the modal still opens (with a close button) and
-  shows today's defaults read-only-in-effect, rather than getting stuck.
+  note. Stored in a `settings` table (`api/settings/index.js`) with one row
+  per owner — deliberately separate from the per-project `design` JSONB in
+  `projects` since these apply across every project for that account, not to
+  one design. `src/lib/pricingEngine.js`'s `calculateEstimate` accepts each
+  rate as an optional override (`selections.gstRate` etc.) and falls back to
+  today's hardcoded values when Settings hasn't loaded or been changed yet,
+  so nothing changes until an admin actually edits something. If the
+  Settings database isn't reachable, the modal still opens (with a close
+  button) and shows today's defaults read-only-in-effect, rather than
+  getting stuck.
+  Since Settings is per-owner and admin-editable, a saved/shared design
+  freezes the rates it was quoted at into its own snapshot
+  (`pricingSettings` in `src/lib/designState.js`) the first time it's saved —
+  a customer reopening an already-shared link always sees the numbers they
+  were actually quoted, never a price that's silently moved because the
+  owner has since changed their company-wide GST rate or discount
+  percentages. A brand-new, never-saved project still tracks live Settings
+  until that first save freezes it.
 - **QR code on the PDF cover page** — when the current design has been saved
   as a Project (`currentProjectId` is set), `handleExportPdf` generates a QR
   (via the `qrcode` package) encoding that project's `?p=<id>` URL and

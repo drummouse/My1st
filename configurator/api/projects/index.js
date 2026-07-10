@@ -1,13 +1,17 @@
 import { sql, ensureSchema } from '../_lib/db.js';
+import { requireUserId } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
   try {
+    const ownerId = await requireUserId(req, res);
+    if (!ownerId) return;
     await ensureSchema();
 
     if (req.method === 'GET') {
       const rows = await sql`
         select id, job_number, customer_name, address, created_at, updated_at
         from projects
+        where owner_id = ${ownerId}
         order by updated_at desc
       `;
       res.status(200).json(rows);
@@ -21,8 +25,8 @@ export default async function handler(req, res) {
         return;
       }
       const [row] = await sql`
-        insert into projects (job_number, customer_name, address, design)
-        values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${JSON.stringify(design)}::jsonb)
+        insert into projects (job_number, customer_name, address, design, owner_id)
+        values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${JSON.stringify(design)}::jsonb, ${ownerId})
         returning id, job_number, customer_name, address, created_at, updated_at
       `;
       res.status(201).json(row);

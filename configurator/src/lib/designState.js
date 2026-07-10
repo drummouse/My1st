@@ -29,6 +29,12 @@ export function captureDesignState(state) {
     accessoryColors: state.accessoryColors,
     uniformFinish: state.uniformFinish,
     facetOverrides: state.facetOverrides,
+    // Freezes the GST/package-deal rates that applied when this design was
+    // saved. Company Settings are per-owner and admin-editable — without
+    // this, a customer reopening an already-shared/quoted design later would
+    // see the price recalculated at whatever rates the owner has *since*
+    // changed, instead of the numbers they were actually quoted.
+    pricingSettings: state.pricingSettings || null,
   };
 }
 
@@ -84,4 +90,5 @@ export function applyDesignState(snapshot, setters) {
   if (snapshot.accessoryColors) setters.setAccessoryColors(snapshot.accessoryColors);
   if (typeof snapshot.uniformFinish === 'boolean') setters.setUniformFinish(snapshot.uniformFinish);
   if (snapshot.facetOverrides) setters.setFacetOverrides(snapshot.facetOverrides);
+  if (snapshot.pricingSettings) setters.setPricingSettings(snapshot.pricingSettings);
 }

@@ -80,6 +80,11 @@ export default function App() {
   const [approveBusy, setApproveBusy] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [companySettings, setCompanySettings] = useState(null);
+  // Once a design has been saved or loaded, this freezes the GST/discount
+  // rates it was quoted at — see designState.js's pricingSettings comment.
+  // null means "not frozen yet," i.e. a brand-new project still tracking
+  // whatever the live companySettings currently say.
+  const [pricingSettings, setPricingSettings] = useState(null);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
@@ -97,6 +102,15 @@ export default function App() {
       wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
       uniformFinish, facetOverrides,
+      // Freeze live company rates the first time a project is saved; once
+      // frozen, keep re-saving the same frozen values rather than whatever
+      // Settings currently says.
+      pricingSettings: pricingSettings || (companySettings ? {
+        gstRate: Number(companySettings.gst_rate),
+        fullWrapDiscountPct: Number(companySettings.full_wrap_discount_pct),
+        soffitFasciaDiscountPct: Number(companySettings.soffit_fascia_discount_pct),
+        gutterDownspoutFree: companySettings.gutter_downspout_free,
+      } : null),
     });
 
   const applyDesignSnapshot = (snapshot, lock) => {
@@ -120,6 +134,7 @@ export default function App() {
       setAccessoryColors,
       setUniformFinish,
       setFacetOverrides,
+      setPricingSettings,
     });
   };
 
@@ -167,8 +182,15 @@ export default function App() {
   // Company-wide settings (GST rate, package-deal percentages, New Project
   // defaults, report footer) — fetched once and applied on top of today's
   // hardcoded fallbacks, so the app behaves identically until an admin
-  // actually changes something in the Settings panel.
+  // actually changes something in the Settings panel. Skipped entirely for
+  // customer-facing entry points (checked directly rather than via
+  // isCustomerView state, which hasn't committed yet this early) — it's now
+  // an authenticated, per-owner route a logged-out customer can't call
+  // anyway, and pricingSettings (frozen at save time) is what customer views
+  // actually price off of.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (window.__IRONWRAP_DESIGN__ || params.has('p') || params.has('d')) return;
     fetch('/api/settings')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -265,12 +287,15 @@ export default function App() {
         gutterOption: gutterOptionId,
         downspoutOption: downspoutOptionId,
         manualDiscount,
-        gstRate: companySettings ? Number(companySettings.gst_rate) : undefined,
-        fullWrapDiscountPct: companySettings ? Number(companySettings.full_wrap_discount_pct) : undefined,
-        soffitFasciaDiscountPct: companySettings ? Number(companySettings.soffit_fascia_discount_pct) : undefined,
-        gutterDownspoutFree: companySettings ? companySettings.gutter_downspout_free : undefined,
+        // A design that's already been saved/loaded prices off the rates it
+        // was frozen at (pricingSettings); a brand-new one still tracks
+        // whatever Settings currently says (companySettings).
+        gstRate: pricingSettings ? pricingSettings.gstRate : (companySettings ? Number(companySettings.gst_rate) : undefined),
+        fullWrapDiscountPct: pricingSettings ? pricingSettings.fullWrapDiscountPct : (companySettings ? Number(companySettings.full_wrap_discount_pct) : undefined),
+        soffitFasciaDiscountPct: pricingSettings ? pricingSettings.soffitFasciaDiscountPct : (companySettings ? Number(companySettings.soffit_fascia_discount_pct) : undefined),
+        gutterDownspoutFree: pricingSettings ? pricingSettings.gutterDownspoutFree : (companySettings ? companySettings.gutter_downspout_free : undefined),
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings]
   );
 
   const facetColors = useMemo(() => {
@@ -329,6 +354,7 @@ export default function App() {
     setSelectedFacet(null);
     setCurrentProjectId(null);
     setApprovedAt(null);
+    setPricingSettings(null);
   };
 
   const handleRoofProductChange = (id) => {
@@ -501,6 +527,14 @@ export default function App() {
     setApproveBusy(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      window.location.href = window.location.pathname;
+    }
+  };
+
   return (
     <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
       <header className="app-header">
@@ -510,7 +544,10 @@ export default function App() {
         </div>
         <div className="app-header-actions">
           {!isCustomerView && (
-            <button type="button" className="btn-secondary" onClick={() => setShowSettings(true)}>Settings</button>
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setShowSettings(true)}>Settings</button>
+              <button type="button" className="btn-secondary" onClick={handleLogout}>Log Out</button>
+            </>
           )}
           <BrandToggle brandId={brandId} onChange={setBrandId} />
         </div>
