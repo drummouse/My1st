@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import Viewer3D from './components/Viewer3D.jsx';
 import BrandToggle from './components/BrandToggle.jsx';
 import ColorPickerButton from './components/ColorPickerButton.jsx';
@@ -9,6 +10,7 @@ import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
+import SettingsPanel from './components/SettingsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
@@ -20,41 +22,7 @@ import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTI
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
-
-const DEFAULT_SERVICES = {
-  roof: true,
-  wall: true,
-  soffit: true,
-  fascia: true,
-  gutters: true,
-  downspouts: true,
-  snowRetention: false,
-  capFlashing: false,
-  garageDoorCapping: false,
-};
-
-const DEFAULT_ACCESSORY_COLORS = {
-  soffit: 'wk-04',
-  fascia: 'wk-04',
-  gutters: 'wk-04',
-  downspouts: 'wk-04',
-};
-
-// Admin-only: which optional services the client can't opt out of when
-// viewing an HTML export / shareable link / project link. Locking a service
-// freezes its current checked state in customer view rather than forcing it
-// on — an admin can still lock a service off, if that's ever useful.
-const DEFAULT_LOCKED_SERVICES = {
-  roof: false,
-  wall: false,
-  soffit: false,
-  fascia: false,
-  gutters: false,
-  downspouts: false,
-  snowRetention: false,
-  capFlashing: false,
-  garageDoorCapping: false,
-};
+import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from './data/defaults.js';
 
 const BLANK_HOUSE = {
   jobNumber: '',
@@ -108,6 +76,10 @@ export default function App() {
   const [facetOverrides, setFacetOverrides] = useState({}); // key -> { productId?, colorId? }
   const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, layerId, sizeSf, pitch, orientation }
   const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [approvedAt, setApprovedAt] = useState(null);
+  const [approveBusy, setApproveBusy] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [companySettings, setCompanySettings] = useState(null);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
@@ -186,9 +158,24 @@ export default function App() {
       .then((row) => {
         applyDesignSnapshot(row.design, true);
         setCurrentProjectId(projectId);
+        setApprovedAt(row.approved_at || null);
       })
       .catch((err) => console.error('Failed to load project link:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Company-wide settings (GST rate, package-deal percentages, New Project
+  // defaults, report footer) — fetched once and applied on top of today's
+  // hardcoded fallbacks, so the app behaves identically until an admin
+  // actually changes something in the Settings panel.
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(setCompanySettings)
+      .catch((err) => console.error('Failed to load company settings:', err));
   }, []);
 
   // Re-parses only when a layer's content/visibility/order changes (offset
@@ -278,8 +265,12 @@ export default function App() {
         gutterOption: gutterOptionId,
         downspoutOption: downspoutOptionId,
         manualDiscount,
+        gstRate: companySettings ? Number(companySettings.gst_rate) : undefined,
+        fullWrapDiscountPct: companySettings ? Number(companySettings.full_wrap_discount_pct) : undefined,
+        soffitFasciaDiscountPct: companySettings ? Number(companySettings.soffit_fascia_discount_pct) : undefined,
+        gutterDownspoutFree: companySettings ? companySettings.gutter_downspout_free : undefined,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings]
   );
 
   const facetColors = useMemo(() => {
@@ -319,12 +310,12 @@ export default function App() {
     setHouse(BLANK_HOUSE);
     setRoofProductId(ROOF_PRODUCTS[0].id);
     setRoofProfile(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
-    setRoofColorId('wk-04');
+    setRoofColorId(companySettings?.default_roof_color_id || 'wk-04');
     setWallProductId(WALL_PRODUCTS[0].id);
     setWallProfile(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
-    setWallColorId('wk-01');
-    setServices(DEFAULT_SERVICES);
-    setLockedServices(DEFAULT_LOCKED_SERVICES);
+    setWallColorId(companySettings?.default_wall_color_id || 'wk-01');
+    setServices(companySettings?.default_services || DEFAULT_SERVICES);
+    setLockedServices(companySettings?.default_locked_services || DEFAULT_LOCKED_SERVICES);
     setGutterOptionId(GUTTER_OPTIONS[0].id);
     setDownspoutOptionId(DOWNSPOUT_OPTIONS[0].id);
     setMeasurements(BLANK_HOUSE.measurements);
@@ -332,11 +323,12 @@ export default function App() {
     setManualDiscount(0);
     setLayerOffsets({});
     setActiveLayerId(undefined);
-    setAccessoryColors(DEFAULT_ACCESSORY_COLORS);
+    setAccessoryColors(companySettings?.default_accessory_colors || DEFAULT_ACCESSORY_COLORS);
     setUniformFinish(true);
     setFacetOverrides({});
     setSelectedFacet(null);
     setCurrentProjectId(null);
+    setApprovedAt(null);
   };
 
   const handleRoofProductChange = (id) => {
@@ -453,7 +445,20 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
+    // Only a saved project has a `?p=<id>` link to encode — a brand-new,
+    // never-saved design has nothing to point the QR at, so it's omitted
+    // rather than forcing a save as a side effect of exporting a PDF.
+    let qrDataUrl = null;
+    let shareUrl = null;
+    if (currentProjectId) {
+      shareUrl = `${window.location.origin}${window.location.pathname}?p=${currentProjectId}`;
+      try {
+        qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 300 });
+      } catch (err) {
+        console.error('QR code generation failed:', err);
+      }
+    }
     buildEstimatePdf({
       brand,
       house,
@@ -472,10 +477,28 @@ export default function App() {
       facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
+      qrDataUrl,
+      shareUrl,
+      reportFooterNote: companySettings?.report_footer_note,
       facetLabels,
       openingsSchedule: labeledOpenings,
       lineTakeoffs,
     });
+  };
+
+  const handleApproveDesign = async () => {
+    if (!currentProjectId) return;
+    setApproveBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${currentProjectId}/approve`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const row = await res.json();
+      setApprovedAt(row.approved_at);
+    } catch (err) {
+      console.error('Failed to approve design:', err);
+      alert('Could not submit approval — please try again.');
+    }
+    setApproveBusy(false);
   };
 
   return (
@@ -485,8 +508,16 @@ export default function App() {
           <div className="app-title">{brand.name} 3D Configurator</div>
           <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
         </div>
-        <BrandToggle brandId={brandId} onChange={setBrandId} />
+        <div className="app-header-actions">
+          {!isCustomerView && (
+            <button type="button" className="btn-secondary" onClick={() => setShowSettings(true)}>Settings</button>
+          )}
+          <BrandToggle brandId={brandId} onChange={setBrandId} />
+        </div>
       </header>
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} onSaved={(row) => { setCompanySettings(row); setShowSettings(false); }} />
+      )}
 
       <main className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}>
         <section className="viewer-pane">
@@ -638,6 +669,20 @@ export default function App() {
             onManualDiscountChange={setManualDiscount}
             readOnlyDiscount={isCustomerView}
           />
+
+          {isCustomerView && currentProjectId && (
+            <div className="control-block">
+              {approvedAt ? (
+                <div className="control-sublabel">
+                  Approved on {new Date(approvedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}.
+                </div>
+              ) : (
+                <button type="button" className="btn-primary" onClick={handleApproveDesign} disabled={approveBusy} style={{ width: '100%' }}>
+                  Approve This Design
+                </button>
+              )}
+            </div>
+          )}
 
           {!isCustomerView && (
             <div className="export-buttons">

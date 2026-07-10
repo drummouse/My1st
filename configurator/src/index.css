@@ -30,6 +30,8 @@ body {
 
 .app-title { font-size: 1.1rem; font-weight: 700; }
 .app-subtitle { font-size: 0.8rem; color: #a8b1bd; }
+.app-header-actions { display: flex; align-items: center; gap: 0.6rem; }
+.app-header-actions .btn-secondary { margin-top: 0; }
 
 .brand-toggle { display: flex; gap: 0.4rem; }
 .brand-toggle-btn {
@@ -491,6 +493,30 @@ body {
 
 .export-buttons { display: flex; gap: 0.6rem; }
 .export-buttons .btn-primary, .export-buttons .btn-secondary { flex: 1 1 0; margin-top: 0; text-align: center; }
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 18, 22, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1rem;
+  z-index: 800;
+  overflow-y: auto;
+}
+.settings-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  width: 480px;
+  max-width: 100%;
+  padding: 1.1rem 1.2rem 1.3rem;
+}
+.settings-modal-header { display: flex; align-items: center; justify-content: space-between; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; }
+.settings-row label { font-size: 0.82rem; }
+.settings-row input { width: 90px; text-align: right; }
 
 @media (max-width: 860px) {
   .app-body { flex-direction: column; }

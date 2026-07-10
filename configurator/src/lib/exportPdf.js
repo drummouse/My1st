@@ -28,7 +28,7 @@ function drawPageHeader(doc, brand, title) {
   doc.line(MARGIN, 34, PAGE_W - MARGIN, 34);
 }
 
-function drawCoverPage(doc, brand, house) {
+function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote) {
   const [ar, ag, ab] = hexToRgb(brand.accent);
   doc.setFillColor(ar, ag, ab);
   doc.rect(0, 0, PAGE_W, 10, 'F');
@@ -85,10 +85,29 @@ function drawCoverPage(doc, brand, house) {
     ry += rowH;
   });
 
+  if (qrDataUrl) {
+    const qrSize = 90;
+    const qrY = cardTop + cardH + 36;
+    doc.addImage(qrDataUrl, 'PNG', cardX, qrY, qrSize, qrSize);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text('Scan for a live, rotatable 3D view', cardX + qrSize + 16, qrY + 30);
+    if (shareUrl) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(120);
+      drawWrapped(doc, shareUrl, cardX + qrSize + 16, qrY + 46, cardW - qrSize - 16, 11);
+    }
+  }
+
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
   doc.setTextColor(140);
-  doc.text('This is a preliminary estimate — final pricing subject to on-site verification and a signed contract.', MARGIN, PAGE_H - MARGIN);
+  doc.text(
+    reportFooterNote || 'This is a preliminary estimate — final pricing subject to on-site verification and a signed contract.',
+    MARGIN, PAGE_H - MARGIN
+  );
 }
 
 // Draws possibly-wrapping text and returns the y position after it — jsPDF's
@@ -526,10 +545,11 @@ export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
+  qrDataUrl, shareUrl, reportFooterNote,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
-  drawCoverPage(doc, brand, house);
+  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote);
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,

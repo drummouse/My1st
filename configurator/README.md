@@ -164,17 +164,43 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   saved-project link and starts a genuinely new record. A **Project Name**
   field under the Download button shows `JOB_NUMBER - CUSTOMER - DATE`
   (also used as the downloaded file's name) — purely derived from the
-  current Job #/Customer for now, not yet independently editable (planned
-  for a future Settings panel), which also means it can't go stale: it's
-  never a separate piece of state to forget to reset. "Copy Project Link"
-  gives the same short `?p=<id>` URL directly, by reference instead of
-  embedding the whole design — this is meant to eventually anchor a rotatable
-  3D view linked from an exported PDF (see "Not yet built" below). API
-  routes: `api/projects/index.js` (list, create), `api/projects/[id].js`
-  (get/update/delete); schema is created automatically on first request (see
-  `db/schema.sql`). The saved-projects list below the buttons is capped at a
-  fixed height and scrolls internally once it grows past a handful of
-  entries, instead of stretching the whole sidebar taller as more get saved.
+  current Job #/Customer for now, not yet independently editable. "Copy
+  Project Link" gives the same short `?p=<id>` URL directly, by reference
+  instead of embedding the whole design — this now also anchors the PDF's
+  cover-page QR code (see below). API routes: `api/projects/index.js` (list,
+  create), `api/projects/[id].js` (get/update/delete); schema is created
+  automatically on first request (see `db/schema.sql`). The saved-projects
+  list below the buttons is capped at a fixed height and scrolls internally
+  once it grows past a handful of entries, instead of stretching the whole
+  sidebar taller as more get saved.
+- **Company Settings** (`src/components/SettingsPanel.jsx`, admin-only —
+  hidden along with everything else in customer view) — a "Settings" button
+  in the header opens a modal for GST rate, the Full Wrap / Soffit+Fascia
+  package-deal percentages, whether Downspouts are free with the Gutters
+  package, New Project's default services/locks/colors, and a PDF footer
+  note. Stored in its own single-row `settings` table (`api/settings/index.js`),
+  deliberately separate from the per-project `design` JSONB in `projects`
+  since these apply company-wide rather than to one design.
+  `src/lib/pricingEngine.js`'s `calculateEstimate` accepts each rate as an
+  optional override (`selections.gstRate` etc.) and falls back to today's
+  hardcoded values when Settings hasn't loaded or been changed yet, so
+  nothing changes until an admin actually edits something. If the Settings
+  database isn't reachable, the modal still opens (with a close button) and
+  shows today's defaults read-only-in-effect, rather than getting stuck.
+- **QR code on the PDF cover page** — when the current design has been saved
+  as a Project (`currentProjectId` is set), `handleExportPdf` generates a QR
+  (via the `qrcode` package) encoding that project's `?p=<id>` URL and
+  `drawCoverPage` in `exportPdf.js` draws it in the previously-unused space
+  below the info card, captioned "Scan for a live, rotatable 3D view". A
+  brand-new, never-saved design simply gets today's PDF with no QR block —
+  exporting never forces a save as a side effect.
+- **Customer "Approve This Design"** — shown only in customer view on a real
+  saved-project link (`isCustomerView && currentProjectId`; not on the
+  legacy `?d=` link or the Share Design HTML export, which have no project
+  id to attach an approval to). Posts to `api/projects/[id]/approve.js`,
+  which stamps `approved_at`/`approved_by_name` on that project's row; once
+  approved, the button is replaced with "Approved on `<date>`" and stays
+  that way on every future visit to the same link.
 
 ## Known simplification
 
@@ -226,11 +252,9 @@ npm run build      # production build to dist/
   (PDF3D) shut down in 2023, and no free/open path exists to convert a
   Three.js scene to the required U3D/PRC format. Current fallback: the PDF
   stays a static screenshot + full facet report, with Share Design (HTML
-  export) as the genuinely rotatable option. A clickable
-  link/QR code in the PDF pointing to the live rotatable view is the
-  next-best alternative, on request — now that Projects gives every design a
-  stable short `?p=<id>` URL, that link is a natural fit for this, but it
-  hasn't been wired into `exportPdf.js` yet.
+  export) as the genuinely rotatable option, plus a QR code on the cover
+  page (see below) linking straight to the live `?p=<id>` view when the
+  project has been saved.
 - Projects database (`db/schema.sql`, `api/projects/*`) is built but not yet
   live-tested end-to-end: this sandbox's network egress allowlist blocks the
   Neon HTTP endpoint (`*.neon.tech`), so it's untested against a running

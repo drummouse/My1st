@@ -73,10 +73,11 @@ export function calculateEstimate(measurements, selections) {
 
   let fasciaTotal = 0;
   let fasciaDiscount = 0;
+  const soffitFasciaDiscountPct = selections.soffitFasciaDiscountPct ?? 0.5;
   const soffitFasciaDeal = !!(services.soffit && services.fascia && !fullWrap);
   if (services.fascia) {
     const base = measurements.fasciaLf * ACCESSORY_PRICING.fascia.pricePerLf;
-    fasciaDiscount = soffitFasciaDeal ? base * 0.5 : 0;
+    fasciaDiscount = soffitFasciaDeal ? base * soffitFasciaDiscountPct : 0;
     fasciaTotal = base - fasciaDiscount;
     line.push({
       key: 'fascia',
@@ -92,9 +93,10 @@ export function calculateEstimate(measurements, selections) {
     line.push({ key: 'gutters', label: gutterOption.label, qty: measurements.gutterLf, unit: 'LF', rate: gutterOption.pricePerLf, total: gutterTotal });
   }
 
+  const gutterDownspoutFree = selections.gutterDownspoutFree ?? true;
   const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
-  const gutterDownspoutDeal = !!(services.gutters && services.downspouts && !fullWrap);
+  const gutterDownspoutDeal = !!(gutterDownspoutFree && services.gutters && services.downspouts && !fullWrap);
   if (services.downspouts) {
     const base = measurements.downspoutLf * downspoutOption.pricePerLf;
     downspoutTotal = gutterDownspoutDeal ? 0 : base;
@@ -125,12 +127,14 @@ export function calculateEstimate(measurements, selections) {
 
   const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal;
 
-  // Full Wrap: roof + walls + soffit + fascia + gutters + downspouts, 7% off total.
-  const fullWrapDiscount = fullWrap ? subtotal * 0.07 : 0;
+  // Full Wrap: roof + walls + soffit + fascia + gutters + downspouts, off total.
+  const fullWrapDiscountPct = selections.fullWrapDiscountPct ?? 0.07;
+  const fullWrapDiscount = fullWrap ? subtotal * fullWrapDiscountPct : 0;
 
   const manualDiscount = Math.max(0, Number(selections.manualDiscount) || 0);
   const preTaxTotal = Math.max(0, subtotal - fullWrapDiscount - manualDiscount);
-  const gst = preTaxTotal * GST_RATE;
+  const gstRate = selections.gstRate ?? GST_RATE;
+  const gst = preTaxTotal * gstRate;
   const total = preTaxTotal + gst;
 
   return {
@@ -148,7 +152,7 @@ export function calculateEstimate(measurements, selections) {
     },
     manualDiscount,
     preTaxTotal,
-    gstRate: GST_RATE,
+    gstRate,
     gst,
     total,
   };
