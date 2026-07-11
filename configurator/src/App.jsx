@@ -4,7 +4,7 @@ import Viewer3D from './components/Viewer3D.jsx';
 import BrandToggle from './components/BrandToggle.jsx';
 import ColorPickerButton from './components/ColorPickerButton.jsx';
 import ProductSelector from './components/ProductSelector.jsx';
-import ServicesPanel from './components/ServicesPanel.jsx';
+import ServicesPanel, { ServiceRow } from './components/ServicesPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
@@ -218,6 +218,11 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
       applyDesignSnapshot(window.__IRONWRAP_DESIGN__, true);
+      // Present since the HTML export flow (handleExportHtml) saves the
+      // design as a project and embeds its id, precisely so this exported
+      // file's "Approve This Design" button (which needs a project id to
+      // POST to) shows up the same way a ?p= link's does.
+      if (window.__IRONWRAP_DESIGN__.projectId) setCurrentProjectId(window.__IRONWRAP_DESIGN__.projectId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -289,6 +294,13 @@ export default function App() {
     () => house.layers.map((l) => ({ id: l.id, name: l.name, visible: l.visible, parsed: parseAppliCadXML(l.xml) })),
     [house.layers]
   );
+
+  // Whether ANY imported layer actually contains Roof/Wall faces (RoofRuler
+  // XML self-declares each face's type — see roofRulerParser.js) — gates the
+  // Roof Material/Siding Material sections so a roof-only import doesn't show
+  // an irrelevant wall material/color picker, and vice versa.
+  const hasRoofFaces = useMemo(() => parsedLayers.some((l) => l.parsed.faces.some((f) => f.type === 'Roof')), [parsedLayers]);
+  const hasWallFaces = useMemo(() => parsedLayers.some((l) => l.parsed.faces.some((f) => f.type === 'Wall')), [parsedLayers]);
 
   // Keep the Assembly Adjustment layer selector pointed at a layer that
   // still exists after an add/remove.
@@ -537,9 +549,33 @@ export default function App() {
       return;
     }
     const state = buildDesignSnapshot();
+
+    // Save (or update) this design as a project first, same save-or-update
+    // call ProjectsPanel's Download button makes, so the exported file has a
+    // real project id to embed — without one, "Approve This Design" has
+    // nothing to POST to and never renders (see the ?p= view, which always
+    // has an id). A failure here just means the export proceeds without an
+    // Approve button, same as it silently did before this fix.
+    let projectId = currentProjectId;
+    try {
+      const res = await fetch(projectId ? `/api/projects/${projectId}` : '/api/projects', {
+        method: projectId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobNumber: house.jobNumber, customerName: house.customerName, address: house.address, design: state }),
+      });
+      if (res.ok) {
+        const saved = projectId ? { id: projectId } : await res.json();
+        projectId = saved.id;
+        setCurrentProjectId(projectId);
+      }
+    } catch (err) {
+      console.error('Failed to save project before HTML export:', err);
+    }
+    const stateWithProject = projectId ? { ...state, projectId } : state;
+
     // Escape "</script>" sequences that could appear inside string values
     // (e.g. a customer name) so they can't break out of the inline script.
-    const stateJson = JSON.stringify(state).replace(/</g, '\\u003c');
+    const stateJson = JSON.stringify(stateWithProject).replace(/</g, '\\u003c');
     const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson};</script>\n`;
     const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
     const blob = new Blob([html], { type: 'text/html' });
@@ -792,33 +828,51 @@ export default function App() {
             )}
           </div>
 
-          <ProductSelector
-            label="Roof Material"
-            products={allRoofProducts()}
-            profiles={ROOF_PROFILES}
-            selectedId={roofProductId}
-            selectedProfile={roofProfile}
-            onProductChange={handleRoofProductChange}
-            onProfileChange={setRoofProfile}
-          />
-          <div className="control-block color-row">
-            <span className="control-label">Roof Color</span>
-            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === roofProductId)?.colorIds} />
-          </div>
+          {hasRoofFaces && (
+            <>
+              <ServiceRow
+                label="Roof" checked={services.roof} onToggle={(val) => setServices((s) => ({ ...s, roof: val }))}
+                readOnly={isCustomerView} locked={lockedServices?.roof}
+                onToggleLock={(val) => setLockedServices((s) => ({ ...s, roof: val }))} showLockToggle={!isCustomerView}
+              />
+              <ProductSelector
+                label="Roof Material"
+                products={allRoofProducts()}
+                profiles={ROOF_PROFILES}
+                selectedId={roofProductId}
+                selectedProfile={roofProfile}
+                onProductChange={handleRoofProductChange}
+                onProfileChange={setRoofProfile}
+              />
+              <div className="control-block color-row">
+                <span className="control-label">Roof Color</span>
+                <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === roofProductId)?.colorIds} />
+              </div>
+            </>
+          )}
 
-          <ProductSelector
-            label="Siding Material"
-            products={allWallProducts()}
-            profiles={WALL_PROFILES}
-            selectedId={wallProductId}
-            selectedProfile={wallProfile}
-            onProductChange={handleWallProductChange}
-            onProfileChange={setWallProfile}
-          />
-          <div className="control-block color-row">
-            <span className="control-label">Siding Color</span>
-            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === wallProductId)?.colorIds} />
-          </div>
+          {hasWallFaces && (
+            <>
+              <ServiceRow
+                label="Wall" checked={services.wall} onToggle={(val) => setServices((s) => ({ ...s, wall: val }))}
+                readOnly={isCustomerView} locked={lockedServices?.wall}
+                onToggleLock={(val) => setLockedServices((s) => ({ ...s, wall: val }))} showLockToggle={!isCustomerView}
+              />
+              <ProductSelector
+                label="Siding Material"
+                products={allWallProducts()}
+                profiles={WALL_PROFILES}
+                selectedId={wallProductId}
+                selectedProfile={wallProfile}
+                onProductChange={handleWallProductChange}
+                onProfileChange={setWallProfile}
+              />
+              <div className="control-block color-row">
+                <span className="control-label">Siding Color</span>
+                <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === wallProductId)?.colorIds} />
+              </div>
+            </>
+          )}
 
           <ServicesPanel
             services={services}

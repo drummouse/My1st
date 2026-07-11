@@ -274,6 +274,34 @@ const Viewer3D = forwardRef(function Viewer3D({
       return dataUrl;
     },
   }));
+  // Snaps the live (interactive) camera to look straight at one side of the
+  // model — a shortcut into the same view captureElevationViews() renders
+  // for the PDF, except this one stays live/orbitable rather than a one-shot
+  // capture. Directions match captureElevationViews' Front/Right/Back/Left
+  // convention (relative to the model — RoofRuler exports carry no true
+  // compass orientation).
+  const ELEVATION_DIRS = {
+    front: new THREE.Vector3(0, -1, 0),
+    right: new THREE.Vector3(1, 0, 0),
+    back: new THREE.Vector3(0, 1, 0),
+    left: new THREE.Vector3(-1, 0, 0),
+  };
+  const snapToElevation = (direction) => {
+    const s = sceneRef.current;
+    const dir = ELEVATION_DIRS[direction];
+    if (!s?.camera || !s.renderer || !s.root || !s.controls || !dir) return;
+    const { camera, renderer, root, controls } = s;
+    const box = new THREE.Box3().setFromObject(root);
+    const aspect = renderer.domElement.width / renderer.domElement.height;
+    const { center, distance } = computeFramingDistance(box, dir, aspect, camera.fov);
+    camera.position.copy(center).addScaledVector(dir, distance);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(center);
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.update();
+  };
+
   const onFacetClickRef = useRef(onFacetClick);
   onFacetClickRef.current = onFacetClick;
   const facetSelectionEnabledRef = useRef(facetSelectionEnabled);
@@ -438,6 +466,10 @@ const Viewer3D = forwardRef(function Viewer3D({
         />
       )}
       <div ref={mountRef} className="viewer3d-canvas" />
+      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-top" onClick={() => snapToElevation('back')}>Elevation View</button>
+      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-bottom" onClick={() => snapToElevation('front')}>Elevation View</button>
+      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-left" onClick={() => snapToElevation('left')}>Elevation View</button>
+      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-right" onClick={() => snapToElevation('right')}>Elevation View</button>
       <div className="viewer3d-note">
         Preview model: each imported layer's RoofRuler export rendered independently and stacked for display.
       </div>

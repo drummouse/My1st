@@ -1,5 +1,11 @@
 * , *::before, *::after { box-sizing: border-box; }
 
+/* Browsers don't inherit color/font into form controls by default (button's
+   text falls back to the UA's own ButtonText color) — without this, a
+   .btn-secondary with no explicit `color` renders unpredictably depending on
+   the surrounding background (e.g. invisible dark-on-dark in the header). */
+button, input, select, textarea { font: inherit; color: inherit; }
+
 html, body, #root { height: 100%; margin: 0; }
 
 :root {
@@ -225,6 +231,42 @@ body {
   border-radius: 4px;
   pointer-events: none;
 }
+
+/* Shortcut buttons docked at the center of each side of the 3D view — skinny
+   along their short axis, 60% of that side's length along their long axis —
+   that snap the live camera to look straight at that side (see
+   Viewer3D.jsx's snapToElevation). */
+.viewer3d-elevation-btn {
+  position: absolute;
+  background: rgba(20, 24, 30, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+.viewer3d-elevation-btn:hover { background: rgba(20, 24, 30, 0.8); }
+.viewer3d-elevation-btn-top, .viewer3d-elevation-btn-bottom {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 26px;
+}
+.viewer3d-elevation-btn-top { top: 0.6rem; }
+.viewer3d-elevation-btn-bottom { bottom: 0.6rem; }
+.viewer3d-elevation-btn-left, .viewer3d-elevation-btn-right {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 60%;
+  writing-mode: vertical-rl;
+}
+.viewer3d-elevation-btn-left { left: 0.6rem; }
+.viewer3d-elevation-btn-right { right: 0.6rem; }
 
 .controls-pane {
   flex: 0 0 35%;

@@ -25,9 +25,9 @@ function AddCustomServiceRow({ catalog, existingIds, onAdd }) {
   );
 }
 
-function ServiceRow({
+export function ServiceRow({
   label, checked, onToggle, qty, unit, onQtyChange, note, colorId, onColorChange, readOnly,
-  locked, onToggleLock, showLockToggle,
+  locked, onToggleLock, showLockToggle, extra,
 }) {
   return (
     <div className="service-row">
@@ -44,6 +44,7 @@ function ServiceRow({
           <span>Lock</span>
         </label>
       )}
+      {extra}
       {qty !== undefined && (
         <>
           <input
@@ -83,15 +84,10 @@ export default function ServicesPanel({
   return (
     <div className="control-block">
       <div className="control-label">Optional Services</div>
-
-      <ServiceRow
-        label="Roof" checked={services.roof} onToggle={toggle('roof')} readOnly={readOnlyQuantities}
-        locked={lockedServices?.roof} onToggleLock={toggleLock('roof')} showLockToggle={showLockToggle}
-      />
-      <ServiceRow
-        label="Wall" checked={services.wall} onToggle={toggle('wall')} readOnly={readOnlyQuantities}
-        locked={lockedServices?.wall} onToggleLock={toggleLock('wall')} showLockToggle={showLockToggle}
-      />
+      <div className="control-sublabel">
+        Roof and Wall have their own enable checkbox next to their Material section above — this
+        list covers everything else.
+      </div>
 
       <ServiceRow
         label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}
@@ -107,41 +103,37 @@ export default function ServicesPanel({
         locked={lockedServices?.fascia} onToggleLock={toggleLock('fascia')} showLockToggle={showLockToggle}
       />
 
-      <div className="service-row service-row-select">
-        <label>Eavestrough profile</label>
-        <select
-          className="control-select"
-          value={gutterOptionId}
-          disabled={readOnlyQuantities}
-          onChange={(e) => onGutterOptionChange(e.target.value)}
-        >
-          {GUTTER_OPTIONS.map((g) => (
-            <option key={g.id} value={g.id}>{g.label} — ${g.pricePerLf.toFixed(2)}/LF</option>
-          ))}
-        </select>
-      </div>
       <ServiceRow
         label="Gutters" checked={services.gutters} onToggle={toggle('gutters')}
+        extra={(
+          <select
+            className="control-select" aria-label="Eavestrough profile"
+            value={gutterOptionId} disabled={readOnlyQuantities || !services.gutters}
+            onChange={(e) => onGutterOptionChange(e.target.value)}
+          >
+            {GUTTER_OPTIONS.map((g) => (
+              <option key={g.id} value={g.id}>{g.label} — ${g.pricePerLf.toFixed(2)}/LF</option>
+            ))}
+          </select>
+        )}
         qty={measurements.gutterLf} unit="LF" onQtyChange={setQty('gutterLf')}
         colorId={accessoryColors.gutters} onColorChange={setColor('gutters')} readOnly={readOnlyQuantities}
         locked={lockedServices?.gutters} onToggleLock={toggleLock('gutters')} showLockToggle={showLockToggle}
       />
 
-      <div className="service-row service-row-select">
-        <label>Downspout type</label>
-        <select
-          className="control-select"
-          value={downspoutOptionId}
-          disabled={readOnlyQuantities}
-          onChange={(e) => onDownspoutOptionChange(e.target.value)}
-        >
-          {DOWNSPOUT_OPTIONS.map((d) => (
-            <option key={d.id} value={d.id}>{d.label} — ${d.pricePerLf.toFixed(2)}/LF</option>
-          ))}
-        </select>
-      </div>
       <ServiceRow
         label="Downspouts" checked={services.downspouts} onToggle={toggle('downspouts')}
+        extra={(
+          <select
+            className="control-select" aria-label="Downspout type"
+            value={downspoutOptionId} disabled={readOnlyQuantities || !services.downspouts}
+            onChange={(e) => onDownspoutOptionChange(e.target.value)}
+          >
+            {DOWNSPOUT_OPTIONS.map((d) => (
+              <option key={d.id} value={d.id}>{d.label} — ${d.pricePerLf.toFixed(2)}/LF</option>
+            ))}
+          </select>
+        )}
         qty={measurements.downspoutLf} unit="LF" onQtyChange={setQty('downspoutLf')}
         colorId={accessoryColors.downspouts} onColorChange={setColor('downspouts')}
         note={gutterDownspoutDeal ? 'FREE (gutters + downspouts deal)' : null} readOnly={readOnlyQuantities}
