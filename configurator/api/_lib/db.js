@@ -115,6 +115,40 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists custom_services_owner_id_idx on custom_services (owner_id)`;
+
+      // Materials & Colors Library — owner-added entries layered on top of
+      // the app's baseline ROOF_PRODUCTS/WALL_PRODUCTS/RAL_COLORS catalogs
+      // (see src/data/pricing.js and colors.js's allRoofProducts()/
+      // allWallProducts()/allColors()). Not used to filter which colors a
+      // given material allows (no material_colors join table) — every
+      // color remains pickable for every material/service, same as the
+      // baseline catalog today.
+      await sql`
+        create table if not exists colors (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid references users(id),
+          name text not null,
+          code text,
+          hex text not null default '#888888',
+          series text not null default 'Custom',
+          thumbnail_url text,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists colors_owner_id_idx on colors (owner_id)`;
+
+      await sql`
+        create table if not exists materials (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid references users(id),
+          name text not null,
+          kind text not null default 'roof',
+          price_per_sqft numeric not null default 0,
+          profiles jsonb,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists materials_owner_id_idx on materials (owner_id)`;
     })();
   }
   return schemaReady;

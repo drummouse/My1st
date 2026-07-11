@@ -1,11 +1,14 @@
-import { ROOF_PRODUCTS, WALL_PRODUCTS, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
+import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING, allRoofProducts, allWallProducts } from '../data/pricing.js';
 
 // Fallback base tax rate when an owner hasn't configured a tax region yet
 // (Alberta GST — this app's original single hardcoded rate).
 export const GST_RATE = 0.05;
 
-const findRoofProduct = (id) => ROOF_PRODUCTS.find((p) => p.id === id) || ROOF_PRODUCTS[0];
-const findWallProduct = (id) => WALL_PRODUCTS.find((p) => p.id === id) || WALL_PRODUCTS[0];
+// Searches the baseline catalog plus any owner-added Materials Library
+// entries (allRoofProducts()/allWallProducts() — see data/pricing.js) so a
+// project referencing a custom material still prices and labels correctly.
+const findRoofProduct = (id) => allRoofProducts().find((p) => p.id === id) || allRoofProducts()[0];
+const findWallProduct = (id) => allWallProducts().find((p) => p.id === id) || allWallProducts()[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
 const findDownspout = (id) => DOWNSPOUT_OPTIONS.find((d) => d.id === id) || DOWNSPOUT_OPTIONS[0];
 

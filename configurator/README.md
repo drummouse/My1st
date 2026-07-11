@@ -279,6 +279,28 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   ever look at the fixed service keys); `exportEstimate.js`/`exportPdf.js`/
   `PriceSummary.jsx` all print a line's `description`/`linkUrl` when
   present, the same way custom services are shown in the live HTML view.
+- **Materials & Colors Library** (`src/components/MaterialsPanel.jsx`, its
+  own "Materials" nav section) — per-owner `colors` and `materials` tables
+  layered on top of the app's baseline catalogs (`RAL_COLORS` in
+  `src/data/colors.js`; `ROOF_PRODUCTS`/`WALL_PRODUCTS` in
+  `src/data/pricing.js`). Rather than thread a merged list through every
+  component that reads those catalogs (`ColorPickerButton`, `ProductSelector`,
+  `FacetInspector`, `pricingEngine.js`, the PDF/text exporters), both data
+  modules expose a small mutable registry — `setExtraColors()`/
+  `allColors()` and `setExtraMaterials()`/`allRoofProducts()`/
+  `allWallProducts()` — that App.jsx populates once from a fetch, after
+  which every existing `colorById()`/product-lookup call site picks up
+  custom entries automatically with no changes to how it's called.
+  Deliberately no `material_colors` join table restricting which colors
+  apply to which material — every color stays pickable everywhere, same as
+  the baseline catalog today; a future Scanner-tool import is still free to
+  populate `materials`/`colors` directly, join table or not.
+  `GET /api/colors`/`GET /api/materials` serve two audiences from one route:
+  called with an `ownerId` query param they're public (a customer viewing a
+  `?p=` link passes that already-public project's `owner_id` to see the same
+  custom entries its owner added, no login needed); called with no
+  `ownerId` they require a session and return the caller's own rows (used by
+  the Materials panel itself). Create/update/delete stay authenticated-only.
 - **Company logo** (Settings → Company Logo) — uploads via `@vercel/blob`'s
   client-side direct-upload path (the browser uploads straight to Blob
   storage with a signed token from `api/upload.js`, bypassing Vercel's

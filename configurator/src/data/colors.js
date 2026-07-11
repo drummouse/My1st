@@ -69,6 +69,24 @@ export const RAL_COLORS = [
   { id: 'wk-08', code: 'RAL 8004', name: 'Terracotta', hex: '#a0553e', series: 'Wrinkle Coating', thumbnail: wrinkle8004Thumb, texture: wrinkle8004Texture },
 ];
 
+// Owner-added colors from the Colors Library (Phase 6) — fetched once by
+// App.jsx and pushed in here via setExtraColors(), so every existing
+// consumer of colorById()/RAL_COLORS-style lookups picks up custom colors
+// automatically without each call site needing to know where they came
+// from. A plain module-level list (not React state) is fine here: nothing
+// reads it during the render that happens before the fetch resolves except
+// ColorPickerButton, which re-reads allColors() fresh every time its picker
+// opens, so it never shows a stale list.
+let extraColors = [];
+
+export function setExtraColors(colors) {
+  extraColors = Array.isArray(colors) ? colors : [];
+}
+
+export function allColors() {
+  return extraColors.length ? [...RAL_COLORS, ...extraColors] : RAL_COLORS;
+}
+
 export function colorById(id) {
-  return RAL_COLORS.find((c) => c.id === id) || RAL_COLORS[0];
+  return allColors().find((c) => c.id === id) || RAL_COLORS[0];
 }

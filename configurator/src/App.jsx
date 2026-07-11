@@ -13,6 +13,7 @@ import ProjectsPanel from './components/ProjectsPanel.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import DiscountsPanel from './components/DiscountsPanel.jsx';
 import CustomServicesPanel from './components/CustomServicesPanel.jsx';
+import MaterialsPanel from './components/MaterialsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
@@ -21,20 +22,20 @@ import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib/designState.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
-import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS } from './data/pricing.js';
-import { colorById } from './data/colors.js';
+import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
+import { colorById, setExtraColors } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from './data/defaults.js';
 
-// More sections land here as their phases ship (Custom Services, Materials)
-// — a thin shell over existing/future panel components, not a router:
+// A thin shell over existing/future panel components, not a router:
 // switching sections just toggles which one renders.
 const NAV_SECTIONS = [
   { key: 'configurator', label: 'Configurator' },
   { key: 'settings', label: 'Settings' },
   { key: 'discounts', label: 'Discounts' },
   { key: 'customServices', label: 'Custom Services' },
+  { key: 'materials', label: 'Materials' },
 ];
 
 const BLANK_HOUSE = {
@@ -52,6 +53,22 @@ const BLANK_HOUSE = {
     garageDoorCappingLf: 0,
   },
 };
+
+// Maps a materials-table row (snake_case, DB shape) to the plain
+// {id, label, pricePerSqft} shape ROOF_PRODUCTS/WALL_PRODUCTS already use,
+// so allRoofProducts()/allWallProducts() in data/pricing.js can treat a
+// custom material exactly like a baseline one everywhere it's looked up.
+function toMaterialProduct(m) {
+  return { id: m.id, label: m.name, pricePerSqft: Number(m.price_per_sqft) };
+}
+
+// Maps a colors-table row (snake_case, DB shape) to the plain
+// {id, code, name, hex, series, thumbnail} shape RAL_COLORS already uses,
+// so allColors() in data/colors.js can treat a custom color exactly like a
+// baseline one everywhere it's looked up (swatch rendering, formatColorLabel).
+function toColorEntry(c) {
+  return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: c.thumbnail_url || undefined };
+}
 
 function extractProductOverrides(overrides) {
   const result = {};
@@ -197,6 +214,20 @@ export default function App() {
         applyDesignSnapshot(row.design, true);
         setCurrentProjectId(projectId);
         setApprovedAt(row.approved_at || null);
+        // A customer exploring this shared link should see the same custom
+        // Materials/Colors Library entries the owner set up, not just the
+        // baseline catalog — ownerId comes straight off this already-public
+        // project row, so no login is needed for these two reads either.
+        if (row.owner_id) {
+          fetch(`/api/colors?ownerId=${row.owner_id}`)
+            .then((r) => (r.ok ? r.json() : []))
+            .then((rows) => setExtraColors(rows.map(toColorEntry)))
+            .catch((err) => console.error('Failed to load colors library:', err));
+          fetch(`/api/materials?ownerId=${row.owner_id}`)
+            .then((r) => (r.ok ? r.json() : []))
+            .then((rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) }))
+            .catch((err) => console.error('Failed to load materials library:', err));
+        }
       })
       .catch((err) => console.error('Failed to load project link:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,6 +259,20 @@ export default function App() {
       })
       .then(setCustomServiceCatalog)
       .catch((err) => console.error('Failed to load custom services catalog:', err));
+    fetch('/api/colors')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((rows) => setExtraColors(rows.map(toColorEntry)))
+      .catch((err) => console.error('Failed to load colors library:', err));
+    fetch('/api/materials')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) }))
+      .catch((err) => console.error('Failed to load materials library:', err));
   }, []);
 
   // Re-parses only when a layer's content/visibility/order changes (offset
@@ -464,10 +509,10 @@ export default function App() {
     const text = buildEstimateText({
       brand,
       house,
-      roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
+      roofProduct: allRoofProducts().find((p) => p.id === roofProductId),
       roofColorId,
       roofProfile,
-      wallProduct: WALL_PRODUCTS.find((p) => p.id === wallProductId),
+      wallProduct: allWallProducts().find((p) => p.id === wallProductId),
       wallColorId,
       wallProfile,
       estimate,
@@ -533,10 +578,10 @@ export default function App() {
       isoSnapshots: viewerRef.current?.captureIsoViews() || [],
       elevationViews: viewerRef.current?.captureElevationViews() || [],
       roofPlanView: viewerRef.current?.captureRoofPlanView() || null,
-      roofProduct: ROOF_PRODUCTS.find((p) => p.id === roofProductId),
+      roofProduct: allRoofProducts().find((p) => p.id === roofProductId),
       roofColorId,
       roofProfile,
-      wallProduct: WALL_PRODUCTS.find((p) => p.id === wallProductId),
+      wallProduct: allWallProducts().find((p) => p.id === wallProductId),
       wallColorId,
       wallProfile,
       estimate,
@@ -619,6 +664,12 @@ export default function App() {
       )}
       {activeSection === 'customServices' && !isCustomerView && (
         <CustomServicesPanel onChanged={setCustomServiceCatalog} />
+      )}
+      {activeSection === 'materials' && !isCustomerView && (
+        <MaterialsPanel
+          onColorsChanged={(rows) => setExtraColors(rows.map(toColorEntry))}
+          onMaterialsChanged={(rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) })}
+        />
       )}
 
       <main
@@ -723,7 +774,7 @@ export default function App() {
 
           <ProductSelector
             label="Roof Material"
-            products={ROOF_PRODUCTS}
+            products={allRoofProducts()}
             profiles={ROOF_PROFILES}
             selectedId={roofProductId}
             selectedProfile={roofProfile}
@@ -737,7 +788,7 @@ export default function App() {
 
           <ProductSelector
             label="Siding Material"
-            products={WALL_PRODUCTS}
+            products={allWallProducts()}
             profiles={WALL_PROFILES}
             selectedId={wallProductId}
             selectedProfile={wallProfile}

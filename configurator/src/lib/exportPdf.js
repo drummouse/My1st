@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
-import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
+import { allRoofProducts, allWallProducts } from '../data/pricing.js';
 import { money, formatPct, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
 
 const MARGIN = 40;
@@ -547,10 +547,10 @@ function drawFacetDetailPages(doc, {
   };
 
   const roofFacetRows = roofFacesForPricing?.length
-    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId, facetLabels)
+    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, allRoofProducts(), roofProduct.id, roofColorId, facetLabels)
     : [];
   const wallFacetRows = wallFacesForPricing?.length
-    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId, facetLabels)
+    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, allWallProducts(), wallProduct.id, wallColorId, facetLabels)
     : [];
 
   if (roofFacetRows.length) renderFacetTable('Roof Slopes', roofFacetRows);

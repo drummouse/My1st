@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { RAL_COLORS, colorById } from '../data/colors.js';
+import { allColors, colorById } from '../data/colors.js';
 
 const SERIES_ORDER = ['Wrinkle Coating', 'Icecrystal Relief', 'Printech Woodgrain'];
+
+// Baseline series first (stable, familiar order), then any Colors Library
+// series an owner has added — computed fresh each call so a color added
+// while the picker is closed shows up the next time it's opened.
+function seriesList() {
+  const extra = [...new Set(allColors().map((c) => c.series).filter((s) => !SERIES_ORDER.includes(s)))];
+  return [...SERIES_ORDER, ...extra];
+}
 
 // Same touch/desktop signal used by the Position dock (AssemblyAdjustment.jsx)
 // — a combined pointer+width check so a wide touchscreen laptop still gets
@@ -43,7 +51,7 @@ function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
       <div className="color-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Choose a color">
         <div className="color-modal-header">
           <div className="color-tabs">
-            {SERIES_ORDER.map((s) => (
+            {seriesList().map((s) => (
               <button
                 key={s}
                 type="button"
@@ -57,7 +65,7 @@ function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
           <button type="button" className="layer-remove-btn" onClick={onClose} aria-label="Close color picker">×</button>
         </div>
         <div className="color-card-grid">
-          {RAL_COLORS.filter((c) => c.series === series).map((c) => (
+          {allColors().filter((c) => c.series === series).map((c) => (
             <button
               key={c.id}
               type="button"
@@ -107,8 +115,8 @@ function QuickDrawer({ selectedId, mixed, onChange, onClose }) {
           <button type="button" className="layer-remove-btn" onClick={onClose} aria-label="Close color picker">×</button>
         </div>
         <div className="color-drawer-body">
-          {SERIES_ORDER.map((series) => {
-            const items = RAL_COLORS.filter((c) => c.series === series && matches(c));
+          {seriesList().map((series) => {
+            const items = allColors().filter((c) => c.series === series && matches(c));
             if (q && items.length === 0) return null;
             const isOpen = q ? true : openSeries === series;
             return (

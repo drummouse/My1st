@@ -1,5 +1,5 @@
 import { colorById } from '../data/colors.js';
-import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
+import { allRoofProducts, allWallProducts } from '../data/pricing.js';
 
 export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 // Trims to at most 2 decimals but drops trailing zeros (5% not 5.00%, 14.975% stays precise).
@@ -87,8 +87,8 @@ export function buildEstimateText({
       );
     });
   };
-  renderFacetRows('ROOF SLOPES (* = customized, differs from default above)', roofFacesForPricing, facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId);
-  renderFacetRows('WALL SEGMENTS (* = customized, differs from default above)', wallFacesForPricing, facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId);
+  renderFacetRows('ROOF SLOPES (* = customized, differs from default above)', roofFacesForPricing, facetOverrides, allRoofProducts(), roofProduct.id, roofColorId);
+  renderFacetRows('WALL SEGMENTS (* = customized, differs from default above)', wallFacesForPricing, facetOverrides, allWallProducts(), wallProduct.id, wallColorId);
 
   lines.push('');
   lines.push('PRICE BREAKDOWN');
