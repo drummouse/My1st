@@ -299,6 +299,27 @@ const Viewer3D = forwardRef(function Viewer3D({
     controls.update();
   };
 
+  // Snaps the live camera straight down onto the roof — the same top-down
+  // framing captureRoofPlanView() renders for the PDF (dir 0,0,1), except
+  // live/orbitable. `up` points at the model's +Y so its front (−Y, the
+  // Front Elevation direction) sits at the bottom of the screen, matching
+  // the usual roof-plan orientation.
+  const snapToTop = () => {
+    const s = sceneRef.current;
+    if (!s?.camera || !s.renderer || !s.root || !s.controls) return;
+    const { camera, renderer, root, controls } = s;
+    const box = new THREE.Box3().setFromObject(root);
+    const aspect = renderer.domElement.width / renderer.domElement.height;
+    const dir = new THREE.Vector3(0, 0, 1);
+    const { center, distance } = computeFramingDistance(box, dir, aspect, camera.fov);
+    camera.position.copy(center).addScaledVector(dir, distance);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(center);
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.update();
+  };
+
   const onFacetClickRef = useRef(onFacetClick);
   onFacetClickRef.current = onFacetClick;
   const facetSelectionEnabledRef = useRef(facetSelectionEnabled);
@@ -463,6 +484,7 @@ const Viewer3D = forwardRef(function Viewer3D({
         />
       )}
       <div ref={mountRef} className="viewer3d-canvas" />
+      <button type="button" className="viewer3d-topview-btn" onClick={snapToTop}>Top View</button>
       <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-top" onClick={() => snapToElevation('back')}>Elevation View</button>
       <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-bottom" onClick={() => snapToElevation('front')}>Elevation View</button>
       <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-left" onClick={() => snapToElevation('left')}>Elevation View</button>

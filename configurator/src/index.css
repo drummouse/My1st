@@ -270,6 +270,27 @@ body {
 .viewer3d-elevation-btn-left { left: 0.6rem; }
 .viewer3d-elevation-btn-right { right: 0.6rem; }
 
+/* Top-down "roof plan" shortcut — a compact pill in the top-right corner,
+   clear of the four side-docked elevation buttons (see Viewer3D.jsx's
+   snapToTop). */
+.viewer3d-topview-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: rgba(20, 24, 30, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.viewer3d-topview-btn:hover { background: rgba(20, 24, 30, 0.8); }
+
 .controls-pane {
   flex: 0 0 35%;
   min-width: 320px;
