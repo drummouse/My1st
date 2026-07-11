@@ -14,6 +14,7 @@ import SettingsPanel from './components/SettingsPanel.jsx';
 import DiscountsPanel from './components/DiscountsPanel.jsx';
 import CustomServicesPanel from './components/CustomServicesPanel.jsx';
 import MaterialsPanel from './components/MaterialsPanel.jsx';
+import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
@@ -121,6 +122,10 @@ export default function App() {
   // non-customer views since the customer-facing route is unauthenticated.
   const [customServiceLines, setCustomServiceLines] = useState([]);
   const [customServiceCatalog, setCustomServiceCatalog] = useState([]);
+  // Current project's attachments — kept in App state (not just inside
+  // AttachmentsPanel) so PDF/text export can read them at export-click time
+  // without a second fetch.
+  const [attachments, setAttachments] = useState([]);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
@@ -521,6 +526,7 @@ export default function App() {
       facetOverrides,
       roofFacesForPricing,
       wallFacesForPricing,
+      attachments,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
   };
@@ -572,6 +578,21 @@ export default function App() {
         console.error('Logo fetch failed:', err);
       }
     }
+    // jsPDF's addImage needs an already-loaded image, not a remote URL —
+    // convert each photo attachment once here rather than inside exportPdf.js,
+    // matching the same pattern already used for the company logo above. A
+    // photo that fails to fetch (network hiccup, since-deleted Blob) is
+    // simply skipped rather than failing the whole export.
+    const attachmentPhotos = await Promise.all(
+      attachments.filter((a) => a.kind === 'photo').map(async (a) => {
+        try {
+          return { ...a, dataUrl: await urlToDataUrl(a.url) };
+        } catch (err) {
+          console.error('Attachment photo fetch failed:', err);
+          return null;
+        }
+      })
+    );
     buildEstimatePdf({
       brand,
       house,
@@ -597,6 +618,8 @@ export default function App() {
       facetLabels,
       openingsSchedule: labeledOpenings,
       lineTakeoffs,
+      attachmentFiles: attachments.filter((a) => a.kind === 'file'),
+      attachmentPhotos: attachmentPhotos.filter(Boolean),
     });
   };
 
@@ -756,6 +779,14 @@ export default function App() {
               onOpenProject={(design) => applyDesignSnapshot(design, false)}
               currentProjectId={currentProjectId}
               onProjectIdChange={setCurrentProjectId}
+            />
+          )}
+
+          {currentProjectId && (
+            <AttachmentsPanel
+              projectId={currentProjectId}
+              isCustomerView={isCustomerView}
+              onChanged={setAttachments}
             />
           )}
 

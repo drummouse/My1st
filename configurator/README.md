@@ -301,6 +301,33 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   custom entries its owner added, no login needed); called with no
   `ownerId` they require a session and return the caller's own rows (used by
   the Materials panel itself). Create/update/delete stay authenticated-only.
+- **Attachments** (`src/components/AttachmentsPanel.jsx`, shown under
+  Projects once a project has been saved) — an `attachments` table
+  (`project_id`, `kind` 'file'|'photo', `file_name`, `url`, `mime_type`,
+  `size_bytes`) with two upload paths sharing `api/upload.js`'s existing
+  `photo`/`file` Blob kinds (15 MB/photo, 25 MB/file, enforced again
+  server-side in `api/attachments/[[...id]].js` along with a 200 MB
+  per-project aggregate cap). **Attach File** always renders as a link —
+  jsPDF can't embed another PDF anyway, and it keeps report generation time
+  and size predictable regardless of file count. **Attach Photo** embeds a
+  small thumbnail directly in the PDF's own "Attachments" page (via
+  `urlToDataUrl`, the same fetch-to-data-URL step already used for the
+  company logo) alongside a link to the full-resolution original — never
+  the full-size image inline. The list route is deliberately public
+  (`GET /api/attachments?projectId=`) so a customer viewing a `?p=` link
+  sees the same attachments with no login, matching how the project itself
+  is public; add/remove require the project's owner.
+- **API route layout** — every `api/*` route is one Vercel serverless
+  function, and the Hobby plan caps how many a single project can deploy.
+  Rather than one file per resource-and-verb (`projects/index.js`,
+  `projects/[id].js`, `projects/[id]/approve.js`, ...), each resource is a
+  single file using an optional catch-all path (`projects/[[...id]].js`,
+  `colors/[[...id]].js`, etc.) that dispatches on the path segments and
+  `req.method` internally — same routes/URLs from the browser's point of
+  view, far fewer functions. `auth/[action].js` does the same for
+  signup/login/logout/me. Keep new API surface inside these existing files
+  (or follow the same pattern for a genuinely new resource) rather than
+  adding another top-level route file.
 - **Company logo** (Settings → Company Logo) — uploads via `@vercel/blob`'s
   client-side direct-upload path (the browser uploads straight to Blob
   storage with a signed token from `api/upload.js`, bypassing Vercel's

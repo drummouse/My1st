@@ -557,6 +557,73 @@ function drawFacetDetailPages(doc, {
   if (wallFacetRows.length) renderFacetTable('Wall Segments', wallFacetRows);
 }
 
+// Files are links only (jsPDF can't embed another PDF anyway, and this
+// keeps report generation fast regardless of file count); Photos get a
+// small embedded thumbnail (already converted to a data URL by the caller —
+// see App.jsx's handleExportPdf) that's also a link to the full-resolution
+// original, never the full-size image inline, so this page's layout time
+// and size stay predictable no matter how many photos get attached.
+function drawAttachmentsPage(doc, { brand, attachmentFiles, attachmentPhotos }) {
+  if (!attachmentFiles?.length && !attachmentPhotos?.length) return;
+  doc.addPage();
+  drawPageHeader(doc, brand, 'Attachments');
+  let y = 50;
+  const bottom = PAGE_H - MARGIN;
+
+  if (attachmentFiles?.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text('Files', MARGIN, y);
+    y += 18;
+    doc.setFontSize(9);
+    attachmentFiles.forEach((f) => {
+      if (y > bottom - 14) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink(f.file_name, MARGIN, y, { url: f.url });
+      doc.setTextColor(140);
+      doc.text(`${(f.size_bytes / (1024 * 1024)).toFixed(1)} MB`, PAGE_W - MARGIN, y, { align: 'right' });
+      doc.setTextColor(0);
+      y += 16;
+    });
+    y += 10;
+  }
+
+  if (attachmentPhotos?.length) {
+    if (y > bottom - 140) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text('Photos', MARGIN, y);
+    y += 14;
+
+    const cols = 3;
+    const gap = 12;
+    const cellW = (PAGE_W - MARGIN * 2 - gap * (cols - 1)) / cols;
+    const cellH = cellW * 0.75;
+    let col = 0;
+    attachmentPhotos.forEach((p) => {
+      if (col === 0 && y + cellH + 26 > bottom) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+      const x = MARGIN + col * (cellW + gap);
+      try {
+        doc.setDrawColor(225);
+        doc.roundedRect(x, y, cellW, cellH, 3, 3, 'S');
+        drawImageContained(doc, p.dataUrl, x + 2, y + 2, cellW - 4, cellH - 4);
+      } catch {
+        // Skip a photo that fails to draw — keep the rest of the report.
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink('Full resolution', x, y + cellH + 11, { url: p.url });
+      doc.setTextColor(0);
+      col += 1;
+      if (col === cols) { col = 0; y += cellH + 24; }
+    });
+  }
+}
+
 function stampFootersAndPageNumbers(doc, house) {
   const totalPages = doc.internal.getNumberOfPages();
   for (let p = 2; p <= totalPages; p++) {
@@ -574,7 +641,7 @@ export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
-  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl,
+  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, attachmentFiles, attachmentPhotos,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
@@ -593,6 +660,8 @@ export function buildEstimatePdf({
     brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
     roofFacesForPricing, wallFacesForPricing, facetLabels,
   });
+
+  drawAttachmentsPage(doc, { brand, attachmentFiles, attachmentPhotos });
 
   stampFootersAndPageNumbers(doc, house);
 
