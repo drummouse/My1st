@@ -199,34 +199,71 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
 - **Nav bar** (`NAV_SECTIONS` in `App.jsx`, admin-only — hidden in customer
   view) — a thin tab strip under the header switching which section renders
   (`Configurator`, today's main view, is the default); more tabs land here
-  as their features ship (Discounts, Custom Services, Materials). Not a
-  router — just a plain `activeSection` state toggle. Switching away from
+  as their features ship (Custom Services, Materials). Not a router — just a
+  plain `activeSection` state toggle. Switching away from
   Configurator hides it with `display: none` rather than unmounting it, so
   the 3D viewer (expensive to tear down/rebuild) survives a trip to Settings
   and back; contrast with the deliberate "Hide 3D Model" toolbar button,
   which does fully unmount it.
 - **Company Settings** (`src/components/SettingsPanel.jsx`, its own nav
-  section) — GST rate, the Full Wrap / Soffit+Fascia package-deal
-  percentages, whether Downspouts are free with the Gutters package, New
-  Project's default services/locks/colors, a company logo, and a PDF footer
-  note. Stored in a `settings` table (`api/settings/index.js`) with one row
-  per owner — deliberately separate from the per-project `design` JSONB in
-  `projects` since these apply across every project for that account, not to
-  one design. `src/lib/pricingEngine.js`'s `calculateEstimate` accepts each
-  rate as an optional override (`selections.gstRate` etc.) and falls back to
-  today's hardcoded values when Settings hasn't loaded or been changed yet,
-  so nothing changes until an admin actually edits something. If the
-  Settings database isn't reachable, the modal still opens (with a close
-  button) and shows today's defaults read-only-in-effect, rather than
-  getting stuck.
+  section) — tax jurisdiction, New Project's default services/locks/colors, a
+  company logo, and a PDF footer note. Stored in a `settings` table
+  (`api/settings/index.js`) with one row per owner — deliberately separate
+  from the per-project `design` JSONB in `projects` since these apply across
+  every project for that account, not to one design. `src/lib/pricingEngine.js`'s
+  `calculateEstimate` accepts each rate as an optional override
+  (`selections.gstRate` etc.) and falls back to today's hardcoded values when
+  Settings hasn't loaded or been changed yet, so nothing changes until an
+  admin actually edits something. If the Settings database isn't reachable,
+  the panel still opens and shows today's defaults read-only-in-effect,
+  rather than getting stuck.
   Since Settings is per-owner and admin-editable, a saved/shared design
   freezes the rates it was quoted at into its own snapshot
   (`pricingSettings` in `src/lib/designState.js`) the first time it's saved —
   a customer reopening an already-shared link always sees the numbers they
   were actually quoted, never a price that's silently moved because the
-  owner has since changed their company-wide GST rate or discount
-  percentages. A brand-new, never-saved project still tracks live Settings
-  until that first save freezes it.
+  owner has since changed their company-wide tax rate or discount rules. A
+  brand-new, never-saved project still tracks live Settings until that first
+  save freezes it.
+- **Tax model** (`src/data/taxRates.js`, Settings → Tax) — a static, researched
+  table of base sales-tax rates for all 13 Canadian provinces/territories
+  (GST-only, GST+PST/RST, or HST depending on province) and all 50 US states
+  + DC (no US federal sales tax — state rate only, 0% in five states).
+  Picking a Country/Province-State in Settings prefills the base rate and a
+  display label (GST/HST/State/...) from this table, both still fully
+  editable afterward — the table is a starting default, not an authority.
+  An additional, always-editable **Municipal / local tax** field covers
+  county/city add-ons the static table can't know about (mainly a US
+  concern). `pricingEngine.js` sums base + municipal into one effective
+  `taxRate` applied exactly where the old hardcoded GST rate used to be — no
+  new call sites, just what feeds that one number. The combined rate and its
+  label freeze into `pricingSettings` the same way the discount rules below
+  do.
+- **Generalized discount rules** (`src/components/DiscountsPanel.jsx`, its
+  own nav section) — the three package deals (Full Wrap 7% off everything;
+  Soffit+Fascia 50% off Fascia; Gutters+Downspouts frees Downspouts) used to
+  be hardcoded conditionals in `pricingEngine.js`. They're now data: a
+  `discount_rules` jsonb column on `settings`, each rule shaped
+  `{ id, name, appliesToServices, requireAll, effect }` where `effect` is
+  either `{ type: 'percent', value }` (no `serviceKey` — percent off the
+  *whole* pre-discount subtotal) or `{ type: 'percent'|'free', value?,
+  serviceKey }` (applies to one line item only). `calculateEstimate` matches
+  rules against which services are actually active (roof/wall count as
+  active only when they have real priced square footage, not just a checked
+  box — matching the old Full Wrap logic exactly), and a matching
+  whole-estimate rule always wins outright over narrower ones, same as
+  before. A `null` `discount_rules` column (every row created before this
+  feature, or never edited in the Discounts panel) means "not customized
+  yet" — `buildDefaultDiscountRules()` seeds the same three rules from the
+  legacy `full_wrap_discount_pct`/`soffit_fascia_discount_pct`/
+  `gutter_downspout_free` columns in that case, so pricing is byte-identical
+  to the old hardcoded math until an admin actually adds/edits a rule. Those
+  three legacy columns are left in place (this codebase never does
+  destructive migrations) purely as that fallback's source values.
+  Settings and Discounts are separate panels that each `PUT` only the fields
+  they show; `api/settings/index.js`'s update writes every column with
+  `coalesce(excluded.x, settings.x)` so one panel's save never blanks out a
+  field only the other panel manages.
 - **Company logo** (Settings → Company Logo) — uploads via `@vercel/blob`'s
   client-side direct-upload path (the browser uploads straight to Blob
   storage with a signed token from `api/upload.js`, bypassing Vercel's

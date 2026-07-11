@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import ColorPickerButton from './ColorPickerButton.jsx';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from '../data/defaults.js';
+import { COUNTRIES, REGIONS, regionByCode } from '../data/taxRates.js';
 
 const SERVICE_KEYS = [
   { key: 'roof', label: 'Roof' },
@@ -37,9 +38,10 @@ export default function SettingsPanel({ onSaved }) {
       .then((row) => {
         setForm({
           gstRatePct: toPct(row.gst_rate),
-          fullWrapDiscountPct: toPct(row.full_wrap_discount_pct),
-          soffitFasciaDiscountPct: toPct(row.soffit_fascia_discount_pct),
-          gutterDownspoutFree: row.gutter_downspout_free,
+          taxCountry: row.tax_country || 'CA',
+          taxRegion: row.tax_region || 'CA-AB',
+          taxLabel: row.tax_label || 'GST',
+          municipalTaxPct: toPct(row.municipal_tax_rate || 0),
           defaultServices: row.default_services || DEFAULT_SERVICES,
           defaultLockedServices: row.default_locked_services || DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: row.default_accessory_colors || DEFAULT_ACCESSORY_COLORS,
@@ -54,9 +56,10 @@ export default function SettingsPanel({ onSaved }) {
         setStatus('Could not reach the Settings database — showing today\'s defaults; changes may not save.');
         setForm({
           gstRatePct: '5',
-          fullWrapDiscountPct: '7',
-          soffitFasciaDiscountPct: '50',
-          gutterDownspoutFree: true,
+          taxCountry: 'CA',
+          taxRegion: 'CA-AB',
+          taxLabel: 'GST',
+          municipalTaxPct: '0',
           defaultServices: DEFAULT_SERVICES,
           defaultLockedServices: DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: DEFAULT_ACCESSORY_COLORS,
@@ -113,9 +116,10 @@ export default function SettingsPanel({ onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gstRate: toFrac(form.gstRatePct),
-          fullWrapDiscountPct: toFrac(form.fullWrapDiscountPct),
-          soffitFasciaDiscountPct: toFrac(form.soffitFasciaDiscountPct),
-          gutterDownspoutFree: form.gutterDownspoutFree,
+          taxCountry: form.taxCountry,
+          taxRegion: form.taxRegion,
+          taxLabel: form.taxLabel,
+          municipalTaxRate: toFrac(form.municipalTaxPct),
           defaultServices: form.defaultServices,
           defaultLockedServices: form.defaultLockedServices,
           defaultAccessoryColors: form.defaultAccessoryColors,
@@ -146,35 +150,66 @@ export default function SettingsPanel({ onSaved }) {
       </div>
 
       <div className="control-block">
-        <div className="field-label">Pricing</div>
+        <div className="field-label">Tax</div>
         <div className="settings-row">
-          <label htmlFor="settings-gst">GST rate (%)</label>
+          <label htmlFor="settings-tax-country">Country</label>
+          <select
+            id="settings-tax-country" className="control-select" value={form.taxCountry}
+            onChange={(e) => {
+              const country = e.target.value;
+              const firstRegion = REGIONS[country]?.[0];
+              setForm((f) => ({
+                ...f, taxCountry: country, taxRegion: firstRegion?.code || '',
+                gstRatePct: firstRegion ? toPct(firstRegion.rate) : f.gstRatePct,
+                taxLabel: firstRegion?.label || f.taxLabel,
+              }));
+            }}
+          >
+            {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="settings-row">
+          <label htmlFor="settings-tax-region">Province / State</label>
+          <select
+            id="settings-tax-region" className="control-select" value={form.taxRegion}
+            onChange={(e) => {
+              const region = regionByCode(e.target.value);
+              setForm((f) => ({
+                ...f, taxRegion: e.target.value,
+                gstRatePct: region ? toPct(region.rate) : f.gstRatePct,
+                taxLabel: region?.label || f.taxLabel,
+              }));
+            }}
+          >
+            {(REGIONS[form.taxCountry] || []).map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+          </select>
+        </div>
+        <div className="settings-row">
+          <label htmlFor="settings-gst">Base tax rate (%)</label>
           <input
-            id="settings-gst" type="number" min="0" step="0.1" className="control-select"
+            id="settings-gst" type="number" min="0" step="0.001" className="control-select"
             value={form.gstRatePct} onChange={(e) => setForm((f) => ({ ...f, gstRatePct: e.target.value }))}
           />
         </div>
         <div className="settings-row">
-          <label htmlFor="settings-fullwrap">Full Wrap discount (%)</label>
+          <label htmlFor="settings-municipal-tax">Municipal / local tax (%)</label>
           <input
-            id="settings-fullwrap" type="number" min="0" max="100" step="1" className="control-select"
-            value={form.fullWrapDiscountPct} onChange={(e) => setForm((f) => ({ ...f, fullWrapDiscountPct: e.target.value }))}
+            id="settings-municipal-tax" type="number" min="0" step="0.001" className="control-select"
+            value={form.municipalTaxPct} onChange={(e) => setForm((f) => ({ ...f, municipalTaxPct: e.target.value }))}
           />
         </div>
         <div className="settings-row">
-          <label htmlFor="settings-soffitfascia">Soffit + Fascia discount (%)</label>
+          <label htmlFor="settings-tax-label">Tax label (shown on estimates)</label>
           <input
-            id="settings-soffitfascia" type="number" min="0" max="100" step="1" className="control-select"
-            value={form.soffitFasciaDiscountPct} onChange={(e) => setForm((f) => ({ ...f, soffitFasciaDiscountPct: e.target.value }))}
+            id="settings-tax-label" type="text" className="control-select"
+            value={form.taxLabel} onChange={(e) => setForm((f) => ({ ...f, taxLabel: e.target.value }))}
           />
         </div>
-        <label className="uniform-toggle">
-          <input
-            type="checkbox" checked={form.gutterDownspoutFree}
-            onChange={(e) => setForm((f) => ({ ...f, gutterDownspoutFree: e.target.checked }))}
-          />
-          <span>Downspouts free with Gutters package</span>
-        </label>
+        <div className="control-sublabel">
+          The region picker prefills the base rate from researched Canada/US rates — still fully
+          editable. Add any county/city add-on in Municipal tax; the combined rate applies to every
+          new estimate. Discount/package deals moved to the new Discounts tab.
+        </div>
       </div>
 
       <div className="control-block">

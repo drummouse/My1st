@@ -1,4 +1,6 @@
 const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
+// Trims to at most 2 decimals but drops trailing zeros (5% not 5.00%, 14.975% stays precise).
+const formatPct = (rate) => (rate * 100).toFixed(2).replace(/\.?0+$/, '');
 
 export default function PriceSummary({ estimate, manualDiscount, onManualDiscountChange, readOnlyDiscount }) {
   return (
@@ -19,12 +21,12 @@ export default function PriceSummary({ estimate, manualDiscount, onManualDiscoun
         <span>Subtotal</span>
         <span>{money(estimate.subtotal)}</span>
       </div>
-      {estimate.deals.fullWrap && (
-        <div className="price-row price-row-deal">
-          <span>Full Wrap discount (7%)</span>
-          <span>-{money(estimate.deals.fullWrapDiscountAmount)}</span>
+      {estimate.appliedDiscounts.filter((d) => d.scope === 'subtotal').map((d) => (
+        <div className="price-row price-row-deal" key={d.id}>
+          <span>{d.name} ({Math.round(d.pct * 100)}%)</span>
+          <span>-{money(d.amount)}</span>
         </div>
-      )}
+      ))}
 
       {readOnlyDiscount ? (
         manualDiscount > 0 && (
@@ -54,18 +56,18 @@ export default function PriceSummary({ estimate, manualDiscount, onManualDiscoun
         <span>{money(estimate.preTaxTotal)}</span>
       </div>
       <div className="price-row">
-        <span>GST ({(estimate.gstRate * 100).toFixed(0)}%)</span>
-        <span>{money(estimate.gst)}</span>
+        <span>{estimate.taxLabel} ({formatPct(estimate.taxRate)}%)</span>
+        <span>{money(estimate.taxAmount)}</span>
       </div>
       <div className="price-row price-row-total">
         <span>Total Estimate</span>
         <span>{money(estimate.total)}</span>
       </div>
-      <div className="price-deals-note">
-        {estimate.deals.soffitFasciaDeal && <div>✓ Soffit + Fascia package — 50% off fascia</div>}
-        {estimate.deals.gutterDownspoutDeal && <div>✓ Gutters + Downspouts package — downspouts free</div>}
-        {estimate.deals.fullWrap && <div>✓ Full Wrap package — 7% off total</div>}
-      </div>
+      {estimate.appliedDiscounts.length > 0 && (
+        <div className="price-deals-note">
+          {estimate.appliedDiscounts.map((d) => <div key={d.id}>{d.summary}</div>)}
+        </div>
+      )}
     </div>
   );
 }

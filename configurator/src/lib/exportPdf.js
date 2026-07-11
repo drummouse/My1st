@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
 import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { money, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
+import { money, formatPct, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
@@ -260,20 +260,20 @@ function drawIsoAndSummaryPage(doc, {
   };
 
   totalRow('Subtotal', money(estimate.subtotal));
-  if (estimate.deals.fullWrap) totalRow('Full Wrap discount (7%)', `-${money(estimate.deals.fullWrapDiscountAmount)}`, { color: [13, 122, 62] });
+  estimate.appliedDiscounts
+    .filter((d) => d.scope === 'subtotal')
+    .forEach((d) => totalRow(`${d.name} (${Math.round(d.pct * 100)}%)`, `-${money(d.amount)}`, { color: [13, 122, 62] }));
   if (estimate.manualDiscount > 0) totalRow('Additional discount', `-${money(estimate.manualDiscount)}`, { color: [13, 122, 62] });
   totalRow('Pre-tax total', money(estimate.preTaxTotal));
-  totalRow(`GST (${(estimate.gstRate * 100).toFixed(0)}%)`, money(estimate.gst));
+  totalRow(`${estimate.taxLabel} (${formatPct(estimate.taxRate)}%)`, money(estimate.taxAmount));
   totalRow('TOTAL', money(estimate.total), { bold: true });
 
-  if (estimate.deals.soffitFasciaDeal || estimate.deals.gutterDownspoutDeal || estimate.deals.fullWrap) {
+  if (estimate.appliedDiscounts.length) {
     y += 6;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.8);
     doc.setTextColor(13, 122, 62);
-    if (estimate.deals.soffitFasciaDeal) { doc.text('✓ Soffit + Fascia package — 50% off fascia', rightX, y, { maxWidth: colW }); y += 10; }
-    if (estimate.deals.gutterDownspoutDeal) { doc.text('✓ Gutters + Downspouts package — downspouts free', rightX, y, { maxWidth: colW }); y += 10; }
-    if (estimate.deals.fullWrap) { doc.text('✓ Full Wrap package — 7% off total', rightX, y, { maxWidth: colW }); y += 10; }
+    estimate.appliedDiscounts.forEach((d) => { doc.text(d.summary, rightX, y, { maxWidth: colW }); y += 10; });
     doc.setTextColor(0);
   }
 }

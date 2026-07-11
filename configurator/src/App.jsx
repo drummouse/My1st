@@ -11,6 +11,7 @@ import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
+import DiscountsPanel from './components/DiscountsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
@@ -25,12 +26,13 @@ import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from './data/defaults.js';
 
-// More sections land here as their phases ship (Discounts, Custom Services,
-// Materials) — a thin shell over existing/future panel components, not a
-// router: switching sections just toggles which one renders.
+// More sections land here as their phases ship (Custom Services, Materials)
+// — a thin shell over existing/future panel components, not a router:
+// switching sections just toggles which one renders.
 const NAV_SECTIONS = [
   { key: 'configurator', label: 'Configurator' },
   { key: 'settings', label: 'Settings' },
+  { key: 'discounts', label: 'Discounts' },
 ];
 
 const BLANK_HOUSE = {
@@ -119,6 +121,9 @@ export default function App() {
         fullWrapDiscountPct: Number(companySettings.full_wrap_discount_pct),
         soffitFasciaDiscountPct: Number(companySettings.soffit_fascia_discount_pct),
         gutterDownspoutFree: companySettings.gutter_downspout_free,
+        discountRules: companySettings.discount_rules || null,
+        municipalTaxRate: Number(companySettings.municipal_tax_rate || 0),
+        taxLabel: companySettings.tax_label || 'GST',
       } : null),
     });
 
@@ -303,6 +308,9 @@ export default function App() {
         fullWrapDiscountPct: pricingSettings ? pricingSettings.fullWrapDiscountPct : (companySettings ? Number(companySettings.full_wrap_discount_pct) : undefined),
         soffitFasciaDiscountPct: pricingSettings ? pricingSettings.soffitFasciaDiscountPct : (companySettings ? Number(companySettings.soffit_fascia_discount_pct) : undefined),
         gutterDownspoutFree: pricingSettings ? pricingSettings.gutterDownspoutFree : (companySettings ? companySettings.gutter_downspout_free : undefined),
+        discountRules: pricingSettings ? pricingSettings.discountRules : (companySettings ? companySettings.discount_rules : undefined),
+        municipalTaxRate: pricingSettings ? pricingSettings.municipalTaxRate : (companySettings ? Number(companySettings.municipal_tax_rate || 0) : undefined),
+        taxLabel: pricingSettings ? pricingSettings.taxLabel : (companySettings ? (companySettings.tax_label || 'GST') : undefined),
       }),
     [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings]
   );
@@ -588,6 +596,9 @@ export default function App() {
 
       {activeSection === 'settings' && !isCustomerView && (
         <SettingsPanel onSaved={setCompanySettings} />
+      )}
+      {activeSection === 'discounts' && !isCustomerView && (
+        <DiscountsPanel onSaved={setCompanySettings} />
       )}
 
       <main

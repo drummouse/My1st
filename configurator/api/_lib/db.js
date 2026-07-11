@@ -80,6 +80,22 @@ export function ensureSchema() {
       await sql`alter table settings add column if not exists owner_id uuid references users(id)`;
       await sql`create unique index if not exists settings_owner_id_key on settings (owner_id)`;
       await sql`alter table settings add column if not exists logo_url text`;
+      // Tax jurisdiction: base rate stays in the existing gst_rate column
+      // (originally Alberta-only, now this owner's region's rate, still
+      // editable/overridable) plus its country/region code and display
+      // label (GST/HST/State/...), and an optional local add-on rate summed
+      // with it at estimate time — see src/data/taxRates.js.
+      await sql`alter table settings add column if not exists tax_country text`;
+      await sql`alter table settings add column if not exists tax_region text`;
+      await sql`alter table settings add column if not exists tax_label text`;
+      await sql`alter table settings add column if not exists municipal_tax_rate numeric not null default 0`;
+      // Generalized discount rules (replaces the three hardcoded package
+      // deals). Null means "not customized yet" — pricingEngine.js seeds the
+      // same three rules from full_wrap_discount_pct/soffit_fascia_discount_pct/
+      // gutter_downspout_free in that case, so behavior is unchanged until an
+      // admin edits a rule in the Discounts panel. Those three legacy columns
+      // are left in place (never dropped) as that fallback's source values.
+      await sql`alter table settings add column if not exists discount_rules jsonb`;
     })();
   }
   return schemaReady;
