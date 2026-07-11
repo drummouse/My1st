@@ -57,6 +57,13 @@ export default async function handler(req, res) {
     // /api/projects/<id>/approve — deliberately public, no owner check; a
     // customer approving a design they were sent has no account of their own.
     if (sub === 'approve') {
+      // A standalone exported HTML file (opened from email/file:// or another
+      // host) approves cross-origin — it's a "simple" POST (no body, no custom
+      // headers) so there's no preflight, but the browser still needs this
+      // header to let that file read the confirmation. Safe to open up: this
+      // route is deliberately public (a customer has no account) and only ever
+      // marks a design the owner already shared as approved.
+      res.setHeader('Access-Control-Allow-Origin', '*');
       if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         res.status(405).json({ error: 'Method not allowed' });

@@ -559,10 +559,8 @@ export default function App() {
     // call ProjectsPanel's Download button makes, so the exported file has a
     // real project id to embed — without one, "Approve This Design" has
     // nothing to POST to and never renders (see the ?p= view, which always
-    // has an id). A failure here just means the export proceeds without an
-    // Approve button, same as it silently did before this fix.
-    const projectSavePromise = saveOrUpdateProject(state, currentProjectId)
-      .catch((err) => { console.error('Failed to save project before HTML export:', err); return null; });
+    // has an id).
+    const projectSavePromise = saveOrUpdateProject(state, currentProjectId);
 
     let template;
     try {
@@ -571,14 +569,35 @@ export default function App() {
       alert('Could not load the export template. Please try again.');
       return;
     }
-    const saved = await projectSavePromise;
+
+    // A failed save leaves the export without a project id, so the customer's
+    // file can't show an Approve button. Rather than silently hand over a
+    // button-less file (the old behavior — the #1 cause of "there's no Approve
+    // button" reports), tell the owner why and let them decide.
+    let saved = null;
+    try {
+      saved = await projectSavePromise;
+    } catch (err) {
+      console.error('Failed to save project before HTML export:', err);
+      const proceed = window.confirm(
+        "Couldn't save this design to your account, so the shared file won't include an \"Approve This Design\" button. "
+        + "Make sure you're signed in and try again — or click OK to download it without the Approve button."
+      );
+      if (!proceed) return;
+    }
     if (saved?.id) setCurrentProjectId(saved.id);
     const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
 
     // Escape "</script>" sequences that could appear inside string values
     // (e.g. a customer name) so they can't break out of the inline script.
     const stateJson = JSON.stringify(stateWithProject).replace(/</g, '\\u003c');
-    const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson};</script>\n`;
+    // The exported file is a standalone download the customer may open from
+    // anywhere (email attachment, file://, another host), so its Approve
+    // button can't use a relative /api path — it embeds the origin it was
+    // exported from and POSTs there (see handleApproveDesign). Only set for
+    // exports; the live app and ?p= links leave it undefined and stay relative.
+    const originJson = JSON.stringify(window.location.origin);
+    const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson}; window.__IRONWRAP_ORIGIN__ = ${originJson};</script>\n`;
     const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -654,7 +673,11 @@ export default function App() {
     if (!currentProjectId) return;
     setApproveBusy(true);
     try {
-      const res = await fetch(`/api/projects/${currentProjectId}/approve`, { method: 'POST' });
+      // In the live app / a ?p= link this is same-origin (base is ''); in a
+      // standalone exported file it's the origin embedded at export time, so
+      // approval reaches the real server instead of a dead relative path.
+      const base = (typeof window !== 'undefined' && window.__IRONWRAP_ORIGIN__) || '';
+      const res = await fetch(`${base}/api/projects/${currentProjectId}/approve`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const row = await res.json();
       setApprovedAt(row.approved_at);
