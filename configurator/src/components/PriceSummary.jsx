@@ -10,7 +10,11 @@ export default function PriceSummary({ estimate, manualDiscount, onManualDiscoun
         <tbody>
           {estimate.lineItems.map((li) => (
             <tr key={li.key}>
-              <td>{li.label}</td>
+              <td>
+                {li.label}
+                {li.description && <div className="service-note">{li.description}</div>}
+                {li.linkUrl && <div><a href={li.linkUrl} target="_blank" rel="noreferrer">Link</a></div>}
+              </td>
               <td className="price-table-qty">{li.qty.toLocaleString()} {li.unit}</td>
               <td className="price-table-total">{money(li.total)}</td>
             </tr>

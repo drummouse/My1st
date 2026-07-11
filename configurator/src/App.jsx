@@ -12,6 +12,7 @@ import LayersPanel from './components/LayersPanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import DiscountsPanel from './components/DiscountsPanel.jsx';
+import CustomServicesPanel from './components/CustomServicesPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
@@ -33,6 +34,7 @@ const NAV_SECTIONS = [
   { key: 'configurator', label: 'Configurator' },
   { key: 'settings', label: 'Settings' },
   { key: 'discounts', label: 'Discounts' },
+  { key: 'customServices', label: 'Custom Services' },
 ];
 
 const BLANK_HOUSE = {
@@ -96,6 +98,12 @@ export default function App() {
   // null means "not frozen yet," i.e. a brand-new project still tracking
   // whatever the live companySettings currently say.
   const [pricingSettings, setPricingSettings] = useState(null);
+  // Resolved custom-service selections on the current project (name/price
+  // frozen from the owner's catalog at add-time) — the catalog itself
+  // (customServiceCatalog) is separate, admin-only, and only fetched for
+  // non-customer views since the customer-facing route is unauthenticated.
+  const [customServiceLines, setCustomServiceLines] = useState([]);
+  const [customServiceCatalog, setCustomServiceCatalog] = useState([]);
 
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
@@ -112,7 +120,7 @@ export default function App() {
       brandId, house, roofProductId, roofProfile, roofColorId,
       wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
-      uniformFinish, facetOverrides,
+      uniformFinish, facetOverrides, customServiceLines,
       // Freeze live company rates the first time a project is saved; once
       // frozen, keep re-saving the same frozen values rather than whatever
       // Settings currently says.
@@ -149,6 +157,7 @@ export default function App() {
       setUniformFinish,
       setFacetOverrides,
       setPricingSettings,
+      setCustomServiceLines,
     });
   };
 
@@ -212,6 +221,13 @@ export default function App() {
       })
       .then(setCompanySettings)
       .catch((err) => console.error('Failed to load company settings:', err));
+    fetch('/api/custom-services')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(setCustomServiceCatalog)
+      .catch((err) => console.error('Failed to load custom services catalog:', err));
   }, []);
 
   // Re-parses only when a layer's content/visibility/order changes (offset
@@ -311,8 +327,9 @@ export default function App() {
         discountRules: pricingSettings ? pricingSettings.discountRules : (companySettings ? companySettings.discount_rules : undefined),
         municipalTaxRate: pricingSettings ? pricingSettings.municipalTaxRate : (companySettings ? Number(companySettings.municipal_tax_rate || 0) : undefined),
         taxLabel: pricingSettings ? pricingSettings.taxLabel : (companySettings ? (companySettings.tax_label || 'GST') : undefined),
+        customServiceLines,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings, customServiceLines]
   );
 
   const facetColors = useMemo(() => {
@@ -600,6 +617,9 @@ export default function App() {
       {activeSection === 'discounts' && !isCustomerView && (
         <DiscountsPanel onSaved={setCompanySettings} />
       )}
+      {activeSection === 'customServices' && !isCustomerView && (
+        <CustomServicesPanel onChanged={setCustomServiceCatalog} />
+      )}
 
       <main
         className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}
@@ -744,6 +764,9 @@ export default function App() {
             onAccessoryColorsChange={setAccessoryColors}
             readOnlyQuantities={isCustomerView}
             isCustomerView={isCustomerView}
+            customServiceLines={customServiceLines}
+            onCustomServiceLinesChange={setCustomServiceLines}
+            customServiceCatalog={customServiceCatalog}
           />
 
           <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />

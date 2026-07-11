@@ -211,7 +211,23 @@ export function calculateEstimate(measurements, selections) {
     line.push({ key: 'garageDoorCapping', label: ACCESSORY_PRICING.garageDoorCapping.label, qty: measurements.garageDoorCappingLf, unit: 'LF', rate: ACCESSORY_PRICING.garageDoorCapping.pricePerLf, total: garageDoorCappingTotal });
   }
 
-  const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal;
+  // Owner-defined custom services — a simple qty * price line each, frozen
+  // at the name/price/description/link the project was saved with (the
+  // caller resolves these from the owner's catalog before calling here; see
+  // App.jsx's buildDesignSnapshot). Not matched against discountRules —
+  // package deals only ever referenced the fixed service keys.
+  const customServiceLines = (selections.customServiceLines || []).filter((cs) => Number(cs.qty) > 0);
+  let customServicesTotal = 0;
+  customServiceLines.forEach((cs) => {
+    const total = Number(cs.qty) * Number(cs.price);
+    customServicesTotal += total;
+    line.push({
+      key: `custom-${cs.id}`, label: cs.name, qty: Number(cs.qty), unit: cs.unit || 'each', rate: Number(cs.price), total,
+      description: cs.description || undefined, linkUrl: cs.linkUrl || undefined,
+    });
+  });
+
+  const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal + customServicesTotal;
 
   const subtotalDiscount = subtotalRule ? subtotal * subtotalRule.effect.value : 0;
   if (subtotalRule) {

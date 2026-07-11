@@ -264,6 +264,21 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   they show; `api/settings/index.js`'s update writes every column with
   `coalesce(excluded.x, settings.x)` so one panel's save never blanks out a
   field only the other panel manages.
+- **Custom Services** (`src/components/CustomServicesPanel.jsx`, its own nav
+  section) — a per-owner catalog (`custom_services` table:
+  name/unit/price/description/link) of extra services beyond the fixed
+  Roof/Wall/Soffit/... set, for one-off items that don't warrant their own
+  hardcoded pricing row. Adding one to a project (from the "Add a custom
+  service" picker at the bottom of Optional Services) copies its
+  name/price/unit/description/link into that project's own
+  `customServiceLines` at add-time — a project keeps pricing at whatever it
+  was quoted even if the owner later edits or deletes that catalog entry,
+  the same "frozen at save/add time" spirit as `pricingSettings`.
+  `pricingEngine.js` turns each line with a qty > 0 into an ordinary
+  `qty * price` line item (not matched against `discountRules` — those only
+  ever look at the fixed service keys); `exportEstimate.js`/`exportPdf.js`/
+  `PriceSummary.jsx` all print a line's `description`/`linkUrl` when
+  present, the same way custom services are shown in the live HTML view.
 - **Company logo** (Settings → Company Logo) — uploads via `@vercel/blob`'s
   client-side direct-upload path (the browser uploads straight to Blob
   storage with a signed token from `api/upload.js`, bypassing Vercel's

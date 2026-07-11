@@ -1,5 +1,29 @@
+import { useState } from 'react';
 import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
 import ColorPickerButton from './ColorPickerButton.jsx';
+
+function AddCustomServiceRow({ catalog, existingIds, onAdd }) {
+  const available = catalog.filter((def) => !existingIds.includes(def.id));
+  const [selectedId, setSelectedId] = useState(available[0]?.id || '');
+  if (!available.length) return null;
+  return (
+    <div className="service-row service-row-select">
+      <label htmlFor="add-custom-service">Add a custom service</label>
+      <select id="add-custom-service" className="control-select" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+        {available.map((def) => <option key={def.id} value={def.id}>{def.name} — ${Number(def.price).toFixed(2)}/{def.unit}</option>)}
+      </select>
+      <button
+        type="button" className="btn-secondary"
+        onClick={() => {
+          const def = catalog.find((d) => d.id === selectedId);
+          if (def) onAdd(def);
+        }}
+      >
+        + Add
+      </button>
+    </div>
+  );
+}
 
 function ServiceRow({
   label, checked, onToggle, qty, unit, onQtyChange, note, colorId, onColorChange, readOnly,
@@ -45,6 +69,7 @@ export default function ServicesPanel({
   services, onServicesChange, lockedServices, onLockedServicesChange, measurements, onMeasurementsChange,
   gutterOptionId, onGutterOptionChange, downspoutOptionId, onDownspoutOptionChange,
   accessoryColors, onAccessoryColorsChange, readOnlyQuantities, isCustomerView,
+  customServiceLines = [], onCustomServiceLinesChange, customServiceCatalog = [],
 }) {
   const toggle = (key) => (val) => onServicesChange({ ...services, [key]: val });
   const setQty = (key) => (val) => onMeasurementsChange({ ...measurements, [key]: val });
@@ -138,6 +163,44 @@ export default function ServicesPanel({
         qty={measurements.garageDoorCappingLf} unit="LF" onQtyChange={setQty('garageDoorCappingLf')} readOnly={readOnlyQuantities}
         locked={lockedServices?.garageDoorCapping} onToggleLock={toggleLock('garageDoorCapping')} showLockToggle={showLockToggle}
       />
+
+      {(customServiceLines.length > 0 || (!isCustomerView && customServiceCatalog.length > 0)) && (
+        <>
+          <div className="field-label" style={{ marginTop: '0.75rem' }}>Custom Services</div>
+          {customServiceLines.map((cs) => (
+            <div className="service-row" key={cs.id}>
+              <label className="service-row-main"><span>{cs.name}</span></label>
+              <input
+                type="number" min="0" step="1" className="service-qty"
+                value={cs.qty} disabled={readOnlyQuantities}
+                aria-label={`${cs.name} quantity in ${cs.unit}`}
+                onChange={(e) => onCustomServiceLinesChange(customServiceLines.map((l) => (l.id === cs.id ? { ...l, qty: Number(e.target.value) || 0 } : l)))}
+              />
+              <span className="service-unit">{cs.unit}</span>
+              <span className="service-note">${Number(cs.price).toFixed(2)}/{cs.unit}</span>
+              {cs.linkUrl && <a href={cs.linkUrl} target="_blank" rel="noreferrer" className="service-note">Link</a>}
+              {!readOnlyQuantities && (
+                <button
+                  type="button" className="layer-remove-btn" aria-label={`Remove ${cs.name}`}
+                  onClick={() => onCustomServiceLinesChange(customServiceLines.filter((l) => l.id !== cs.id))}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          {!isCustomerView && !readOnlyQuantities && (
+            <AddCustomServiceRow
+              catalog={customServiceCatalog}
+              existingIds={customServiceLines.map((l) => l.id)}
+              onAdd={(def) => onCustomServiceLinesChange([...customServiceLines, {
+                id: def.id, name: def.name, unit: def.unit, price: Number(def.price), qty: 1,
+                description: def.description, linkUrl: def.link_url,
+              }])}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

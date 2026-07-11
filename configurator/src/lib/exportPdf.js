@@ -242,6 +242,23 @@ function drawIsoAndSummaryPage(doc, {
     doc.text(`${li.qty.toLocaleString()} ${li.unit}`, col.qty, y, { align: 'right' });
     doc.text(money(li.total), col.total, y, { align: 'right' });
     y = drawWrapped(doc, shortLabel(li.label), col.item, y, itemMaxWidth, 10);
+    if (li.description) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      y = drawWrapped(doc, li.description, col.item, y, itemMaxWidth, 9);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.2);
+    }
+    if (li.linkUrl) {
+      doc.setFontSize(7);
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink('Link ↗', col.item, y, { url: li.linkUrl });
+      doc.setTextColor(0);
+      doc.setFontSize(8.2);
+      y += 9;
+    }
   });
 
   y += 3;

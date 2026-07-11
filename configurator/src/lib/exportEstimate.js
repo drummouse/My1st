@@ -95,6 +95,8 @@ export function buildEstimateText({
   lines.push('-'.repeat(50));
   estimate.lineItems.forEach((li) => {
     lines.push(`${li.label.padEnd(46)} ${li.qty.toLocaleString()} ${li.unit}  ${money(li.total)}`);
+    if (li.description) lines.push(`    ${li.description}`);
+    if (li.linkUrl) lines.push(`    Link: ${li.linkUrl}`);
   });
   lines.push('-'.repeat(50));
   lines.push(`Subtotal: ${money(estimate.subtotal)}`);

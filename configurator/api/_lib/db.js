@@ -96,6 +96,25 @@ export function ensureSchema() {
       // admin edits a rule in the Discounts panel. Those three legacy columns
       // are left in place (never dropped) as that fallback's source values.
       await sql`alter table settings add column if not exists discount_rules jsonb`;
+
+      // Owner-defined services beyond the fixed roof/wall/soffit/etc. set —
+      // a simple name+price+unit+description(+link) catalog, not a formula
+      // engine. Selected instances (with a qty frozen at save time) live in
+      // a project's own `design` JSONB, same as every other selection —
+      // this table is just the reusable catalog admins pick from.
+      await sql`
+        create table if not exists custom_services (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid references users(id),
+          name text not null,
+          unit text not null default 'each',
+          price numeric not null default 0,
+          description text,
+          link_url text,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists custom_services_owner_id_idx on custom_services (owner_id)`;
     })();
   }
   return schemaReady;
