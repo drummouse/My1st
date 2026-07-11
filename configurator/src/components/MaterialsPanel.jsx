@@ -15,6 +15,34 @@ function FolderSelect({ id, folders, value, onChange, allowNone = true }) {
   );
 }
 
+// A vertical "what's already there" sidebar, docked at the outer edge of its
+// column — replaces a flat horizontal filter row with something that reads
+// as a library tree at a glance. Indents one level for a folder whose
+// parent_id points at another folder in this same list (folders can nest
+// arbitrarily deep in the data model; this UI doesn't yet offer a way to
+// create anything past one level, so deeper indentation never triggers).
+function FolderTree({ folders, activeId, onSelect, onRemove, allLabel, allCount, countFor, busy, align }) {
+  const byId = new Map(folders.map((f) => [f.id, f]));
+  const depthOf = (f) => (f.parent_id && byId.has(f.parent_id) ? 1 : 0);
+  return (
+    <nav className={`folder-tree${align === 'right' ? ' folder-tree-right' : ''}`}>
+      <button type="button" className={`folder-tree-item${!activeId ? ' active' : ''}`} onClick={() => onSelect('')}>
+        <span>{allLabel}</span>
+        <span className="folder-tree-count">{allCount}</span>
+      </button>
+      {folders.map((f) => (
+        <div className="folder-tree-row" key={f.id} style={{ paddingLeft: `${depthOf(f) * 0.9}rem` }}>
+          <button type="button" className={`folder-tree-item${activeId === f.id ? ' active' : ''}`} onClick={() => onSelect(f.id)}>
+            <span>{f.name}</span>
+            <span className="folder-tree-count">{countFor(f.id)}</span>
+          </button>
+          <button type="button" className="folder-tree-remove" disabled={busy} onClick={() => onRemove(f.id)} aria-label={`Remove folder ${f.name}`}>×</button>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
 export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) {
   const [colors, setColors] = useState(null);
   const [materials, setMaterials] = useState(null);
@@ -258,176 +286,182 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
   const visibleMaterials = materialFolderFilter ? materials.filter((m) => m.folder_id === materialFolderFilter) : materials;
 
   return (
-    <div className="settings-panel">
+    <div className="settings-panel materials-colors-panel">
       <div className="control-label">Materials &amp; Colors</div>
       <div className="control-sublabel">
         Custom entries layered on top of IronWrap's standard roof/wall products and Wrinkle/
-        Icecrystal/Printech Woodgrain colors — organize each into folders (e.g. Roofing/Siding
-        for Materials, a color-line name for Colors), and mark which colors are applicable to a
-        material. A color can belong to more than one folder.
+        Icecrystal/Printech Woodgrain colors. Materials (left) and Colors (right) are two separate
+        libraries — a material declares which colors from the Color Library apply to it, not the
+        other way around. Each library's folder tree sits at the outer edge of its side.
       </div>
 
-      <div className="control-block">
-        <div className="field-label">Color folders</div>
-        <div className="service-row" style={{ flexWrap: 'wrap' }}>
-          <label className="uniform-toggle" style={{ marginRight: '0.75rem' }}>
-            <input type="radio" name="color-folder-filter" checked={!colorFolderFilter} onChange={() => setColorFolderFilter('')} />
-            <span>All ({colors.length})</span>
-          </label>
-          {colorFolders.map((f) => (
-            <span key={f.id} style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0.75rem' }}>
-              <label className="uniform-toggle">
-                <input type="radio" name="color-folder-filter" checked={colorFolderFilter === f.id} onChange={() => setColorFolderFilter(f.id)} />
-                <span>{f.name} ({colors.filter((c) => c.folderIds?.includes(f.id)).length})</span>
-              </label>
-              <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveColorFolder(f.id)} aria-label={`Remove folder ${f.name}`}>×</button>
-            </span>
-          ))}
-        </div>
-        <div className="settings-row">
-          <input type="text" className="control-select" placeholder="New color folder name" value={newColorFolderName} onChange={(e) => setNewColorFolderName(e.target.value)} />
-          <button type="button" className="btn-secondary" onClick={handleAddColorFolder} disabled={busy}>+ Add folder</button>
-        </div>
-      </div>
-
-      <div className="control-block">
-        <div className="field-label">Colors{colorFolderFilter ? ` — ${colorFolders.find((f) => f.id === colorFolderFilter)?.name}` : ''}</div>
-        {visibleColors.map((c) => (
-          <div className="service-row" key={c.id} style={{ flexWrap: 'wrap' }}>
-            <span className="color-picker-btn-swatch" style={{ background: c.hex }} />
-            <label className="service-row-main"><span>{c.name}</span></label>
-            {c.code && <span className="service-note">{c.code}</span>}
-            <span className="service-note">
-              {(c.folderIds || []).map((fid) => colorFolders.find((f) => f.id === fid)?.name).filter(Boolean).join(', ') || 'Unfiled'}
-            </span>
-            {colorFolderFilter && c.folderIds?.includes(colorFolderFilter) && (
-              <button type="button" className="btn-secondary" disabled={busy} onClick={() => handleRemoveColorFromFolder(c, colorFolderFilter)}>Remove from this folder</button>
-            )}
-            <select
-              className="control-select" value={addToFolderByColor[c.id] || ''}
-              onChange={(e) => setAddToFolderByColor((m) => ({ ...m, [c.id]: e.target.value }))}
-            >
-              <option value="">Add to folder…</option>
-              {colorFolders.filter((f) => !c.folderIds?.includes(f.id)).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-            <button
-              type="button" className="btn-secondary" disabled={busy || !addToFolderByColor[c.id]}
-              onClick={() => { handleAddColorToFolder(c, addToFolderByColor[c.id]); setAddToFolderByColor((m) => ({ ...m, [c.id]: '' })); }}
-            >
-              Add
-            </button>
-            <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveColor(c.id)} aria-label={`Remove ${c.name}`}>×</button>
-          </div>
-        ))}
-        <div className="settings-row">
-          <label htmlFor="color-name">Name</label>
-          <input id="color-name" type="text" className="control-select" value={colorForm.name} onChange={(e) => setColorForm((f) => ({ ...f, name: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="color-code">Code (optional)</label>
-          <input id="color-code" type="text" className="control-select" value={colorForm.code} onChange={(e) => setColorForm((f) => ({ ...f, code: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="color-hex">Swatch color</label>
-          <input id="color-hex" type="color" className="control-select" value={colorForm.hex} onChange={(e) => setColorForm((f) => ({ ...f, hex: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="color-series">Group (picker tab)</label>
-          <input id="color-series" type="text" className="control-select" value={colorForm.series} onChange={(e) => setColorForm((f) => ({ ...f, series: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="color-folder">Starting folder</label>
-          <FolderSelect id="color-folder" folders={colorFolders} value={colorForm.folderId} onChange={(v) => setColorForm((f) => ({ ...f, folderId: v }))} />
-        </div>
-        <div className="export-buttons">
-          <button type="button" className="btn-primary" onClick={handleAddColor} disabled={busy} style={{ width: '100%' }}>Add Color</button>
-        </div>
-      </div>
-
-      <div className="control-block">
-        <div className="field-label">Material folders</div>
-        <div className="service-row" style={{ flexWrap: 'wrap' }}>
-          <label className="uniform-toggle" style={{ marginRight: '0.75rem' }}>
-            <input type="radio" name="material-folder-filter" checked={!materialFolderFilter} onChange={() => setMaterialFolderFilter('')} />
-            <span>All ({materials.length})</span>
-          </label>
-          {materialFolders.map((f) => (
-            <span key={f.id} style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0.75rem' }}>
-              <label className="uniform-toggle">
-                <input type="radio" name="material-folder-filter" checked={materialFolderFilter === f.id} onChange={() => setMaterialFolderFilter(f.id)} />
-                <span>{f.name} ({materials.filter((m) => m.folder_id === f.id).length})</span>
-              </label>
-              <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveMaterialFolder(f.id)} aria-label={`Remove folder ${f.name}`}>×</button>
-            </span>
-          ))}
-        </div>
-        <div className="settings-row">
-          <input type="text" className="control-select" placeholder="New material folder name (e.g. Roofing)" value={newMaterialFolderName} onChange={(e) => setNewMaterialFolderName(e.target.value)} />
-          <button type="button" className="btn-secondary" onClick={handleAddMaterialFolder} disabled={busy}>+ Add folder</button>
-        </div>
-      </div>
-
-      <div className="control-block">
-        <div className="field-label">Materials{materialFolderFilter ? ` — ${materialFolders.find((f) => f.id === materialFolderFilter)?.name}` : ''}</div>
-        {visibleMaterials.map((m) => (
-          <div key={m.id}>
-            <div className="service-row">
-              <label className="service-row-main"><span>{m.name}</span></label>
-              <span className="service-note">{m.kind === 'wall' ? 'Wall' : 'Roof'}</span>
-              <span className="service-note">${Number(m.price_per_sqft).toFixed(2)}/sqft</span>
-              <span className="service-note">{materialFolders.find((f) => f.id === m.folder_id)?.name || 'Unfiled'}</span>
-              <button type="button" className="btn-secondary" onClick={() => (editingColorsForMaterial === m.id ? setEditingColorsForMaterial(null) : openColorEditor(m))}>
-                Applicable colors ({m.colorIds?.length || 0})
-              </button>
-              <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveMaterial(m.id)} aria-label={`Remove ${m.name}`}>×</button>
-            </div>
-            {editingColorsForMaterial === m.id && (
-              <div className="control-sublabel" style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
-                <div style={{ marginBottom: '0.3rem' }}>
-                  No colors checked means "not restricted" — the in-project picker shows every color. Check at least one to limit this material to just those colors.
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {colors.map((c) => (
-                    <label key={c.id} className="uniform-toggle">
-                      <input
-                        type="checkbox" checked={draftMaterialColorIds.includes(c.id)}
-                        onChange={(e) => setDraftMaterialColorIds((ids) => (e.target.checked ? [...ids, c.id] : ids.filter((i) => i !== c.id)))}
-                      />
-                      <span>{c.name}</span>
-                    </label>
-                  ))}
-                </div>
-                <button type="button" className="btn-primary" style={{ marginTop: '0.4rem' }} disabled={busy} onClick={() => saveMaterialColors(m.id)}>Save applicable colors</button>
+      <div className="materials-colors-layout">
+        <section className="materials-colors-section materials-section">
+          <div className="materials-colors-section-header">Materials</div>
+          <div className="materials-colors-section-body">
+            <div className="folder-tree-dock">
+              <FolderTree
+                folders={materialFolders}
+                activeId={materialFolderFilter}
+                onSelect={setMaterialFolderFilter}
+                onRemove={handleRemoveMaterialFolder}
+                allLabel="All Materials" allCount={materials.length}
+                countFor={(fid) => materials.filter((m) => m.folder_id === fid).length}
+                busy={busy}
+              />
+              <div className="settings-row" style={{ marginTop: '0.5rem' }}>
+                <input type="text" className="control-select" placeholder="New folder" value={newMaterialFolderName} onChange={(e) => setNewMaterialFolderName(e.target.value)} />
               </div>
-            )}
+              <button type="button" className="btn-secondary" onClick={handleAddMaterialFolder} disabled={busy} style={{ width: '100%' }}>+ Add folder</button>
+            </div>
+
+            <div className="materials-colors-main">
+              <div className="field-label">Materials{materialFolderFilter ? ` — ${materialFolders.find((f) => f.id === materialFolderFilter)?.name}` : ''}</div>
+              {visibleMaterials.map((m) => (
+                <div key={m.id}>
+                  <div className="service-row">
+                    <label className="service-row-main"><span>{m.name}</span></label>
+                    <span className="service-note">{m.kind === 'wall' ? 'Wall' : 'Roof'}</span>
+                    <span className="service-note">${Number(m.price_per_sqft).toFixed(2)}/sqft</span>
+                    <span className="service-note">{materialFolders.find((f) => f.id === m.folder_id)?.name || 'Unfiled'}</span>
+                    <button type="button" className="btn-secondary" onClick={() => (editingColorsForMaterial === m.id ? setEditingColorsForMaterial(null) : openColorEditor(m))}>
+                      Applicable colors ({m.colorIds?.length || 0})
+                    </button>
+                    <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveMaterial(m.id)} aria-label={`Remove ${m.name}`}>×</button>
+                  </div>
+                  {editingColorsForMaterial === m.id && (
+                    <div className="control-sublabel" style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
+                      <div style={{ marginBottom: '0.3rem' }}>
+                        No colors checked means "not restricted" — the in-project picker shows every color. Check at least one to limit this material to just those colors.
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {colors.map((c) => (
+                          <label key={c.id} className="uniform-toggle">
+                            <input
+                              type="checkbox" checked={draftMaterialColorIds.includes(c.id)}
+                              onChange={(e) => setDraftMaterialColorIds((ids) => (e.target.checked ? [...ids, c.id] : ids.filter((i) => i !== c.id)))}
+                            />
+                            <span>{c.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button type="button" className="btn-primary" style={{ marginTop: '0.4rem' }} disabled={busy} onClick={() => saveMaterialColors(m.id)}>Save applicable colors</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <div className="control-block" style={{ marginTop: '0.75rem' }}>
+                <div className="field-label">Add a material</div>
+                <div className="settings-row">
+                  <label htmlFor="material-name">Name</label>
+                  <input id="material-name" type="text" className="control-select" value={materialForm.name} onChange={(e) => setMaterialForm((f) => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="material-kind">Applies to</label>
+                  <select id="material-kind" className="control-select" value={materialForm.kind} onChange={(e) => setMaterialForm((f) => ({ ...f, kind: e.target.value }))}>
+                    <option value="roof">Roof</option>
+                    <option value="wall">Wall</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="material-price">Price per sqft ($)</label>
+                  <input id="material-price" type="number" min="0" step="0.01" className="control-select" value={materialForm.pricePerSqft} onChange={(e) => setMaterialForm((f) => ({ ...f, pricePerSqft: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="material-profiles">Profiles (comma-separated, optional)</label>
+                  <input id="material-profiles" type="text" className="control-select" value={materialForm.profiles} onChange={(e) => setMaterialForm((f) => ({ ...f, profiles: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="material-folder">Folder</label>
+                  <FolderSelect id="material-folder" folders={materialFolders} value={materialForm.folderId} onChange={(v) => setMaterialForm((f) => ({ ...f, folderId: v }))} />
+                </div>
+                <div className="export-buttons">
+                  <button type="button" className="btn-primary" onClick={handleAddMaterial} disabled={busy} style={{ width: '100%' }}>Add Material</button>
+                </div>
+              </div>
+            </div>
           </div>
-        ))}
-        <div className="settings-row">
-          <label htmlFor="material-name">Name</label>
-          <input id="material-name" type="text" className="control-select" value={materialForm.name} onChange={(e) => setMaterialForm((f) => ({ ...f, name: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="material-kind">Applies to</label>
-          <select id="material-kind" className="control-select" value={materialForm.kind} onChange={(e) => setMaterialForm((f) => ({ ...f, kind: e.target.value }))}>
-            <option value="roof">Roof</option>
-            <option value="wall">Wall</option>
-          </select>
-        </div>
-        <div className="settings-row">
-          <label htmlFor="material-price">Price per sqft ($)</label>
-          <input id="material-price" type="number" min="0" step="0.01" className="control-select" value={materialForm.pricePerSqft} onChange={(e) => setMaterialForm((f) => ({ ...f, pricePerSqft: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="material-profiles">Profiles (comma-separated, optional)</label>
-          <input id="material-profiles" type="text" className="control-select" value={materialForm.profiles} onChange={(e) => setMaterialForm((f) => ({ ...f, profiles: e.target.value }))} />
-        </div>
-        <div className="settings-row">
-          <label htmlFor="material-folder">Folder</label>
-          <FolderSelect id="material-folder" folders={materialFolders} value={materialForm.folderId} onChange={(v) => setMaterialForm((f) => ({ ...f, folderId: v }))} />
-        </div>
-        <div className="export-buttons">
-          <button type="button" className="btn-primary" onClick={handleAddMaterial} disabled={busy} style={{ width: '100%' }}>Add Material</button>
-        </div>
+        </section>
+
+        <section className="materials-colors-section colors-section">
+          <div className="materials-colors-section-header">Colors</div>
+          <div className="materials-colors-section-body">
+            <div className="materials-colors-main">
+              <div className="field-label">Colors{colorFolderFilter ? ` — ${colorFolders.find((f) => f.id === colorFolderFilter)?.name}` : ''}</div>
+              {visibleColors.map((c) => (
+                <div className="service-row" key={c.id} style={{ flexWrap: 'wrap' }}>
+                  <span className="color-picker-btn-swatch" style={{ background: c.hex }} />
+                  <label className="service-row-main"><span>{c.name}</span></label>
+                  {c.code && <span className="service-note">{c.code}</span>}
+                  <span className="service-note">
+                    {(c.folderIds || []).map((fid) => colorFolders.find((f) => f.id === fid)?.name).filter(Boolean).join(', ') || 'Unfiled'}
+                  </span>
+                  {colorFolderFilter && c.folderIds?.includes(colorFolderFilter) && (
+                    <button type="button" className="btn-secondary" disabled={busy} onClick={() => handleRemoveColorFromFolder(c, colorFolderFilter)}>Remove from this folder</button>
+                  )}
+                  <select
+                    className="control-select" value={addToFolderByColor[c.id] || ''}
+                    onChange={(e) => setAddToFolderByColor((m) => ({ ...m, [c.id]: e.target.value }))}
+                  >
+                    <option value="">Add to folder…</option>
+                    {colorFolders.filter((f) => !c.folderIds?.includes(f.id)).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                  <button
+                    type="button" className="btn-secondary" disabled={busy || !addToFolderByColor[c.id]}
+                    onClick={() => { handleAddColorToFolder(c, addToFolderByColor[c.id]); setAddToFolderByColor((m) => ({ ...m, [c.id]: '' })); }}
+                  >
+                    Add
+                  </button>
+                  <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemoveColor(c.id)} aria-label={`Remove ${c.name}`}>×</button>
+                </div>
+              ))}
+
+              <div className="control-block" style={{ marginTop: '0.75rem' }}>
+                <div className="field-label">Add a color</div>
+                <div className="settings-row">
+                  <label htmlFor="color-name">Name</label>
+                  <input id="color-name" type="text" className="control-select" value={colorForm.name} onChange={(e) => setColorForm((f) => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="color-code">Code (optional)</label>
+                  <input id="color-code" type="text" className="control-select" value={colorForm.code} onChange={(e) => setColorForm((f) => ({ ...f, code: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="color-hex">Swatch color</label>
+                  <input id="color-hex" type="color" className="control-select" value={colorForm.hex} onChange={(e) => setColorForm((f) => ({ ...f, hex: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="color-series">Group (picker tab)</label>
+                  <input id="color-series" type="text" className="control-select" value={colorForm.series} onChange={(e) => setColorForm((f) => ({ ...f, series: e.target.value }))} />
+                </div>
+                <div className="settings-row">
+                  <label htmlFor="color-folder">Starting folder</label>
+                  <FolderSelect id="color-folder" folders={colorFolders} value={colorForm.folderId} onChange={(v) => setColorForm((f) => ({ ...f, folderId: v }))} />
+                </div>
+                <div className="export-buttons">
+                  <button type="button" className="btn-primary" onClick={handleAddColor} disabled={busy} style={{ width: '100%' }}>Add Color</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="folder-tree-dock">
+              <FolderTree
+                folders={colorFolders}
+                activeId={colorFolderFilter}
+                onSelect={setColorFolderFilter}
+                onRemove={handleRemoveColorFolder}
+                allLabel="All Colors" allCount={colors.length}
+                countFor={(fid) => colors.filter((c) => c.folderIds?.includes(fid)).length}
+                busy={busy} align="right"
+              />
+              <div className="settings-row" style={{ marginTop: '0.5rem' }}>
+                <input type="text" className="control-select" placeholder="New folder" value={newColorFolderName} onChange={(e) => setNewColorFolderName(e.target.value)} />
+              </div>
+              <button type="button" className="btn-secondary" onClick={handleAddColorFolder} disabled={busy} style={{ width: '100%' }}>+ Add folder</button>
+            </div>
+          </div>
+        </section>
       </div>
 
       {status && <div className="control-sublabel">{status}</div>}

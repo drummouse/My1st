@@ -123,6 +123,11 @@ export function ensureSchema() {
       // design.approved event (see INTEGRATIONS.md) — null means "not
       // configured," in which case approval just skips the notification.
       await sql`alter table settings add column if not exists notification_webhook_url text`;
+      // Which custom_services catalog entries a brand-new project starts
+      // with already enabled — same "New Project defaults" idea as
+      // default_services, just for the owner's own custom catalog instead
+      // of the fixed roof/wall/soffit/... set.
+      await sql`alter table settings add column if not exists default_custom_service_ids jsonb`;
 
       // Owner-defined services beyond the fixed roof/wall/soffit/etc. set —
       // a simple name+price+unit+description(+link) catalog, not a formula

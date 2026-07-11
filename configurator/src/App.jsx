@@ -95,11 +95,11 @@ export default function App() {
 
   const [roofProductId, setRoofProductId] = useState(ROOF_PRODUCTS[0].id);
   const [roofProfile, setRoofProfile] = useState(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
-  const [roofColorId, setRoofColorId] = useState('wk-04'); // Graphite Grey (RAL 7024)
+  const [roofColorId, setRoofColorId] = useState('wg-02'); // Driftwood — light, neutral
 
   const [wallProductId, setWallProductId] = useState(WALL_PRODUCTS[0].id);
   const [wallProfile, setWallProfile] = useState(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
-  const [wallColorId, setWallColorId] = useState('wk-01'); // Jet Black (Wrinkle Coating)
+  const [wallColorId, setWallColorId] = useState('wg-02'); // Driftwood — light, neutral
 
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [lockedServices, setLockedServices] = useState(DEFAULT_LOCKED_SERVICES);
@@ -426,10 +426,10 @@ export default function App() {
     setHouse(BLANK_HOUSE);
     setRoofProductId(ROOF_PRODUCTS[0].id);
     setRoofProfile(ROOF_PROFILES[ROOF_PRODUCTS[0].id]?.[0] || '');
-    setRoofColorId(companySettings?.default_roof_color_id || 'wk-04');
+    setRoofColorId(companySettings?.default_roof_color_id || 'wg-02');
     setWallProductId(WALL_PRODUCTS[0].id);
     setWallProfile(WALL_PROFILES[WALL_PRODUCTS[0].id]?.[0] || '');
-    setWallColorId(companySettings?.default_wall_color_id || 'wk-01');
+    setWallColorId(companySettings?.default_wall_color_id || 'wg-02');
     setServices(companySettings?.default_services || DEFAULT_SERVICES);
     setLockedServices(companySettings?.default_locked_services || DEFAULT_LOCKED_SERVICES);
     setGutterOptionId(GUTTER_OPTIONS[0].id);
@@ -446,6 +446,12 @@ export default function App() {
     setCurrentProjectId(null);
     setApprovedAt(null);
     setPricingSettings(null);
+    const defaultCustomServiceIds = companySettings?.default_custom_service_ids || [];
+    setCustomServiceLines(
+      customServiceCatalog
+        .filter((def) => defaultCustomServiceIds.includes(def.id))
+        .map((def) => ({ id: def.id, name: def.name, unit: def.unit, price: Number(def.price), qty: 1, description: def.description, linkUrl: def.link_url }))
+    );
   };
 
   const handleRoofProductChange = (id) => {

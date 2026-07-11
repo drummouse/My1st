@@ -76,7 +76,7 @@ export default function CustomServicesPanel({ onChanged }) {
   };
 
   return (
-    <div className="settings-panel">
+    <div className="settings-panel custom-services-panel-layout">
       <div className="control-label">Custom Services</div>
       <div className="control-sublabel">
         Extra services beyond the fixed set (Roof, Wall, Soffit, ...) available to add to any
@@ -84,17 +84,25 @@ export default function CustomServicesPanel({ onChanged }) {
         a formula.
       </div>
 
-      {services.map((s) => (
-        <div className="service-row" key={s.id}>
-          <label className="service-row-main"><span>{s.name}</span></label>
-          <span className="service-note">${Number(s.price).toFixed(2)}/{s.unit}</span>
-          {s.description && <span className="service-note">{s.description}</span>}
-          {s.link_url && <a href={s.link_url} target="_blank" rel="noreferrer" className="service-note">Link</a>}
-          <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemove(s.id)} aria-label={`Remove ${s.name}`}>×</button>
+      <div className="custom-services-existing">
+        <div className="materials-colors-section-header custom-services-existing-header">
+          Existing services ({services.length})
         </div>
-      ))}
+        <div className="custom-services-existing-body">
+          {services.length === 0 && <div className="control-sublabel">None defined yet — add one on the right.</div>}
+          {services.map((s) => (
+            <div className="service-row" key={s.id}>
+              <label className="service-row-main"><span>{s.name}</span></label>
+              <span className="service-note">${Number(s.price).toFixed(2)}/{s.unit}</span>
+              {s.description && <span className="service-note">{s.description}</span>}
+              {s.link_url && <a href={s.link_url} target="_blank" rel="noreferrer" className="service-note">Link</a>}
+              <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemove(s.id)} aria-label={`Remove ${s.name}`}>×</button>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <div className="control-block">
+      <div className="control-block custom-services-add">
         <div className="field-label">Add a service</div>
         <div className="settings-row">
           <label htmlFor="cs-name">Name</label>
@@ -118,15 +126,14 @@ export default function CustomServicesPanel({ onChanged }) {
           <label htmlFor="cs-link">Link (image/web reference, optional)</label>
           <input id="cs-link" type="text" className="control-select" value={form.linkUrl} onChange={(e) => setForm((f) => ({ ...f, linkUrl: e.target.value }))} />
         </div>
+        <div className="export-buttons">
+          <button type="button" className="btn-primary" onClick={handleAdd} disabled={busy} style={{ width: '100%' }}>
+            Add Service
+          </button>
+        </div>
       </div>
 
       {status && <div className="control-sublabel">{status}</div>}
-
-      <div className="export-buttons">
-        <button type="button" className="btn-primary" onClick={handleAdd} disabled={busy} style={{ width: '100%' }}>
-          Add Service
-        </button>
-      </div>
     </div>
   );
 }
