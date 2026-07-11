@@ -24,11 +24,13 @@ const ACCESSORY_KEYS = ['soffit', 'fascia', 'gutters', 'downspouts'];
 const toPct = (frac) => (Number(frac) * 100).toString();
 const toFrac = (pct) => (Number(pct) || 0) / 100;
 
-export default function SettingsPanel({ onSaved }) {
+export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
   const [form, setForm] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
 
   // Company Profile is identity/contact info on the `users` row (required at
   // signup, see AuthGate.jsx) rather than the per-owner `settings` row this
@@ -100,8 +102,9 @@ export default function SettingsPanel({ onSaved }) {
           defaultServices: row.default_services || DEFAULT_SERVICES,
           defaultLockedServices: row.default_locked_services || DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: row.default_accessory_colors || DEFAULT_ACCESSORY_COLORS,
-          defaultRoofColorId: row.default_roof_color_id || 'wk-04',
-          defaultWallColorId: row.default_wall_color_id || 'wk-01',
+          defaultRoofColorId: row.default_roof_color_id || 'wg-02',
+          defaultWallColorId: row.default_wall_color_id || 'wg-02',
+          defaultCustomServiceIds: row.default_custom_service_ids || [],
           reportFooterNote: row.report_footer_note || '',
           logoUrl: row.logo_url || '',
         });
@@ -119,8 +122,9 @@ export default function SettingsPanel({ onSaved }) {
           defaultServices: DEFAULT_SERVICES,
           defaultLockedServices: DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: DEFAULT_ACCESSORY_COLORS,
-          defaultRoofColorId: 'wk-04',
-          defaultWallColorId: 'wk-01',
+          defaultRoofColorId: 'wg-02',
+          defaultWallColorId: 'wg-02',
+          defaultCustomServiceIds: [],
           reportFooterNote: '',
           logoUrl: '',
         });
@@ -142,19 +146,39 @@ export default function SettingsPanel({ onSaved }) {
     setForm((f) => ({ ...f, defaultLockedServices: { ...f.defaultLockedServices, [key]: val } }));
   const setAccessoryColor = (key) => (val) =>
     setForm((f) => ({ ...f, defaultAccessoryColors: { ...f.defaultAccessoryColors, [key]: val } }));
+  const toggleDefaultCustomService = (id) => (checked) =>
+    setForm((f) => ({
+      ...f,
+      defaultCustomServiceIds: checked
+        ? [...(f.defaultCustomServiceIds || []), id]
+        : (f.defaultCustomServiceIds || []).filter((x) => x !== id),
+    }));
 
-  const handleLogoUpload = async (file) => {
-    if (!file) return;
+  // Picking a file just previews it locally (instant, no network) — nothing
+  // is sent until "Upload" is clicked, so a slow/failed upload doesn't leave
+  // the admin staring at a blank preview wondering if their file was picked
+  // up at all.
+  const handleLogoFileChange = (file) => {
+    setSelectedLogoFile(file || null);
+    setLogoPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  };
+
+  const handleLogoUpload = async () => {
+    if (!selectedLogoFile) return;
     setLogoBusy(true);
     setStatus('Uploading logo…');
     try {
-      const blob = await upload(file.name, file, {
+      const blob = await upload(selectedLogoFile.name, selectedLogoFile, {
         access: 'public',
         handleUploadUrl: '/api/upload',
         clientPayload: JSON.stringify({ kind: 'logo' }),
       });
       setForm((f) => ({ ...f, logoUrl: blob.url }));
       setStatus('Logo uploaded — click Save Settings to apply it.');
+      handleLogoFileChange(null);
     } catch (err) {
       console.error('Logo upload error:', err);
       setStatus('Could not upload the logo — check the file is an image under 5 MB and try again.');
@@ -182,6 +206,7 @@ export default function SettingsPanel({ onSaved }) {
           defaultAccessoryColors: form.defaultAccessoryColors,
           defaultRoofColorId: form.defaultRoofColorId,
           defaultWallColorId: form.defaultWallColorId,
+          defaultCustomServiceIds: form.defaultCustomServiceIds,
           reportFooterNote: form.reportFooterNote,
           logoUrl: form.logoUrl,
         }),
@@ -199,7 +224,7 @@ export default function SettingsPanel({ onSaved }) {
   };
 
   return (
-    <div className="settings-panel">
+    <div className="settings-panel settings-panel-grid">
       <div className="control-label">Company Settings</div>
       <div className="control-sublabel">
         These apply to every new project and every estimate calculation — not just the one
@@ -210,11 +235,11 @@ export default function SettingsPanel({ onSaved }) {
         <div className="control-block">
           <div className="field-label">Company Profile</div>
           <div className="control-sublabel">Enter your name, a business name, or both.</div>
-          <div className="settings-row">
+          <div className="settings-row settings-row-wide">
             <label htmlFor="profile-first">First name</label>
             <input id="profile-first" type="text" className="control-select" value={profile.firstName} onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))} />
           </div>
-          <div className="settings-row">
+          <div className="settings-row settings-row-wide">
             <label htmlFor="profile-last">Last name</label>
             <input id="profile-last" type="text" className="control-select" value={profile.lastName} onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))} />
           </div>
@@ -343,35 +368,64 @@ export default function SettingsPanel({ onSaved }) {
               <span>Lock</span>
             </label>
             {ACCESSORY_KEYS.includes(key) && (
-              <ColorPickerButton selectedId={form.defaultAccessoryColors[key] || 'wk-04'} onChange={setAccessoryColor(key)} />
+              <ColorPickerButton selectedId={form.defaultAccessoryColors[key] || 'wg-02'} onChange={setAccessoryColor(key)} />
+            )}
+            {key === 'roof' && (
+              <ColorPickerButton selectedId={form.defaultRoofColorId} onChange={(id) => setForm((f) => ({ ...f, defaultRoofColorId: id }))} />
+            )}
+            {key === 'wall' && (
+              <ColorPickerButton selectedId={form.defaultWallColorId} onChange={(id) => setForm((f) => ({ ...f, defaultWallColorId: id }))} />
             )}
           </div>
         ))}
-        <div className="color-row" style={{ marginTop: '0.5rem' }}>
-          <span className="control-label">Default Roof Color</span>
-          <ColorPickerButton selectedId={form.defaultRoofColorId} onChange={(id) => setForm((f) => ({ ...f, defaultRoofColorId: id }))} />
-        </div>
-        <div className="color-row">
-          <span className="control-label">Default Wall Color</span>
-          <ColorPickerButton selectedId={form.defaultWallColorId} onChange={(id) => setForm((f) => ({ ...f, defaultWallColorId: id }))} />
-        </div>
+
+        {customServiceCatalog.length > 0 ? (
+          <>
+            <div className="field-label" style={{ marginTop: '0.6rem' }}>Custom services</div>
+            {customServiceCatalog.map((cs) => (
+              <div className="service-row" key={cs.id}>
+                <label className="service-row-main">
+                  <input
+                    type="checkbox" checked={(form.defaultCustomServiceIds || []).includes(cs.id)}
+                    onChange={(e) => toggleDefaultCustomService(cs.id)(e.target.checked)}
+                  />
+                  <span>{cs.name}</span>
+                </label>
+                <span className="service-note">${Number(cs.price).toFixed(2)}/{cs.unit}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            No custom services defined yet — add some in the Custom Services tab, then come back
+            here to have any of them turned on by default for new projects too.
+          </div>
+        )}
       </div>
 
       <div className="control-block">
         <div className="field-label">Report branding</div>
         <label className="field-label" htmlFor="settings-logo">Company Logo</label>
         <div className="settings-logo-row">
-          {form.logoUrl && <img src={form.logoUrl} alt="Company logo" className="settings-logo-preview" />}
+          {(logoPreviewUrl || form.logoUrl) && (
+            <img src={logoPreviewUrl || form.logoUrl} alt="Company logo" className="settings-logo-preview" />
+          )}
           <input
             id="settings-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
             disabled={logoBusy}
-            onChange={(e) => handleLogoUpload(e.target.files?.[0])}
+            onChange={(e) => handleLogoFileChange(e.target.files?.[0])}
           />
+          <button type="button" className="btn-secondary" disabled={logoBusy || !selectedLogoFile} onClick={handleLogoUpload}>
+            {logoBusy ? 'Uploading…' : 'Upload'}
+          </button>
           {form.logoUrl && (
             <button type="button" className="layer-remove-btn" onClick={() => setForm((f) => ({ ...f, logoUrl: '' }))} aria-label="Remove logo">×</button>
           )}
         </div>
-        <div className="control-sublabel">Shown on the PDF cover page and in the app header. PNG/JPEG/WebP/SVG, up to 5 MB.</div>
+        <div className="control-sublabel">
+          Pick a file to preview it, then click Upload. Shown on the PDF cover page and in the app
+          header. PNG/JPEG/WebP/SVG, up to 5 MB.
+        </div>
         <label htmlFor="settings-footer">Footer note (PDF cover page)</label>
         <textarea
           id="settings-footer" className="control-select" rows={2}

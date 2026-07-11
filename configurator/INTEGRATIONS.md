@@ -53,9 +53,12 @@ company-wide rate change never silently reprices an already-quoted design.
 
 Tax jurisdiction (`tax_country`, `tax_region`, `tax_label`, `gst_rate` as the base rate,
 `municipal_tax_rate`), `discount_rules` (jsonb — see `src/lib/pricingEngine.js`'s
-`buildDefaultDiscountRules` for the shape), New Project defaults (`default_services`,
+`buildDefaultDiscountRules` for the shape; a rule may also carry `muted: true`, which keeps it
+saved/editable but excludes it from every estimate), New Project defaults (`default_services`,
 `default_locked_services`, `default_accessory_colors`, `default_roof_color_id`,
-`default_wall_color_id`), `logo_url`, `report_footer_note`, `notification_webhook_url`.
+`default_wall_color_id`, `default_custom_service_ids` — which of the owner's `custom_services`
+catalog entries a brand-new project starts with already added), `logo_url`, `report_footer_note`,
+`notification_webhook_url`.
 
 ### Custom Service (`custom_services` table)
 

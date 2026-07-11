@@ -9,7 +9,10 @@ export const sql = neon(process.env.PROJECTS_DATABASE_URL);
 let schemaReady;
 
 // Runs once per warm serverless instance (cached promise) — idempotent, so
-// a cold start on every instance just re-confirms the schema exists.
+// a cold start on every instance just re-confirms the schema exists. If that
+// one attempt fails (a transient Neon connectivity blip, for example), the
+// cache is cleared so the next call retries instead of permanently wedging
+// this warm instance on the same stale error.
 export function ensureSchema() {
   if (!schemaReady) {
     schemaReady = (async () => {
@@ -120,6 +123,11 @@ export function ensureSchema() {
       // design.approved event (see INTEGRATIONS.md) — null means "not
       // configured," in which case approval just skips the notification.
       await sql`alter table settings add column if not exists notification_webhook_url text`;
+      // Which custom_services catalog entries a brand-new project starts
+      // with already enabled — same "New Project defaults" idea as
+      // default_services, just for the owner's own custom catalog instead
+      // of the fixed roof/wall/soffit/... set.
+      await sql`alter table settings add column if not exists default_custom_service_ids jsonb`;
 
       // Owner-defined services beyond the fixed roof/wall/soffit/etc. set —
       // a simple name+price+unit+description(+link) catalog, not a formula
@@ -229,7 +237,10 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists attachments_project_id_idx on attachments (project_id)`;
-    })();
+    })().catch((err) => {
+      schemaReady = undefined;
+      throw err;
+    });
   }
   return schemaReady;
 }

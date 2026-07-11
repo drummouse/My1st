@@ -102,14 +102,14 @@ export default function AuthGate({ children }) {
             <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
               Enter your name, a business name, or both.
             </div>
-            <div className="settings-row">
+            <div className="settings-row settings-row-wide">
               <label htmlFor="auth-first">First name</label>
               <input
                 id="auth-first" type="text" className="control-select"
                 value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
               />
             </div>
-            <div className="settings-row">
+            <div className="settings-row settings-row-wide">
               <label htmlFor="auth-last">Last name</label>
               <input
                 id="auth-last" type="text" className="control-select"

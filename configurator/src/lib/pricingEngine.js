@@ -162,7 +162,10 @@ export function calculateEstimate(measurements, selections) {
         gutterDownspoutFree: selections.gutterDownspoutFree,
       });
 
-  const matchedRules = discountRules.filter((r) => ruleApplies(r, active));
+  // A muted rule stays saved (DiscountsPanel keeps showing/editing it) but
+  // never actually applies to an estimate — the admin-facing "won't show in
+  // Estimator" toggle.
+  const matchedRules = discountRules.filter((r) => !r.muted && ruleApplies(r, active));
   // A subtotal-wide rule wins outright and suppresses narrower, service-level
   // rules — mirrors the old "Full Wrap beats the two narrower deals" rule.
   const subtotalRule = matchedRules.find((r) => r.effect?.type === 'percent' && !r.effect.serviceKey);

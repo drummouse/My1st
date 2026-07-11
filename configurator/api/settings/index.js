@@ -37,6 +37,7 @@ export default async function handler(req, res) {
         defaultServices, defaultLockedServices, defaultAccessoryColors,
         defaultRoofColorId, defaultWallColorId, reportFooterNote, logoUrl,
         taxCountry, taxRegion, taxLabel, municipalTaxRate, discountRules, notificationWebhookUrl,
+        defaultCustomServiceIds,
       } = req.body || {};
       // Settings and Discounts are now two separate panels that each PUT
       // only the fields they show — every column here is written with
@@ -51,7 +52,8 @@ export default async function handler(req, res) {
           owner_id, gst_rate, full_wrap_discount_pct, soffit_fascia_discount_pct, gutter_downspout_free,
           default_services, default_locked_services, default_accessory_colors,
           default_roof_color_id, default_wall_color_id, report_footer_note, logo_url,
-          tax_country, tax_region, tax_label, municipal_tax_rate, discount_rules, notification_webhook_url, updated_at
+          tax_country, tax_region, tax_label, municipal_tax_rate, discount_rules, notification_webhook_url,
+          default_custom_service_ids, updated_at
         )
         values (
           ${ownerId}, ${gstRate ?? null}, ${fullWrapDiscountPct ?? null}, ${soffitFasciaDiscountPct ?? null}, ${gutterDownspoutFree ?? null},
@@ -60,7 +62,8 @@ export default async function handler(req, res) {
           ${defaultAccessoryColors != null ? JSON.stringify(defaultAccessoryColors) : null}::jsonb,
           ${defaultRoofColorId ?? null}, ${defaultWallColorId ?? null}, ${reportFooterNote ?? null}, ${logoUrl ?? null},
           ${taxCountry ?? null}, ${taxRegion ?? null}, ${taxLabel ?? null}, ${municipalTaxRate ?? null},
-          ${discountRules != null ? JSON.stringify(discountRules) : null}::jsonb, ${notificationWebhookUrl ?? null}, now()
+          ${discountRules != null ? JSON.stringify(discountRules) : null}::jsonb, ${notificationWebhookUrl ?? null},
+          ${defaultCustomServiceIds != null ? JSON.stringify(defaultCustomServiceIds) : null}::jsonb, now()
         )
         on conflict (owner_id) do update set
           gst_rate = coalesce(excluded.gst_rate, settings.gst_rate),
@@ -80,6 +83,7 @@ export default async function handler(req, res) {
           municipal_tax_rate = coalesce(excluded.municipal_tax_rate, settings.municipal_tax_rate),
           discount_rules = coalesce(excluded.discount_rules, settings.discount_rules),
           notification_webhook_url = coalesce(excluded.notification_webhook_url, settings.notification_webhook_url),
+          default_custom_service_ids = coalesce(excluded.default_custom_service_ids, settings.default_custom_service_ids),
           updated_at = now()
         returning *
       `;
