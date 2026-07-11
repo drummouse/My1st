@@ -138,10 +138,7 @@ export function ensureSchema() {
       // Materials & Colors Library — owner-added entries layered on top of
       // the app's baseline ROOF_PRODUCTS/WALL_PRODUCTS/RAL_COLORS catalogs
       // (see src/data/pricing.js and colors.js's allRoofProducts()/
-      // allWallProducts()/allColors()). Not used to filter which colors a
-      // given material allows (no material_colors join table) — every
-      // color remains pickable for every material/service, same as the
-      // baseline catalog today.
+      // allWallProducts()/allColors()).
       await sql`
         create table if not exists colors (
           id uuid primary key default gen_random_uuid(),
@@ -168,6 +165,47 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists materials_owner_id_idx on materials (owner_id)`;
+
+      // Library organization: one folder tree per kind ('material'/'color'),
+      // arbitrary nesting via self-referencing parent_id. A material sits in
+      // at most one folder (folder_id below); a color can sit in several
+      // (color_folders) — e.g. the same color showing up under both a
+      // "Season Crop" and a "Cascadia Steel" color-line folder. Deleting a
+      // folder just un-parents whatever was in it (`on delete set null`)
+      // rather than cascading destructively.
+      await sql`
+        create table if not exists folders (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid references users(id),
+          kind text not null,
+          parent_id uuid references folders(id) on delete set null,
+          name text not null,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists folders_owner_id_idx on folders (owner_id)`;
+
+      await sql`alter table materials add column if not exists folder_id uuid references folders(id) on delete set null`;
+
+      await sql`
+        create table if not exists color_folders (
+          color_id uuid not null references colors(id) on delete cascade,
+          folder_id uuid not null references folders(id) on delete cascade,
+          primary key (color_id, folder_id)
+        )
+      `;
+
+      // "Which colors are applicable" to a material — a plain many-to-many;
+      // a material with zero rows here means "not restricted yet," and the
+      // in-project color picker keeps showing the full merged catalog until
+      // an admin actually links at least one color (see ColorPickerButton.jsx).
+      await sql`
+        create table if not exists material_colors (
+          material_id uuid not null references materials(id) on delete cascade,
+          color_id uuid not null references colors(id) on delete cascade,
+          primary key (material_id, color_id)
+        )
+      `;
 
       // Per-project attachments — Attach File (any format, always a link in
       // every report) and Attach Photo (images only, embedded as a small

@@ -301,6 +301,26 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   custom entries its owner added, no login needed); called with no
   `ownerId` they require a session and return the caller's own rows (used by
   the Materials panel itself). Create/update/delete stay authenticated-only.
+- **Library folders + material↔color linking** — a `folders` table (one
+  self-referencing tree per `kind`, `'material'` or `'color'`) organizes both
+  libraries into named groups (e.g. Materials → Roofing/Siding; Colors → a
+  color-line name), and two join tables capture real many-to-many
+  relationships: `color_folders` (a color can sit in more than one folder —
+  the same finish listed under two different manufacturers' color-line
+  folders) and `material_colors` (which colors are "applicable" to a
+  material, edited from that material's row in `MaterialsPanel.jsx`). This
+  all lives inside the existing `api/colors/[[...id]].js`/
+  `api/materials/[[...id]].js` routes via a `?folders=1` query param (folder
+  CRUD) and `?colors=1` on a material's URL (replace its linked colors) —
+  no new route files, keeping the function count where the "API route
+  layout" note above left it. The baseline catalogs stay ungrouped by this
+  system (no folders, no material_colors rows) — it only organizes the
+  owner-added layer. `ColorPickerButton.jsx` reads an optional
+  `allowedColorIds` prop (`App.jsx` derives it from the selected roof/wall
+  material's linked colors); a material with zero linked colors — the
+  default until an admin actually sets some — shows the full merged catalog
+  exactly as before, so existing projects never lose color choices out from
+  under them.
 - **Attachments** (`src/components/AttachmentsPanel.jsx`, shown under
   Projects once a project has been saved) — an `attachments` table
   (`project_id`, `kind` 'file'|'photo', `file_name`, `url`, `mime_type`,

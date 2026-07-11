@@ -115,6 +115,16 @@ export default function App() {
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
   // Fetched only for the PDF cover page; hidden there when blank.
   const [companyProfile, setCompanyProfile] = useState(null);
+  // Raw Materials Library rows (with each material's colorIds — see
+  // api/materials/[[...id]].js's ?colors=1 link) — kept alongside
+  // setExtraMaterials()'s mapped {id,label,pricePerSqft} shape so the
+  // roof/wall color pickers can look up "does the selected material
+  // restrict which colors apply" (Phase 10's material↔color linking).
+  const [materialsCatalog, setMaterialsCatalog] = useState([]);
+  const applyMaterialsCatalog = (rows) => {
+    setMaterialsCatalog(rows);
+    setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) });
+  };
   // Once a design has been saved or loaded, this freezes the GST/discount
   // rates it was quoted at — see designState.js's pricingSettings comment.
   // null means "not frozen yet," i.e. a brand-new project still tracking
@@ -234,7 +244,7 @@ export default function App() {
             .catch((err) => console.error('Failed to load colors library:', err));
           fetch(`/api/materials?ownerId=${row.owner_id}`)
             .then((r) => (r.ok ? r.json() : []))
-            .then((rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) }))
+            .then(applyMaterialsCatalog)
             .catch((err) => console.error('Failed to load materials library:', err));
         }
       })
@@ -287,7 +297,7 @@ export default function App() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) }))
+      .then(applyMaterialsCatalog)
       .catch((err) => console.error('Failed to load materials library:', err));
   }, []);
 
@@ -703,7 +713,7 @@ export default function App() {
       {activeSection === 'materials' && !isCustomerView && (
         <MaterialsPanel
           onColorsChanged={(rows) => setExtraColors(rows.map(toColorEntry))}
-          onMaterialsChanged={(rows) => setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) })}
+          onMaterialsChanged={applyMaterialsCatalog}
         />
       )}
 
@@ -826,7 +836,7 @@ export default function App() {
           />
           <div className="control-block color-row">
             <span className="control-label">Roof Color</span>
-            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} />
+            <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === roofProductId)?.colorIds} />
           </div>
 
           <ProductSelector
@@ -840,7 +850,7 @@ export default function App() {
           />
           <div className="control-block color-row">
             <span className="control-label">Siding Color</span>
-            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} />
+            <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === wallProductId)?.colorIds} />
           </div>
 
           <ServicesPanel

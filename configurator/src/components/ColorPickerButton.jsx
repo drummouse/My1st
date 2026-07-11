@@ -4,11 +4,13 @@ import { allColors, colorById } from '../data/colors.js';
 const SERIES_ORDER = ['Wrinkle Coating', 'Icecrystal Relief', 'Printech Woodgrain'];
 
 // Baseline series first (stable, familiar order), then any Colors Library
-// series an owner has added — computed fresh each call so a color added
-// while the picker is closed shows up the next time it's opened.
-function seriesList() {
-  const extra = [...new Set(allColors().map((c) => c.series).filter((s) => !SERIES_ORDER.includes(s)))];
-  return [...SERIES_ORDER, ...extra];
+// series an owner has added — computed fresh each call (from whichever
+// color list is actually showing, so a material-restricted picker only
+// lists tabs its allowed colors actually use) so a color added while the
+// picker is closed shows up the next time it's opened.
+function seriesList(colors) {
+  const extra = [...new Set(colors.map((c) => c.series).filter((s) => !SERIES_ORDER.includes(s)))];
+  return [...SERIES_ORDER, ...extra].filter((s) => colors.some((c) => c.series === s));
 }
 
 // Same touch/desktop signal used by the Position dock (AssemblyAdjustment.jsx)
@@ -33,8 +35,16 @@ function swatchStyle(color) {
 // more tactile swatches (name + code visible without hovering). Chosen over
 // an anchored popover specifically to avoid the viewport-collision bug class
 // entirely (no position math — it's just centered).
-function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
-  const [series, setSeries] = useState(() => colorById(selectedId).series);
+function SampleBoardModal({ selectedId, mixed, onChange, onClose, colors }) {
+  // Falls back to the first available tab when the currently selected
+  // color's series isn't in `colors` (e.g. a material-restricted picker
+  // whose allowed colors don't include the facet's current color) — avoids
+  // opening on a tab whose card grid would otherwise render empty.
+  const [series, setSeries] = useState(() => {
+    const preferred = colorById(selectedId).series;
+    const available = seriesList(colors);
+    return available.includes(preferred) ? preferred : (available[0] || preferred);
+  });
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -51,7 +61,7 @@ function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
       <div className="color-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Choose a color">
         <div className="color-modal-header">
           <div className="color-tabs">
-            {seriesList().map((s) => (
+            {seriesList(colors).map((s) => (
               <button
                 key={s}
                 type="button"
@@ -65,7 +75,7 @@ function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
           <button type="button" className="layer-remove-btn" onClick={onClose} aria-label="Close color picker">×</button>
         </div>
         <div className="color-card-grid">
-          {allColors().filter((c) => c.series === series).map((c) => (
+          {colors.filter((c) => c.series === series).map((c) => (
             <button
               key={c.id}
               type="button"
@@ -88,9 +98,13 @@ function SampleBoardModal({ selectedId, mixed, onChange, onClose }) {
 // Mobile: a bottom-sheet drawer — a docked panel always fits by definition
 // (no positioning math needed), searchable, collapsed by series so the
 // default state stays small and thumb-scrollable.
-function QuickDrawer({ selectedId, mixed, onChange, onClose }) {
+function QuickDrawer({ selectedId, mixed, onChange, onClose, colors }) {
   const [query, setQuery] = useState('');
-  const [openSeries, setOpenSeries] = useState(() => colorById(selectedId).series);
+  const [openSeries, setOpenSeries] = useState(() => {
+    const preferred = colorById(selectedId).series;
+    const available = seriesList(colors);
+    return available.includes(preferred) ? preferred : (available[0] || preferred);
+  });
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -115,8 +129,8 @@ function QuickDrawer({ selectedId, mixed, onChange, onClose }) {
           <button type="button" className="layer-remove-btn" onClick={onClose} aria-label="Close color picker">×</button>
         </div>
         <div className="color-drawer-body">
-          {seriesList().map((series) => {
-            const items = allColors().filter((c) => c.series === series && matches(c));
+          {seriesList(colors).map((series) => {
+            const items = colors.filter((c) => c.series === series && matches(c));
             if (q && items.length === 0) return null;
             const isOpen = q ? true : openSeries === series;
             return (
@@ -158,10 +172,18 @@ function QuickDrawer({ selectedId, mixed, onChange, onClose }) {
 // overridden to their own color) don't all share the same effective color,
 // there's no single color to show — the button reads "Various Colors"
 // instead of just whatever the global default happens to be.
-export default function ColorPickerButton({ selectedId, onChange, disabled, mixed }) {
+// `allowedColorIds`: when the material currently selected for this facet
+// restricts which colors apply (Materials & Colors Library → a material's
+// "Applicable colors" — see MaterialsPanel.jsx), only those colors are
+// offered here. Undefined/empty means "not restricted" — every baseline +
+// library color shows, same as before this existed. The button itself
+// always resolves `selected` from the full, unfiltered catalog so a color
+// picked before a restriction existed still displays correctly.
+export default function ColorPickerButton({ selectedId, onChange, disabled, mixed, allowedColorIds }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef(null);
   const selected = colorById(selectedId);
+  const colors = allowedColorIds?.length ? allColors().filter((c) => allowedColorIds.includes(c.id)) : allColors();
   const Picker = isCoarsePointer ? QuickDrawer : SampleBoardModal;
 
   return (
@@ -183,7 +205,7 @@ export default function ColorPickerButton({ selectedId, onChange, disabled, mixe
       </button>
 
       {open && (
-        <Picker selectedId={selectedId} mixed={mixed} onChange={onChange} onClose={() => setOpen(false)} />
+        <Picker selectedId={selectedId} mixed={mixed} onChange={onChange} onClose={() => setOpen(false)} colors={colors} />
       )}
     </div>
   );
