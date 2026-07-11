@@ -3,6 +3,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { buildHouseScene, setMeshColor, setMeshHighlighted } from '../lib/buildScene.js';
 
+// Front/Right/Back/Left — relative to the model, since RoofRuler exports
+// carry no true compass orientation. Shared by captureElevationViews (a PDF
+// snapshot per direction) and snapToElevation (the live "Elevation View"
+// buttons) so there's one source for what each of the 4 directions means.
+const ELEVATION_DIRECTIONS = [
+  { key: 'front', label: 'Front Elevation', dir: new THREE.Vector3(0, -1, 0) },
+  { key: 'right', label: 'Right Elevation', dir: new THREE.Vector3(1, 0, 0) },
+  { key: 'back', label: 'Back Elevation', dir: new THREE.Vector3(0, 1, 0) },
+  { key: 'left', label: 'Left Elevation', dir: new THREE.Vector3(-1, 0, 0) },
+];
+
 // Average of a mesh's raw (un-deduped) vertex positions, transformed to world
 // space — a fine stand-in for the true area-weighted centroid at this scale
 // (each mesh is a single facet, so vertices repeat roughly in proportion to
@@ -234,13 +245,7 @@ const Viewer3D = forwardRef(function Viewer3D({
       if (grid) grid.visible = false;
 
       const box = new THREE.Box3().setFromObject(root);
-      const directions = [
-        { label: 'Front Elevation', dir: new THREE.Vector3(0, -1, 0) },
-        { label: 'Right Elevation', dir: new THREE.Vector3(1, 0, 0) },
-        { label: 'Back Elevation', dir: new THREE.Vector3(0, 1, 0) },
-        { label: 'Left Elevation', dir: new THREE.Vector3(-1, 0, 0) },
-      ];
-      const images = directions.map(({ label, dir }) => ({
+      const images = ELEVATION_DIRECTIONS.map(({ label, dir }) => ({
         label,
         dataUrl: captureOrthoNatural(renderer, scene, box, dir, {}),
       }));
@@ -277,18 +282,10 @@ const Viewer3D = forwardRef(function Viewer3D({
   // Snaps the live (interactive) camera to look straight at one side of the
   // model — a shortcut into the same view captureElevationViews() renders
   // for the PDF, except this one stays live/orbitable rather than a one-shot
-  // capture. Directions match captureElevationViews' Front/Right/Back/Left
-  // convention (relative to the model — RoofRuler exports carry no true
-  // compass orientation).
-  const ELEVATION_DIRS = {
-    front: new THREE.Vector3(0, -1, 0),
-    right: new THREE.Vector3(1, 0, 0),
-    back: new THREE.Vector3(0, 1, 0),
-    left: new THREE.Vector3(-1, 0, 0),
-  };
+  // capture. Reuses ELEVATION_DIRECTIONS (module scope) so both stay in sync.
   const snapToElevation = (direction) => {
     const s = sceneRef.current;
-    const dir = ELEVATION_DIRS[direction];
+    const dir = ELEVATION_DIRECTIONS.find((d) => d.key === direction)?.dir;
     if (!s?.camera || !s.renderer || !s.root || !s.controls || !dir) return;
     const { camera, renderer, root, controls } = s;
     const box = new THREE.Box3().setFromObject(root);

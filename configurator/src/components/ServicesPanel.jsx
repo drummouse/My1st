@@ -7,6 +7,13 @@ import ColorPickerButton from './ColorPickerButton.jsx';
 // Settings never shows a row at all here) rather than showing a
 // permanently-visible, greyed-out row — this is what lets them share one
 // "Add a service" picker with the owner's custom-service catalog below.
+// Roof/Wall (rendered by App.jsx, not here) deliberately don't follow this
+// same hide-when-off rule: they're "structural" — the 3D model always shows
+// roof/wall geometry in some color regardless of billing status, so their
+// Material/Color pickers stay visible whenever a layer actually has that
+// type of face, gated only by services.roof/wall for pricing. These 7 are
+// "optional add-ons" with no permanent visual footprint, so off truly means
+// gone until re-added.
 const FIXED_SERVICE_DEFS = [
   { key: 'soffit', label: ACCESSORY_PRICING.soffit.label },
   { key: 'fascia', label: ACCESSORY_PRICING.fascia.label },

@@ -16,12 +16,13 @@ import CustomServicesPanel from './components/CustomServicesPanel.jsx';
 import MaterialsPanel from './components/MaterialsPanel.jsx';
 import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
-import { parseAppliCadXML, facetKey, collectOpenings } from './lib/roofRulerParser.js';
+import { parseAppliCadXML, facetKey, collectOpenings, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib/designState.js';
+import { saveOrUpdateProject } from './lib/projects.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
 import { colorById, setExtraColors } from './data/colors.js';
@@ -299,8 +300,8 @@ export default function App() {
   // XML self-declares each face's type — see roofRulerParser.js) — gates the
   // Roof Material/Siding Material sections so a roof-only import doesn't show
   // an irrelevant wall material/color picker, and vice versa.
-  const hasRoofFaces = useMemo(() => parsedLayers.some((l) => l.parsed.faces.some((f) => f.type === 'Roof')), [parsedLayers]);
-  const hasWallFaces = useMemo(() => parsedLayers.some((l) => l.parsed.faces.some((f) => f.type === 'Wall')), [parsedLayers]);
+  const hasRoofFaces = useMemo(() => parsedLayers.some((l) => roofSqft(l.parsed) > 0), [parsedLayers]);
+  const hasWallFaces = useMemo(() => parsedLayers.some((l) => wallSqft(l.parsed) > 0), [parsedLayers]);
 
   // Keep the Assembly Adjustment layer selector pointed at a layer that
   // still exists after an add/remove.
@@ -545,39 +546,34 @@ export default function App() {
   };
 
   const handleExportHtml = async () => {
-    let template;
-    try {
-      const res = await fetch('/snapshot-template.html');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      template = await res.text();
-    } catch (err) {
-      alert('Could not load the export template. Please try again.');
-      return;
-    }
     const state = buildDesignSnapshot();
 
+    // The template fetch and the project save (see below) don't depend on
+    // each other's result, so they run concurrently rather than one
+    // round-trip blocking the other.
+    const templatePromise = fetch('/snapshot-template.html').then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    });
     // Save (or update) this design as a project first, same save-or-update
     // call ProjectsPanel's Download button makes, so the exported file has a
     // real project id to embed — without one, "Approve This Design" has
     // nothing to POST to and never renders (see the ?p= view, which always
     // has an id). A failure here just means the export proceeds without an
     // Approve button, same as it silently did before this fix.
-    let projectId = currentProjectId;
+    const projectSavePromise = saveOrUpdateProject(state, currentProjectId)
+      .catch((err) => { console.error('Failed to save project before HTML export:', err); return null; });
+
+    let template;
     try {
-      const res = await fetch(projectId ? `/api/projects/${projectId}` : '/api/projects', {
-        method: projectId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobNumber: house.jobNumber, customerName: house.customerName, address: house.address, design: state }),
-      });
-      if (res.ok) {
-        const saved = projectId ? { id: projectId } : await res.json();
-        projectId = saved.id;
-        setCurrentProjectId(projectId);
-      }
+      template = await templatePromise;
     } catch (err) {
-      console.error('Failed to save project before HTML export:', err);
+      alert('Could not load the export template. Please try again.');
+      return;
     }
-    const stateWithProject = projectId ? { ...state, projectId } : state;
+    const saved = await projectSavePromise;
+    if (saved?.id) setCurrentProjectId(saved.id);
+    const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
 
     // Escape "</script>" sequences that could appear inside string values
     // (e.g. a customer name) so they can't break out of the inline script.
@@ -711,7 +707,7 @@ export default function App() {
       )}
 
       {activeSection === 'settings' && !isCustomerView && (
-        <SettingsPanel onSaved={setCompanySettings} />
+        <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />
       )}
       {activeSection === 'discounts' && !isCustomerView && (
         <DiscountsPanel onSaved={setCompanySettings} />

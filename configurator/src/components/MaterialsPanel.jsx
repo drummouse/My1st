@@ -17,13 +17,12 @@ function FolderSelect({ id, folders, value, onChange, allowNone = true }) {
 
 // A vertical "what's already there" sidebar, docked at the outer edge of its
 // column — replaces a flat horizontal filter row with something that reads
-// as a library tree at a glance. Indents one level for a folder whose
-// parent_id points at another folder in this same list (folders can nest
-// arbitrarily deep in the data model; this UI doesn't yet offer a way to
-// create anything past one level, so deeper indentation never triggers).
+// as a library tree at a glance. Folders can nest arbitrarily deep in the
+// data model (parent_id) and the folders API already accepts it, but
+// nothing in this panel's own "+ Add folder" form offers a parent picker —
+// so every folder created here is a root folder, and this list stays flat
+// rather than guessing at indentation for a level nothing here can create.
 function FolderTree({ folders, activeId, onSelect, onRemove, allLabel, allCount, countFor, busy, align }) {
-  const byId = new Map(folders.map((f) => [f.id, f]));
-  const depthOf = (f) => (f.parent_id && byId.has(f.parent_id) ? 1 : 0);
   return (
     <nav className={`folder-tree${align === 'right' ? ' folder-tree-right' : ''}`}>
       <button type="button" className={`folder-tree-item${!activeId ? ' active' : ''}`} onClick={() => onSelect('')}>
@@ -31,12 +30,12 @@ function FolderTree({ folders, activeId, onSelect, onRemove, allLabel, allCount,
         <span className="folder-tree-count">{allCount}</span>
       </button>
       {folders.map((f) => (
-        <div className="folder-tree-row" key={f.id} style={{ paddingLeft: `${depthOf(f) * 0.9}rem` }}>
+        <div className="folder-tree-row" key={f.id}>
           <button type="button" className={`folder-tree-item${activeId === f.id ? ' active' : ''}`} onClick={() => onSelect(f.id)}>
             <span>{f.name}</span>
             <span className="folder-tree-count">{countFor(f.id)}</span>
           </button>
-          <button type="button" className="folder-tree-remove" disabled={busy} onClick={() => onRemove(f.id)} aria-label={`Remove folder ${f.name}`}>×</button>
+          <button type="button" className="layer-remove-btn folder-tree-remove" disabled={busy} onClick={() => onRemove(f.id)} aria-label={`Remove folder ${f.name}`}>×</button>
         </div>
       ))}
     </nav>

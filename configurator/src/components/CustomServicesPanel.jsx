@@ -84,7 +84,7 @@ export default function CustomServicesPanel({ onChanged }) {
         a formula.
       </div>
 
-      <div className="custom-services-existing">
+      <div className="materials-colors-section custom-services-existing">
         <div className="materials-colors-section-header custom-services-existing-header">
           Existing services ({services.length})
         </div>
@@ -102,7 +102,7 @@ export default function CustomServicesPanel({ onChanged }) {
         </div>
       </div>
 
-      <div className="control-block custom-services-add">
+      <div className="control-block custom-services-add sticky-form-pane">
         <div className="field-label">Add a service</div>
         <div className="settings-row">
           <label htmlFor="cs-name">Name</label>

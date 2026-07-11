@@ -24,21 +24,13 @@ const ACCESSORY_KEYS = ['soffit', 'fascia', 'gutters', 'downspouts'];
 const toPct = (frac) => (Number(frac) * 100).toString();
 const toFrac = (pct) => (Number(pct) || 0) / 100;
 
-export default function SettingsPanel({ onSaved }) {
+export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
   const [form, setForm] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
-  const [customServiceCatalog, setCustomServiceCatalog] = useState([]);
-
-  useEffect(() => {
-    fetch('/api/custom-services')
-      .then((res) => (res.ok ? res.json() : []))
-      .then(setCustomServiceCatalog)
-      .catch((err) => console.error('Custom services fetch error:', err));
-  }, []);
 
   // Company Profile is identity/contact info on the `users` row (required at
   // signup, see AuthGate.jsx) rather than the per-owner `settings` row this

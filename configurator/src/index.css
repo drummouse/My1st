@@ -668,6 +668,14 @@ body {
   grid-column: 1 / -1;
 }
 
+/* Shared by every "form pane stays put while the list scrolls" layout below
+   (Discounts' New Rule, Custom Services' Add form) — pinned on desktop,
+   back to normal document flow once things stack on mobile. */
+.sticky-form-pane { position: sticky; top: 1rem; }
+@media (max-width: 860px) {
+  .sticky-form-pane { position: static; }
+}
+
 /* Discounts: New Rule form fixed on the left, saved rules stacked on the
    right — previously a new rule was just appended into the same list it was
    building from, which read as one long undifferentiated stack. */
@@ -685,7 +693,7 @@ body {
 .discounts-panel-layout > .export-buttons {
   grid-column: 1 / -1;
 }
-.discounts-new-rule { position: sticky; top: 1rem; border-color: var(--brand-accent, #E8541A); }
+.discounts-new-rule { border-color: var(--brand-accent, #E8541A); }
 .discounts-saved-rules { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
 .discount-rule-card-muted { opacity: 0.6; }
 .discount-rule-card-footer {
@@ -715,7 +723,6 @@ body {
 
 @media (max-width: 860px) {
   .discounts-panel-layout { grid-template-columns: 1fr; }
-  .discounts-new-rule { position: static; }
 }
 
 /* Materials & Colors: two visually distinct libraries side by side (blue vs.
@@ -780,20 +787,9 @@ body {
 .folder-tree-count { font-size: 0.68rem; color: #9ca3af; }
 .folder-tree-row { display: flex; align-items: center; gap: 0.25rem; }
 .folder-tree-row .folder-tree-item { flex: 1 1 auto; }
-.folder-tree-remove {
-  flex: 0 0 auto;
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 5px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #9ca3af;
-  font-size: 0.85rem;
-  line-height: 1;
-  cursor: pointer;
-}
-.folder-tree-remove:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-.folder-tree-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Same look/behavior as .layer-remove-btn, just a touch smaller to fit the
+   narrow folder tree sidebar. */
+.folder-tree-remove { width: 1.4rem; height: 1.4rem; font-size: 0.85rem; }
 
 @media (max-width: 860px) {
   .materials-colors-layout { grid-template-columns: 1fr; }
@@ -817,19 +813,14 @@ body {
 .custom-services-panel-layout > .control-sublabel {
   grid-column: 1 / -1;
 }
-.custom-services-existing {
-  border: 1px solid #e2e5ea;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #fff;
-}
+/* .custom-services-existing reuses .materials-colors-section's card chrome
+   (border/radius/background) — same "library card" shell, just a different
+   header color. */
 .custom-services-existing-header { background: #0d9488; }
 .custom-services-existing-body { padding: 0.75rem 0.9rem; }
-.custom-services-add { position: sticky; top: 1rem; }
 
 @media (max-width: 860px) {
   .custom-services-panel-layout { grid-template-columns: 1fr; }
-  .custom-services-add { position: static; }
 }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; }
 .settings-row label { font-size: 0.82rem; }

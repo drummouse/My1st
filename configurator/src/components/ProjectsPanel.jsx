@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { saveOrUpdateProject } from '../lib/projects.js';
 
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -90,20 +91,7 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
   const handleDownload = () =>
     withStatus('Saving...', 'Project saved — file downloaded.', async () => {
       const design = getCurrentDesign();
-      const body = JSON.stringify({
-        jobNumber: design.house.jobNumber,
-        customerName: design.house.customerName,
-        address: design.house.address,
-        design,
-      });
-      const id = currentProjectId;
-      const res = await fetch(id ? `/api/projects/${id}` : '/api/projects', {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const saved = id ? { id } : await res.json();
+      const saved = await saveOrUpdateProject(design, currentProjectId);
       onProjectIdChange(saved.id);
       downloadProjectFile(saved.id, design, defaultProjectName(house));
       await refresh();

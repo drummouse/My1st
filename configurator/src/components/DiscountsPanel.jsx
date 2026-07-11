@@ -188,7 +188,7 @@ export default function DiscountsPanel({ onSaved }) {
         one whole-estimate discount ever applies per estimate.
       </div>
 
-      <div className="discounts-new-rule control-block">
+      <div className="discounts-new-rule sticky-form-pane control-block">
         <div className="field-label">New Rule</div>
         <RuleFields
           rule={draftRule} nameId="rule-draft-name"
