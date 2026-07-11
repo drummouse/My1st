@@ -111,6 +111,10 @@ export default function App() {
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
   const [companySettings, setCompanySettings] = useState(null);
+  // Business identity/contact (name, phone, address, website/social) — on
+  // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
+  // Fetched only for the PDF cover page; hidden there when blank.
+  const [companyProfile, setCompanyProfile] = useState(null);
   // Once a design has been saved or loaded, this freezes the GST/discount
   // rates it was quoted at — see designState.js's pricingSettings comment.
   // null means "not frozen yet," i.e. a brand-new project still tracking
@@ -257,6 +261,13 @@ export default function App() {
       })
       .then(setCompanySettings)
       .catch((err) => console.error('Failed to load company settings:', err));
+    fetch('/api/auth/me')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(setCompanyProfile)
+      .catch((err) => console.error('Failed to load company profile:', err));
     fetch('/api/custom-services')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -615,6 +626,7 @@ export default function App() {
       shareUrl,
       logoDataUrl,
       reportFooterNote: companySettings?.report_footer_note,
+      companyProfile,
       facetLabels,
       openingsSchedule: labeledOpenings,
       lineTakeoffs,

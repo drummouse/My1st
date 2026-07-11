@@ -28,7 +28,7 @@ function drawPageHeader(doc, brand, title) {
   doc.line(MARGIN, 34, PAGE_W - MARGIN, 34);
 }
 
-function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl) {
+function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, companyProfile) {
   const [ar, ag, ab] = hexToRgb(brand.accent);
   doc.setFillColor(ar, ag, ab);
   doc.rect(0, 0, PAGE_W, 10, 'F');
@@ -55,6 +55,23 @@ function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote,
   doc.setFontSize(12);
   doc.setTextColor(90);
   doc.text(brand.tagline, MARGIN, y);
+
+  // Business contact line — each segment only appears when actually set
+  // (Company Profile in Settings; website/social are optional there), so a
+  // brand-new account with a bare-minimum profile doesn't show empty dots.
+  const contactParts = [
+    companyProfile?.phone,
+    [companyProfile?.addressLine, companyProfile?.city].filter(Boolean).join(', '),
+    companyProfile?.website,
+    companyProfile?.socialUrl,
+  ].filter(Boolean);
+  if (contactParts.length) {
+    y += 16;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(contactParts.join('   ·   '), MARGIN, y);
+  }
 
   y += 60;
   doc.setDrawColor(...hexToRgb(brand.accent));
@@ -641,11 +658,11 @@ export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
-  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, attachmentFiles, attachmentPhotos,
+  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, attachmentFiles, attachmentPhotos, companyProfile,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
-  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl);
+  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, companyProfile);
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,

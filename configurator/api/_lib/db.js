@@ -27,6 +27,21 @@ export function ensureSchema() {
           created_at timestamptz not null default now()
         )
       `;
+      // Required at signup (see AuthGate.jsx): either first_name+last_name
+      // or business_name, plus phone and a full address. website/social_url
+      // are optional and only ever shown where explicitly non-blank (PDF
+      // cover page). All additive/nullable so existing accounts (created
+      // before this requirement existed) don't break.
+      await sql`alter table users add column if not exists first_name text`;
+      await sql`alter table users add column if not exists last_name text`;
+      await sql`alter table users add column if not exists business_name text`;
+      await sql`alter table users add column if not exists phone text`;
+      await sql`alter table users add column if not exists address_line text`;
+      await sql`alter table users add column if not exists city text`;
+      await sql`alter table users add column if not exists region_code text`;
+      await sql`alter table users add column if not exists postal_code text`;
+      await sql`alter table users add column if not exists website text`;
+      await sql`alter table users add column if not exists social_url text`;
 
       await sql`
         create table if not exists projects (

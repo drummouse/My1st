@@ -359,6 +359,20 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   approved, the button is replaced with "Approved on `<date>`" and stays
   that way on every future visit to the same link.
 
+- **Required account profile** (`AuthGate.jsx`'s signup form; editable later from
+  Settings → Company Profile) — every account now requires either a first+last name or a
+  business name (at least one), a phone number, and a full address (street, city,
+  province/state, postal/zip). Postal/zip auto-reformats from however it's typed
+  (`src/lib/address.js`'s `formatPostalOrZip` — Canadian → `A0A 0A0`, US → `12345` or
+  `12345-6789`) on blur. Province/state reuses the same `COUNTRIES`/`REGIONS` picker already
+  built for Settings → Tax, and signup auto-seeds that new owner's first `settings` row's tax
+  fields from the address given (still fully editable afterward) instead of defaulting to
+  Alberta's rate. Website and a social link are optional — the one place that actually matters
+  ("hide if blank") is the PDF cover page, which prints a phone/address/website/social contact
+  line only for whichever of those are actually set. Profile fields live on `users` (not
+  `settings`) and are edited via a dedicated `profile` action on `api/auth/[action].js`, kept
+  separate from the Settings save flow since it's identity/contact info, not a business setting.
+
 ## Known simplification
 
 Each imported layer's RoofRuler export uses its own independent local

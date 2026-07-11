@@ -3,6 +3,7 @@ import { upload } from '@vercel/blob/client';
 import ColorPickerButton from './ColorPickerButton.jsx';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from '../data/defaults.js';
 import { COUNTRIES, REGIONS, regionByCode } from '../data/taxRates.js';
+import { formatPostalOrZip } from '../lib/address.js';
 
 const SERVICE_KEYS = [
   { key: 'roof', label: 'Roof' },
@@ -28,6 +29,59 @@ export default function SettingsPanel({ onSaved }) {
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+
+  // Company Profile is identity/contact info on the `users` row (required at
+  // signup, see AuthGate.jsx) rather than the per-owner `settings` row this
+  // component otherwise edits — kept as its own fetch/save pair against
+  // /api/auth/me and /api/auth/profile instead of folded into the Settings
+  // form/save above.
+  const [profile, setProfile] = useState(null);
+  const [profileStatus, setProfileStatus] = useState('');
+  const [profileBusy, setProfileBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((u) => {
+        setProfile({
+          firstName: u.firstName || '', lastName: u.lastName || '', businessName: u.businessName || '',
+          phone: u.phone || '', addressLine: u.addressLine || '', city: u.city || '',
+          country: (u.regionCode || 'CA-AB').split('-')[0], regionCode: u.regionCode || 'CA-AB',
+          postalCode: u.postalCode || '', website: u.website || '', socialUrl: u.socialUrl || '',
+        });
+      })
+      .catch((err) => console.error('Profile fetch error:', err));
+  }, []);
+
+  const handleProfileSave = async () => {
+    setProfileBusy(true);
+    setProfileStatus('Saving…');
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: profile.businessName,
+          firstName: profile.firstName, lastName: profile.lastName, businessName: profile.businessName,
+          phone: profile.phone, addressLine: profile.addressLine, city: profile.city,
+          regionCode: profile.regionCode, postalCode: profile.postalCode,
+          website: profile.website, socialUrl: profile.socialUrl,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      setProfile((p) => ({ ...p, postalCode: body.postalCode || p.postalCode }));
+      setProfileStatus('Saved.');
+    } catch (err) {
+      console.error('Profile save error:', err);
+      setProfileStatus(err.message || 'Could not save.');
+    }
+    setProfileBusy(false);
+    setTimeout(() => setProfileStatus(''), 4000);
+  };
 
   useEffect(() => {
     fetch('/api/settings')
@@ -151,6 +205,67 @@ export default function SettingsPanel({ onSaved }) {
         These apply to every new project and every estimate calculation — not just the one
         currently open.
       </div>
+
+      {profile && (
+        <div className="control-block">
+          <div className="field-label">Company Profile</div>
+          <div className="control-sublabel">Enter your name, a business name, or both.</div>
+          <div className="settings-row">
+            <label htmlFor="profile-first">First name</label>
+            <input id="profile-first" type="text" className="control-select" value={profile.firstName} onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))} />
+          </div>
+          <div className="settings-row">
+            <label htmlFor="profile-last">Last name</label>
+            <input id="profile-last" type="text" className="control-select" value={profile.lastName} onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))} />
+          </div>
+          <label className="field-label" htmlFor="profile-business">Business name</label>
+          <input id="profile-business" type="text" className="control-select" value={profile.businessName} onChange={(e) => setProfile((p) => ({ ...p, businessName: e.target.value }))} />
+          <label className="field-label" htmlFor="profile-phone">Phone</label>
+          <input id="profile-phone" type="tel" className="control-select" value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
+          <label className="field-label" htmlFor="profile-address">Address</label>
+          <input id="profile-address" type="text" className="control-select" placeholder="Street address" value={profile.addressLine} onChange={(e) => setProfile((p) => ({ ...p, addressLine: e.target.value }))} />
+          <div className="settings-row">
+            <label htmlFor="profile-city">City</label>
+            <input id="profile-city" type="text" className="control-select" value={profile.city} onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))} />
+          </div>
+          <div className="settings-row">
+            <label htmlFor="profile-country">Country</label>
+            <select
+              id="profile-country" className="control-select" value={profile.country}
+              onChange={(e) => {
+                const country = e.target.value;
+                setProfile((p) => ({ ...p, country, regionCode: REGIONS[country]?.[0]?.code || '' }));
+              }}
+            >
+              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="settings-row">
+            <label htmlFor="profile-region">Province / State</label>
+            <select id="profile-region" className="control-select" value={profile.regionCode} onChange={(e) => setProfile((p) => ({ ...p, regionCode: e.target.value }))}>
+              {(REGIONS[profile.country] || []).map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+            </select>
+          </div>
+          <div className="settings-row">
+            <label htmlFor="profile-postal">Postal / Zip code</label>
+            <input
+              id="profile-postal" type="text" className="control-select" value={profile.postalCode}
+              onChange={(e) => setProfile((p) => ({ ...p, postalCode: e.target.value }))}
+              onBlur={(e) => setProfile((p) => ({ ...p, postalCode: formatPostalOrZip(e.target.value, p.country) }))}
+            />
+          </div>
+          <label className="field-label" htmlFor="profile-website">Website (optional)</label>
+          <input id="profile-website" type="text" className="control-select" value={profile.website} onChange={(e) => setProfile((p) => ({ ...p, website: e.target.value }))} />
+          <label className="field-label" htmlFor="profile-social">Social link (optional)</label>
+          <input id="profile-social" type="text" className="control-select" value={profile.socialUrl} onChange={(e) => setProfile((p) => ({ ...p, socialUrl: e.target.value }))} />
+          {profileStatus && <div className="control-sublabel">{profileStatus}</div>}
+          <div className="export-buttons" style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn-secondary" onClick={handleProfileSave} disabled={profileBusy} style={{ width: '100%' }}>
+              Save Company Profile
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="control-block">
         <div className="field-label">Tax</div>

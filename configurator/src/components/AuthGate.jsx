@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { COUNTRIES, REGIONS } from '../data/taxRates.js';
+import { formatPostalOrZip } from '../lib/address.js';
 
 // Detects the three customer-facing entry points (shared project link,
 // legacy embedded-design link, or a downloaded HTML export) — none of these
@@ -12,10 +14,17 @@ function isCustomerFacingEntry() {
   return params.has('p') || params.has('d');
 }
 
+const BLANK_SIGNUP = {
+  email: '', password: '', companyName: '',
+  firstName: '', lastName: '', businessName: '', phone: '',
+  addressLine: '', city: '', country: 'CA', regionCode: 'CA-AB', postalCode: '',
+  website: '', socialUrl: '',
+};
+
 export default function AuthGate({ children }) {
   const [status, setStatus] = useState(() => (isCustomerFacingEntry() ? 'public' : 'checking'));
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
-  const [form, setForm] = useState({ email: '', password: '', companyName: '' });
+  const [form, setForm] = useState({ email: '', password: '', ...BLANK_SIGNUP });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -38,10 +47,27 @@ export default function AuthGate({ children }) {
   if (status === 'public' || status === 'authed') return children;
   if (status === 'checking') return null;
 
+  const hasName = form.firstName.trim() && form.lastName.trim();
+  const hasBusiness = form.businessName.trim();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setBusy(true);
     setError('');
+    if (mode === 'signup') {
+      if (!hasName && !hasBusiness) {
+        setError('Enter either your first and last name, or a business name.');
+        return;
+      }
+      if (!form.phone.trim()) {
+        setError('Phone number is required.');
+        return;
+      }
+      if (!form.addressLine.trim() || !form.city.trim() || !form.postalCode.trim()) {
+        setError('Full address (street, city, postal/zip code) is required.');
+        return;
+      }
+    }
+    setBusy(true);
     try {
       const res = await fetch(`/api/auth/${mode}`, {
         method: 'POST',
@@ -73,10 +99,87 @@ export default function AuthGate({ children }) {
 
         {mode === 'signup' && (
           <>
-            <label className="field-label" htmlFor="auth-company">Company Name</label>
+            <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+              Enter your name, a business name, or both.
+            </div>
+            <div className="settings-row">
+              <label htmlFor="auth-first">First name</label>
+              <input
+                id="auth-first" type="text" className="control-select"
+                value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+              />
+            </div>
+            <div className="settings-row">
+              <label htmlFor="auth-last">Last name</label>
+              <input
+                id="auth-last" type="text" className="control-select"
+                value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+              />
+            </div>
+            <label className="field-label" htmlFor="auth-business">Business name</label>
             <input
-              id="auth-company" type="text" className="control-select"
-              value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))}
+              id="auth-business" type="text" className="control-select"
+              value={form.businessName} onChange={(e) => setForm((f) => ({ ...f, businessName: e.target.value, companyName: e.target.value }))}
+            />
+
+            <label className="field-label" htmlFor="auth-phone">Phone</label>
+            <input
+              id="auth-phone" type="tel" required className="control-select"
+              value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            />
+
+            <label className="field-label" htmlFor="auth-address">Address</label>
+            <input
+              id="auth-address" type="text" required className="control-select" placeholder="Street address"
+              value={form.addressLine} onChange={(e) => setForm((f) => ({ ...f, addressLine: e.target.value }))}
+            />
+            <div className="settings-row">
+              <label htmlFor="auth-city">City</label>
+              <input
+                id="auth-city" type="text" required className="control-select"
+                value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+              />
+            </div>
+            <div className="settings-row">
+              <label htmlFor="auth-country">Country</label>
+              <select
+                id="auth-country" className="control-select" value={form.country}
+                onChange={(e) => {
+                  const country = e.target.value;
+                  setForm((f) => ({ ...f, country, regionCode: REGIONS[country]?.[0]?.code || '' }));
+                }}
+              >
+                {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="settings-row">
+              <label htmlFor="auth-region">Province / State</label>
+              <select
+                id="auth-region" className="control-select" value={form.regionCode}
+                onChange={(e) => setForm((f) => ({ ...f, regionCode: e.target.value }))}
+              >
+                {(REGIONS[form.country] || []).map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+              </select>
+            </div>
+            <div className="settings-row">
+              <label htmlFor="auth-postal">Postal / Zip code</label>
+              <input
+                id="auth-postal" type="text" required className="control-select"
+                value={form.postalCode}
+                onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
+                onBlur={(e) => setForm((f) => ({ ...f, postalCode: formatPostalOrZip(e.target.value, f.country) }))}
+              />
+            </div>
+
+            <label className="field-label" htmlFor="auth-website">Website (optional)</label>
+            <input
+              id="auth-website" type="text" className="control-select"
+              value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+            />
+            <label className="field-label" htmlFor="auth-social">Social link (optional)</label>
+            <input
+              id="auth-social" type="text" className="control-select"
+              value={form.socialUrl} onChange={(e) => setForm((f) => ({ ...f, socialUrl: e.target.value }))}
             />
           </>
         )}
