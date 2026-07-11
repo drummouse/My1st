@@ -1,5 +1,6 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { getUserId, requireUserId } from '../_lib/auth.js';
+import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
 
 // Merged list/create/read/update/delete/approve into one function via an
 // optional catch-all path — see api/auth/[action].js for why (Vercel's
@@ -14,10 +15,15 @@ export default async function handler(req, res) {
 
     // /api/projects — list (authenticated) or create (authenticated)
     if (!id) {
-      const ownerId = await requireUserId(req, res);
-      if (!ownerId) return;
+      const userId = await requireUserId(req, res);
+      if (!userId) return;
 
       if (req.method === 'GET') {
+        // A developer can pass ?asOwner=<id> to list a different tenant's
+        // projects for support/debugging — see api/_lib/roles.js. A plain
+        // request (no asOwner, or a non-developer caller) always lists just
+        // the caller's own.
+        const ownerId = await resolveOwnerId(req, userId);
         const rows = await sql`
           select id, job_number, customer_name, address, created_at, updated_at
           from projects
@@ -36,7 +42,7 @@ export default async function handler(req, res) {
         }
         const [row] = await sql`
           insert into projects (job_number, customer_name, address, design, owner_id)
-          values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${JSON.stringify(design)}::jsonb, ${ownerId})
+          values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${JSON.stringify(design)}::jsonb, ${userId})
           returning id, job_number, customer_name, address, created_at, updated_at
         `;
         res.status(201).json(row);
@@ -130,8 +136,9 @@ export default async function handler(req, res) {
       }
       // Projects saved before accounts existed have no owner yet — the first
       // authenticated user to edit one claims it, rather than leaving it
-      // permanently unownable.
-      if (existing.owner_id && existing.owner_id !== userId) {
+      // permanently unownable. A developer can act on any owner's project
+      // for support/debugging — see api/_lib/roles.js.
+      if (existing.owner_id && existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id))) {
         res.status(403).json({ error: 'This project belongs to a different account' });
         return;
       }
@@ -148,7 +155,7 @@ export default async function handler(req, res) {
               customer_name = ${customerName || null},
               address = ${address || null},
               design = ${JSON.stringify(design)}::jsonb,
-              owner_id = ${userId},
+              owner_id = ${existing.owner_id || userId},
               updated_at = now()
           where id = ${id}
           returning id, job_number, customer_name, address, created_at, updated_at

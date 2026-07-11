@@ -42,6 +42,11 @@ export function ensureSchema() {
       await sql`alter table users add column if not exists postal_code text`;
       await sql`alter table users add column if not exists website text`;
       await sql`alter table users add column if not exists social_url text`;
+      // 'owner' (default, every normal signup) or 'developer' (full
+      // cross-tenant access for support/debugging) — see api/_lib/roles.js
+      // and DEVELOPER_ACCESS.md. Not grantable through any API route;
+      // promoting an account requires direct database access by design.
+      await sql`alter table users add column if not exists role text not null default 'owner'`;
 
       await sql`
         create table if not exists projects (

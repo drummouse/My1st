@@ -392,6 +392,11 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   line only for whichever of those are actually set. Profile fields live on `users` (not
   `settings`) and are edited via a dedicated `profile` action on `api/auth/[action].js`, kept
   separate from the Settings save flow since it's identity/contact info, not a business setting.
+- **Developer role** — every account is `owner` by default (full access to only their own tenant,
+  as everywhere else in this doc). A `developer` role exists for cross-tenant support/debugging
+  access, granted only via direct database access (never through the app itself) — see
+  `DEVELOPER_ACCESS.md` for how to grant it, what it does and doesn't currently unlock, and the
+  security policy around not storing real credentials anywhere in this repo.
 
 ## Known simplification
 

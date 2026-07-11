@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     phone: u.phone, addressLine: u.address_line, city: u.city,
     regionCode: u.region_code, postalCode: u.postal_code,
     website: u.website, socialUrl: u.social_url,
+    role: u.role || 'owner',
   });
 
   if (action === 'signup') {
