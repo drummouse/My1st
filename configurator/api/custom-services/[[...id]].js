@@ -1,17 +1,42 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 
+// Merged list/create/update/delete into one function via an optional
+// catch-all path — see api/auth/[action].js for why.
 export default async function handler(req, res) {
-  const { id } = req.query;
-  if (!id) {
-    res.status(400).json({ error: 'id is required' });
-    return;
-  }
+  const [id] = [].concat(req.query.id || []);
 
   try {
     const ownerId = await requireUserId(req, res);
     if (!ownerId) return;
     await ensureSchema();
+
+    if (!id) {
+      if (req.method === 'GET') {
+        const rows = await sql`select * from custom_services where owner_id = ${ownerId} order by created_at asc`;
+        res.status(200).json(rows);
+        return;
+      }
+
+      if (req.method === 'POST') {
+        const { name, unit, price, description, linkUrl } = req.body || {};
+        if (!name) {
+          res.status(400).json({ error: 'name is required' });
+          return;
+        }
+        const [row] = await sql`
+          insert into custom_services (owner_id, name, unit, price, description, link_url)
+          values (${ownerId}, ${name}, ${unit || 'each'}, ${price ?? 0}, ${description || null}, ${linkUrl || null})
+          returning *
+        `;
+        res.status(201).json(row);
+        return;
+      }
+
+      res.setHeader('Allow', 'GET, POST');
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
 
     const [existing] = await sql`select owner_id from custom_services where id = ${id}`;
     if (!existing || existing.owner_id !== ownerId) {

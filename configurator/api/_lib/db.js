@@ -149,6 +149,24 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists materials_owner_id_idx on materials (owner_id)`;
+
+      // Per-project attachments — Attach File (any format, always a link in
+      // every report) and Attach Photo (images only, embedded as a small
+      // thumbnail in the PDF). `on delete cascade` since an attachment has
+      // no meaning once its project is gone.
+      await sql`
+        create table if not exists attachments (
+          id uuid primary key default gen_random_uuid(),
+          project_id uuid not null references projects(id) on delete cascade,
+          kind text not null,
+          file_name text not null,
+          url text not null,
+          mime_type text,
+          size_bytes bigint not null default 0,
+          uploaded_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists attachments_project_id_idx on attachments (project_id)`;
     })();
   }
   return schemaReady;
