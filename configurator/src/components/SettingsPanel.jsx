@@ -42,6 +42,7 @@ export default function SettingsPanel({ onSaved }) {
           taxRegion: row.tax_region || 'CA-AB',
           taxLabel: row.tax_label || 'GST',
           municipalTaxPct: toPct(row.municipal_tax_rate || 0),
+          notificationWebhookUrl: row.notification_webhook_url || '',
           defaultServices: row.default_services || DEFAULT_SERVICES,
           defaultLockedServices: row.default_locked_services || DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: row.default_accessory_colors || DEFAULT_ACCESSORY_COLORS,
@@ -60,6 +61,7 @@ export default function SettingsPanel({ onSaved }) {
           taxRegion: 'CA-AB',
           taxLabel: 'GST',
           municipalTaxPct: '0',
+          notificationWebhookUrl: '',
           defaultServices: DEFAULT_SERVICES,
           defaultLockedServices: DEFAULT_LOCKED_SERVICES,
           defaultAccessoryColors: DEFAULT_ACCESSORY_COLORS,
@@ -120,6 +122,7 @@ export default function SettingsPanel({ onSaved }) {
           taxRegion: form.taxRegion,
           taxLabel: form.taxLabel,
           municipalTaxRate: toFrac(form.municipalTaxPct),
+          notificationWebhookUrl: form.notificationWebhookUrl,
           defaultServices: form.defaultServices,
           defaultLockedServices: form.defaultLockedServices,
           defaultAccessoryColors: form.defaultAccessoryColors,
@@ -261,6 +264,21 @@ export default function SettingsPanel({ onSaved }) {
           onChange={(e) => setForm((f) => ({ ...f, reportFooterNote: e.target.value }))}
           placeholder="This is a preliminary estimate — final pricing subject to on-site verification and a signed contract."
         />
+      </div>
+
+      <div className="control-block">
+        <div className="field-label">Notifications</div>
+        <label htmlFor="settings-webhook">Approval webhook URL</label>
+        <input
+          id="settings-webhook" type="text" className="control-select"
+          value={form.notificationWebhookUrl}
+          onChange={(e) => setForm((f) => ({ ...f, notificationWebhookUrl: e.target.value }))}
+          placeholder="https://hook.us1.make.com/..."
+        />
+        <div className="control-sublabel">
+          When a customer approves a design, a <code>design.approved</code> event is POSTed here
+          (e.g. a Make.com webhook) — see INTEGRATIONS.md. Leave blank to skip notifications.
+        </div>
       </div>
 
       {status && <div className="control-sublabel">{status}</div>}

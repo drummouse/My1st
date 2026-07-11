@@ -62,13 +62,45 @@ export default async function handler(req, res) {
         set approved_at = now(),
             approved_by_name = ${approvedByName || null}
         where id = ${id}
-        returning id, approved_at, approved_by_name
+        returning id, owner_id, job_number, customer_name, address, approved_at, approved_by_name
       `;
       if (!row) {
         res.status(404).json({ error: 'Not found' });
         return;
       }
-      res.status(200).json(row);
+      // design.approved event — see INTEGRATIONS.md. Best-effort: a slow or
+      // failing webhook (or no owner/no URL configured) never changes the
+      // approval response the customer sees.
+      if (row.owner_id) {
+        try {
+          const [settingsRow] = await sql`select notification_webhook_url from settings where owner_id = ${row.owner_id}`;
+          if (settingsRow?.notification_webhook_url) {
+            const proto = req.headers['x-forwarded-proto'] || 'https';
+            const shareUrl = `${proto}://${req.headers.host}/?p=${id}`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            await fetch(settingsRow.notification_webhook_url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                event: 'design.approved',
+                projectId: id,
+                jobNumber: row.job_number,
+                customerName: row.customer_name,
+                address: row.address,
+                approvedAt: row.approved_at,
+                approvedByName: row.approved_by_name,
+                shareUrl,
+              }),
+              signal: controller.signal,
+            }).catch((err) => console.error('Approval webhook failed:', err));
+            clearTimeout(timeout);
+          }
+        } catch (err) {
+          console.error('Approval webhook lookup failed:', err);
+        }
+      }
+      res.status(200).json({ id: row.id, approved_at: row.approved_at, approved_by_name: row.approved_by_name });
       return;
     }
 

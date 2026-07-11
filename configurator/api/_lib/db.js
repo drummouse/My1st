@@ -96,6 +96,10 @@ export function ensureSchema() {
       // admin edits a rule in the Discounts panel. Those three legacy columns
       // are left in place (never dropped) as that fallback's source values.
       await sql`alter table settings add column if not exists discount_rules jsonb`;
+      // Where api/projects/[[...id]].js's approve route POSTs a
+      // design.approved event (see INTEGRATIONS.md) — null means "not
+      // configured," in which case approval just skips the notification.
+      await sql`alter table settings add column if not exists notification_webhook_url text`;
 
       // Owner-defined services beyond the fixed roof/wall/soffit/etc. set —
       // a simple name+price+unit+description(+link) catalog, not a formula
