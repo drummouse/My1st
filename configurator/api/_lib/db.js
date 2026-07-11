@@ -9,7 +9,10 @@ export const sql = neon(process.env.PROJECTS_DATABASE_URL);
 let schemaReady;
 
 // Runs once per warm serverless instance (cached promise) — idempotent, so
-// a cold start on every instance just re-confirms the schema exists.
+// a cold start on every instance just re-confirms the schema exists. If that
+// one attempt fails (a transient Neon connectivity blip, for example), the
+// cache is cleared so the next call retries instead of permanently wedging
+// this warm instance on the same stale error.
 export function ensureSchema() {
   if (!schemaReady) {
     schemaReady = (async () => {
@@ -229,7 +232,10 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists attachments_project_id_idx on attachments (project_id)`;
-    })();
+    })().catch((err) => {
+      schemaReady = undefined;
+      throw err;
+    });
   }
   return schemaReady;
 }
