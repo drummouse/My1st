@@ -14,6 +14,13 @@ const ELEVATION_DIRECTIONS = [
   { key: 'left', label: 'Left Elevation', dir: new THREE.Vector3(-1, 0, 0) },
 ];
 
+// Camera-snap constants (see snapCameraTo). Elevations look horizontally with
+// world-Z up; the Top View looks straight down (world-Z) with world-Y up so
+// the model's front sits at the bottom of the screen.
+const WORLD_UP_Z = new THREE.Vector3(0, 0, 1);
+const WORLD_UP_Y = new THREE.Vector3(0, 1, 0);
+const TOP_VIEW_DIR = new THREE.Vector3(0, 0, 1);
+
 // Average of a mesh's raw (un-deduped) vertex positions, transformed to world
 // space — a fine stand-in for the true area-weighted centroid at this scale
 // (each mesh is a single facet, so vertices repeat roughly in proportion to
@@ -279,46 +286,35 @@ const Viewer3D = forwardRef(function Viewer3D({
       return dataUrl;
     },
   }));
-  // Snaps the live (interactive) camera to look straight at one side of the
-  // model — a shortcut into the same view captureElevationViews() renders
-  // for the PDF, except this one stays live/orbitable rather than a one-shot
-  // capture. Reuses ELEVATION_DIRECTIONS (module scope) so both stay in sync.
-  const snapToElevation = (direction) => {
+  // Snaps the live (interactive) camera to look straight along `dir` at the
+  // model, framed to fit — the same views captureElevationViews()/
+  // captureRoofPlanView() render for the PDF, except left live/orbitable
+  // rather than a one-shot capture. `up` orients the screen: elevations keep
+  // world-Z up; the top-down view uses world-Y so the model's front (−Y) sits
+  // at the bottom, matching the usual roof-plan orientation.
+  const snapCameraTo = (dir, up) => {
     const s = sceneRef.current;
-    const dir = ELEVATION_DIRECTIONS.find((d) => d.key === direction)?.dir;
     if (!s?.camera || !s.renderer || !s.root || !s.controls || !dir) return;
     const { camera, renderer, root, controls } = s;
     const box = new THREE.Box3().setFromObject(root);
     const aspect = renderer.domElement.width / renderer.domElement.height;
     const { center, distance } = computeFramingDistance(box, dir, aspect, camera.fov);
     camera.position.copy(center).addScaledVector(dir, distance);
-    camera.up.set(0, 0, 1);
+    camera.up.copy(up);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
     controls.target.copy(center);
     controls.update();
   };
 
-  // Snaps the live camera straight down onto the roof — the same top-down
-  // framing captureRoofPlanView() renders for the PDF (dir 0,0,1), except
-  // live/orbitable. `up` points at the model's +Y so its front (−Y, the
-  // Front Elevation direction) sits at the bottom of the screen, matching
-  // the usual roof-plan orientation.
-  const snapToTop = () => {
-    const s = sceneRef.current;
-    if (!s?.camera || !s.renderer || !s.root || !s.controls) return;
-    const { camera, renderer, root, controls } = s;
-    const box = new THREE.Box3().setFromObject(root);
-    const aspect = renderer.domElement.width / renderer.domElement.height;
-    const dir = new THREE.Vector3(0, 0, 1);
-    const { center, distance } = computeFramingDistance(box, dir, aspect, camera.fov);
-    camera.position.copy(center).addScaledVector(dir, distance);
-    camera.up.set(0, 1, 0);
-    camera.lookAt(center);
-    camera.updateProjectionMatrix();
-    controls.target.copy(center);
-    controls.update();
+  // Reuses ELEVATION_DIRECTIONS (module scope) so the live buttons and the PDF
+  // captures stay in sync on what each of the four sides means.
+  const snapToElevation = (direction) => {
+    const dir = ELEVATION_DIRECTIONS.find((d) => d.key === direction)?.dir;
+    if (dir) snapCameraTo(dir, WORLD_UP_Z);
   };
+
+  const snapToTop = () => snapCameraTo(TOP_VIEW_DIR, WORLD_UP_Y);
 
   const onFacetClickRef = useRef(onFacetClick);
   onFacetClickRef.current = onFacetClick;
