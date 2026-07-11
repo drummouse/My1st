@@ -219,6 +219,22 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   owner has since changed their company-wide GST rate or discount
   percentages. A brand-new, never-saved project still tracks live Settings
   until that first save freezes it.
+- **Company logo** (Settings → Company Logo) — uploads via `@vercel/blob`'s
+  client-side direct-upload path (the browser uploads straight to Blob
+  storage with a signed token from `api/upload.js`, bypassing Vercel's
+  serverless function body-size limit) rather than through a server route
+  handling the file itself. `api/upload.js` is written as one shared route
+  for every Blob-backed upload in the app — the caller passes a `kind`
+  (`logo` now; `photo`/`file` planned for project attachments) and the route
+  enforces that kind's own content-type/size limit (5 MB, PNG/JPEG/WebP/SVG,
+  for a logo), so a future looser limit on one kind can't be used to bypass
+  a stricter one on another. Shown in the app header and drawn on the PDF
+  cover page (`drawCoverPage` in `exportPdf.js`, fit within a fixed box
+  preserving the logo's own aspect ratio via `doc.getImageProperties`) —
+  `handleExportPdf` fetches the stored logo URL and converts it to a data
+  URL first (`src/lib/fileUtils.js`'s `urlToDataUrl`, also the landing spot
+  for the same conversion once Photo attachments need embedded thumbnails),
+  since jsPDF's `addImage` needs an already-loaded image, not a remote URL.
 - **QR code on the PDF cover page** — when the current design has been saved
   as a Project (`currentProjectId` is set), `handleExportPdf` generates a QR
   (via the `qrcode` package) encoding that project's `?p=<id>` URL and

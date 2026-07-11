@@ -28,10 +28,22 @@ function drawPageHeader(doc, brand, title) {
   doc.line(MARGIN, 34, PAGE_W - MARGIN, 34);
 }
 
-function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote) {
+function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl) {
   const [ar, ag, ab] = hexToRgb(brand.accent);
   doc.setFillColor(ar, ag, ab);
   doc.rect(0, 0, PAGE_W, 10, 'F');
+
+  if (logoDataUrl) {
+    // Fit within a fixed box (top-right, clear of the brand name at left)
+    // preserving the logo's own aspect ratio, whatever shape it is.
+    const boxW = 150;
+    const boxH = 60;
+    const { width: iw, height: ih } = doc.getImageProperties(logoDataUrl);
+    const scale = Math.min(boxW / iw, boxH / ih);
+    const w = iw * scale;
+    const h = ih * scale;
+    doc.addImage(logoDataUrl, PAGE_W - MARGIN - w, 32, w, h);
+  }
 
   let y = 130;
   doc.setFont('helvetica', 'bold');
@@ -545,11 +557,11 @@ export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
-  qrDataUrl, shareUrl, reportFooterNote,
+  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
-  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote);
+  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl);
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,

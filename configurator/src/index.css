@@ -28,6 +28,8 @@ body {
   border-bottom: 3px solid var(--brand-accent);
 }
 
+.app-header-brand { display: flex; align-items: center; gap: 0.7rem; }
+.app-header-logo { height: 32px; max-width: 140px; object-fit: contain; }
 .app-title { font-size: 1.1rem; font-weight: 700; }
 .app-subtitle { font-size: 0.8rem; color: #a8b1bd; }
 .app-header-actions { display: flex; align-items: center; gap: 0.6rem; }
@@ -597,6 +599,9 @@ body {
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; }
 .settings-row label { font-size: 0.82rem; }
 .settings-row input { width: 90px; text-align: right; }
+
+.settings-logo-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; }
+.settings-logo-preview { height: 36px; max-width: 120px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 5px; padding: 2px; background: #fff; }
 
 .auth-gate {
   min-height: 100vh;

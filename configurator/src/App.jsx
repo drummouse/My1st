@@ -18,6 +18,7 @@ import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib/designState.js';
+import { urlToDataUrl } from './lib/fileUtils.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS } from './data/pricing.js';
 import { colorById } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -485,6 +486,14 @@ export default function App() {
         console.error('QR code generation failed:', err);
       }
     }
+    let logoDataUrl = null;
+    if (companySettings?.logo_url) {
+      try {
+        logoDataUrl = await urlToDataUrl(companySettings.logo_url);
+      } catch (err) {
+        console.error('Logo fetch failed:', err);
+      }
+    }
     buildEstimatePdf({
       brand,
       house,
@@ -505,6 +514,7 @@ export default function App() {
       wallFacesForPricing,
       qrDataUrl,
       shareUrl,
+      logoDataUrl,
       reportFooterNote: companySettings?.report_footer_note,
       facetLabels,
       openingsSchedule: labeledOpenings,
@@ -538,9 +548,12 @@ export default function App() {
   return (
     <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
       <header className="app-header">
-        <div>
-          <div className="app-title">{brand.name} 3D Configurator</div>
-          <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
+        <div className="app-header-brand">
+          {companySettings?.logo_url && <img src={companySettings.logo_url} alt="Company logo" className="app-header-logo" />}
+          <div>
+            <div className="app-title">{brand.name} 3D Configurator</div>
+            <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
+          </div>
         </div>
         <div className="app-header-actions">
           {!isCustomerView && (

@@ -79,6 +79,7 @@ export function ensureSchema() {
       await sql`alter table settings add column if not exists id uuid default gen_random_uuid()`;
       await sql`alter table settings add column if not exists owner_id uuid references users(id)`;
       await sql`create unique index if not exists settings_owner_id_key on settings (owner_id)`;
+      await sql`alter table settings add column if not exists logo_url text`;
     })();
   }
   return schemaReady;

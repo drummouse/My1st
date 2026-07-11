@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 import ColorPickerButton from './ColorPickerButton.jsx';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from '../data/defaults.js';
 
@@ -25,6 +26,7 @@ export default function SettingsPanel({ onClose, onSaved }) {
   const [form, setForm] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -44,6 +46,7 @@ export default function SettingsPanel({ onClose, onSaved }) {
           defaultRoofColorId: row.default_roof_color_id || 'wk-04',
           defaultWallColorId: row.default_wall_color_id || 'wk-01',
           reportFooterNote: row.report_footer_note || '',
+          logoUrl: row.logo_url || '',
         });
       })
       .catch((err) => {
@@ -60,6 +63,7 @@ export default function SettingsPanel({ onClose, onSaved }) {
           defaultRoofColorId: 'wk-04',
           defaultWallColorId: 'wk-01',
           reportFooterNote: '',
+          logoUrl: '',
         });
       });
   }, []);
@@ -85,6 +89,26 @@ export default function SettingsPanel({ onClose, onSaved }) {
   const setAccessoryColor = (key) => (val) =>
     setForm((f) => ({ ...f, defaultAccessoryColors: { ...f.defaultAccessoryColors, [key]: val } }));
 
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    setLogoBusy(true);
+    setStatus('Uploading logo…');
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        clientPayload: JSON.stringify({ kind: 'logo' }),
+      });
+      setForm((f) => ({ ...f, logoUrl: blob.url }));
+      setStatus('Logo uploaded — click Save Settings to apply it.');
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      setStatus('Could not upload the logo — check the file is an image under 5 MB and try again.');
+    }
+    setLogoBusy(false);
+    setTimeout(() => setStatus(''), 5000);
+  };
+
   const handleSave = async () => {
     setBusy(true);
     setStatus('Saving…');
@@ -103,6 +127,7 @@ export default function SettingsPanel({ onClose, onSaved }) {
           defaultRoofColorId: form.defaultRoofColorId,
           defaultWallColorId: form.defaultWallColorId,
           reportFooterNote: form.reportFooterNote,
+          logoUrl: form.logoUrl,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -190,6 +215,19 @@ export default function SettingsPanel({ onClose, onSaved }) {
 
         <div className="control-block">
           <div className="field-label">Report branding</div>
+          <label className="field-label" htmlFor="settings-logo">Company Logo</label>
+          <div className="settings-logo-row">
+            {form.logoUrl && <img src={form.logoUrl} alt="Company logo" className="settings-logo-preview" />}
+            <input
+              id="settings-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              disabled={logoBusy}
+              onChange={(e) => handleLogoUpload(e.target.files?.[0])}
+            />
+            {form.logoUrl && (
+              <button type="button" className="layer-remove-btn" onClick={() => setForm((f) => ({ ...f, logoUrl: '' }))} aria-label="Remove logo">×</button>
+            )}
+          </div>
+          <div className="control-sublabel">Shown on the PDF cover page and in the app header. PNG/JPEG/WebP/SVG, up to 5 MB.</div>
           <label htmlFor="settings-footer">Footer note (PDF cover page)</label>
           <textarea
             id="settings-footer" className="control-select" rows={2}

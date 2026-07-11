@@ -29,18 +29,18 @@ export default async function handler(req, res) {
       const {
         gstRate, fullWrapDiscountPct, soffitFasciaDiscountPct, gutterDownspoutFree,
         defaultServices, defaultLockedServices, defaultAccessoryColors,
-        defaultRoofColorId, defaultWallColorId, reportFooterNote,
+        defaultRoofColorId, defaultWallColorId, reportFooterNote, logoUrl,
       } = req.body || {};
       const [row] = await sql`
         insert into settings (
           owner_id, gst_rate, full_wrap_discount_pct, soffit_fascia_discount_pct, gutter_downspout_free,
           default_services, default_locked_services, default_accessory_colors,
-          default_roof_color_id, default_wall_color_id, report_footer_note, updated_at
+          default_roof_color_id, default_wall_color_id, report_footer_note, logo_url, updated_at
         )
         values (
           ${ownerId}, ${gstRate}, ${fullWrapDiscountPct}, ${soffitFasciaDiscountPct}, ${gutterDownspoutFree},
           ${JSON.stringify(defaultServices)}::jsonb, ${JSON.stringify(defaultLockedServices)}::jsonb, ${JSON.stringify(defaultAccessoryColors)}::jsonb,
-          ${defaultRoofColorId || null}, ${defaultWallColorId || null}, ${reportFooterNote || null}, now()
+          ${defaultRoofColorId || null}, ${defaultWallColorId || null}, ${reportFooterNote || null}, ${logoUrl || null}, now()
         )
         on conflict (owner_id) do update set
           gst_rate = excluded.gst_rate,
@@ -53,6 +53,7 @@ export default async function handler(req, res) {
           default_roof_color_id = excluded.default_roof_color_id,
           default_wall_color_id = excluded.default_wall_color_id,
           report_footer_note = excluded.report_footer_note,
+          logo_url = excluded.logo_url,
           updated_at = now()
         returning *
       `;
