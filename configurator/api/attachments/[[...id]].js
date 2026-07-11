@@ -1,5 +1,6 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { getUserId } from '../_lib/auth.js';
+import { canActOnOwner } from '../_lib/roles.js';
 
 const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 const FILE_MAX_BYTES = 25 * 1024 * 1024;
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
           res.status(404).json({ error: 'Project not found' });
           return;
         }
-        if (project.owner_id && project.owner_id !== userId) {
+        if (project.owner_id && project.owner_id !== userId && !(await canActOnOwner(userId, project.owner_id))) {
           res.status(403).json({ error: 'This project belongs to a different account' });
           return;
         }
@@ -94,7 +95,7 @@ export default async function handler(req, res) {
         res.status(404).json({ error: 'Not found' });
         return;
       }
-      if (existing.owner_id && existing.owner_id !== userId) {
+      if (existing.owner_id && existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id))) {
         res.status(403).json({ error: 'This project belongs to a different account' });
         return;
       }

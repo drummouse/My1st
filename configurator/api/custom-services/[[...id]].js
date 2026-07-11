@@ -1,5 +1,6 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
+import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
 
 // Merged list/create/update/delete into one function via an optional
 // catch-all path — see api/auth/[action].js for why.
@@ -7,12 +8,15 @@ export default async function handler(req, res) {
   const [id] = [].concat(req.query.id || []);
 
   try {
-    const ownerId = await requireUserId(req, res);
-    if (!ownerId) return;
+    const userId = await requireUserId(req, res);
+    if (!userId) return;
     await ensureSchema();
 
     if (!id) {
       if (req.method === 'GET') {
+        // A developer can pass ?asOwner=<id> to view a different tenant's
+        // custom services for support/debugging — see api/_lib/roles.js.
+        const ownerId = await resolveOwnerId(req, userId);
         const rows = await sql`select * from custom_services where owner_id = ${ownerId} order by created_at asc`;
         res.status(200).json(rows);
         return;
@@ -26,7 +30,7 @@ export default async function handler(req, res) {
         }
         const [row] = await sql`
           insert into custom_services (owner_id, name, unit, price, description, link_url)
-          values (${ownerId}, ${name}, ${unit || 'each'}, ${price ?? 0}, ${description || null}, ${linkUrl || null})
+          values (${userId}, ${name}, ${unit || 'each'}, ${price ?? 0}, ${description || null}, ${linkUrl || null})
           returning *
         `;
         res.status(201).json(row);
@@ -39,7 +43,7 @@ export default async function handler(req, res) {
     }
 
     const [existing] = await sql`select owner_id from custom_services where id = ${id}`;
-    if (!existing || existing.owner_id !== ownerId) {
+    if (!existing || (existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id)))) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

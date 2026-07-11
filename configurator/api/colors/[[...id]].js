@@ -1,6 +1,7 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 import { handleFolderList, handleFolderItem } from '../_lib/folders.js';
+import { canActOnOwner } from '../_lib/roles.js';
 
 // Merged list/create/update/delete into one function via an optional
 // catch-all path — see api/auth/[action].js for why. Also carries this
@@ -86,7 +87,7 @@ export default async function handler(req, res) {
     if (!userId) return;
 
     const [existing] = await sql`select owner_id from colors where id = ${id}`;
-    if (!existing || existing.owner_id !== userId) {
+    if (!existing || (existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id)))) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

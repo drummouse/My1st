@@ -8,6 +8,17 @@ the code where that thing happens, not building a general dispatcher up front.
 
 ## Data dictionary
 
+### Account (`users` table / `GET /api/auth/me`)
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | The `owner_id` every other table's rows point at |
+| `email`, `password_hash` | text | Password never leaves the server — see `api/auth/[action].js` |
+| `first_name`, `last_name`, `business_name` | text | At least one of (first+last) or business_name is required at signup |
+| `phone`, `address_line`, `city`, `region_code`, `postal_code` | text | Required at signup — see README's "Required account profile" |
+| `website`, `social_url` | text | Optional |
+| `role` | text | `'owner'` (default) or `'developer'` — see `DEVELOPER_ACCESS.md`. Never set via any API route; granted by direct database access only |
+
 ### Project (`projects` table / `GET /api/projects/:id`)
 
 | Field | Type | Notes |
@@ -68,16 +79,16 @@ All routes are under `/api`. Public routes need no session; authenticated routes
 
 | Route | Methods | Auth | Notes |
 | --- | --- | --- | --- |
-| `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` | POST/POST/POST/GET | Public | One user = one tenant (`owner_id`) |
-| `/api/projects` | GET, POST | Authenticated | List / create this owner's projects |
+| `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/profile` | POST/POST/POST/GET/PUT | Public except `/me`, `/profile` | One user = one tenant (`owner_id`) |
+| `/api/projects` | GET, POST | Authenticated | List / create; GET supports `?asOwner=<id>` for a `developer` account (see `DEVELOPER_ACCESS.md`) |
 | `/api/projects/:id` | GET | **Public** | A customer opens `?p=:id` with no account |
-| `/api/projects/:id` | PUT, DELETE | Authenticated | First authenticated editor claims an ownerless legacy project |
+| `/api/projects/:id` | PUT, DELETE | Authenticated | First authenticated editor claims an ownerless legacy project; a `developer` can act on any owner's project |
 | `/api/projects/:id/approve` | POST | **Public** | Fires the `design.approved` event below |
-| `/api/settings` | GET, PUT | Authenticated | One row per owner; PUT is a partial update (unset fields keep their existing value) |
-| `/api/custom-services`, `/api/custom-services/:id` | GET/POST, PUT/DELETE | Authenticated | |
-| `/api/colors`, `/api/colors/:id` | GET/POST, PUT/DELETE | GET is **public with `?ownerId=`**, otherwise authenticated; write is always authenticated | |
-| `/api/materials`, `/api/materials/:id` | GET/POST, PUT/DELETE | Same split as colors | |
-| `/api/attachments?projectId=`, `/api/attachments/:id` | GET/POST, DELETE | GET is **public**; POST/DELETE require the project's owner | 15 MB/photo, 25 MB/file, 200 MB/project |
+| `/api/settings` | GET, PUT | Authenticated | One row per owner; PUT is a partial update (unset fields keep their existing value); supports `?asOwner=<id>` for a `developer` account |
+| `/api/custom-services`, `/api/custom-services/:id` | GET/POST, PUT/DELETE | Authenticated | GET supports `?asOwner=<id>` for a `developer` account |
+| `/api/colors`, `/api/colors/:id` | GET/POST, PUT/DELETE | GET is **public with `?ownerId=`**, otherwise authenticated; write is always authenticated | A `developer` account can PUT/DELETE any owner's row |
+| `/api/materials`, `/api/materials/:id` | GET/POST, PUT/DELETE | Same split as colors | Same `developer` write access as colors |
+| `/api/attachments?projectId=`, `/api/attachments/:id` | GET/POST, DELETE | GET is **public**; POST/DELETE require the project's owner | 15 MB/photo, 25 MB/file, 200 MB/project; a `developer` account can POST/DELETE on any owner's project |
 | `/api/upload` | POST | Authenticated | Vercel Blob client-upload token endpoint; `kind` is `logo`\|`photo`\|`file` |
 
 Each of the above is implemented as a single Vercel serverless function per resource (an optional

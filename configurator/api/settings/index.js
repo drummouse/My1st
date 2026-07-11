@@ -1,10 +1,16 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
+import { resolveOwnerId } from '../_lib/roles.js';
 
 export default async function handler(req, res) {
   try {
-    const ownerId = await requireUserId(req, res);
-    if (!ownerId) return;
+    const userId = await requireUserId(req, res);
+    if (!userId) return;
+    // A developer can pass ?asOwner=<id> to view/edit a different tenant's
+    // Settings for support/debugging — see api/_lib/roles.js. A plain
+    // request (no asOwner, or a non-developer caller) always acts on the
+    // caller's own settings.
+    const ownerId = await resolveOwnerId(req, userId);
     await ensureSchema();
 
     if (req.method === 'GET') {
