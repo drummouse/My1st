@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
-import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { money, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
+import { allRoofProducts, allWallProducts } from '../data/pricing.js';
+import { money, formatPct, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
@@ -28,10 +28,22 @@ function drawPageHeader(doc, brand, title) {
   doc.line(MARGIN, 34, PAGE_W - MARGIN, 34);
 }
 
-function drawCoverPage(doc, brand, house) {
+function drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, companyProfile) {
   const [ar, ag, ab] = hexToRgb(brand.accent);
   doc.setFillColor(ar, ag, ab);
   doc.rect(0, 0, PAGE_W, 10, 'F');
+
+  if (logoDataUrl) {
+    // Fit within a fixed box (top-right, clear of the brand name at left)
+    // preserving the logo's own aspect ratio, whatever shape it is.
+    const boxW = 150;
+    const boxH = 60;
+    const { width: iw, height: ih } = doc.getImageProperties(logoDataUrl);
+    const scale = Math.min(boxW / iw, boxH / ih);
+    const w = iw * scale;
+    const h = ih * scale;
+    doc.addImage(logoDataUrl, PAGE_W - MARGIN - w, 32, w, h);
+  }
 
   let y = 130;
   doc.setFont('helvetica', 'bold');
@@ -43,6 +55,23 @@ function drawCoverPage(doc, brand, house) {
   doc.setFontSize(12);
   doc.setTextColor(90);
   doc.text(brand.tagline, MARGIN, y);
+
+  // Business contact line — each segment only appears when actually set
+  // (Company Profile in Settings; website/social are optional there), so a
+  // brand-new account with a bare-minimum profile doesn't show empty dots.
+  const contactParts = [
+    companyProfile?.phone,
+    [companyProfile?.addressLine, companyProfile?.city].filter(Boolean).join(', '),
+    companyProfile?.website,
+    companyProfile?.socialUrl,
+  ].filter(Boolean);
+  if (contactParts.length) {
+    y += 16;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(contactParts.join('   ·   '), MARGIN, y);
+  }
 
   y += 60;
   doc.setDrawColor(...hexToRgb(brand.accent));
@@ -85,10 +114,29 @@ function drawCoverPage(doc, brand, house) {
     ry += rowH;
   });
 
+  if (qrDataUrl) {
+    const qrSize = 90;
+    const qrY = cardTop + cardH + 36;
+    doc.addImage(qrDataUrl, 'PNG', cardX, qrY, qrSize, qrSize);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text('Scan for a live, rotatable 3D view', cardX + qrSize + 16, qrY + 30);
+    if (shareUrl) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(120);
+      drawWrapped(doc, shareUrl, cardX + qrSize + 16, qrY + 46, cardW - qrSize - 16, 11);
+    }
+  }
+
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
   doc.setTextColor(140);
-  doc.text('This is a preliminary estimate — final pricing subject to on-site verification and a signed contract.', MARGIN, PAGE_H - MARGIN);
+  doc.text(
+    reportFooterNote || 'This is a preliminary estimate — final pricing subject to on-site verification and a signed contract.',
+    MARGIN, PAGE_H - MARGIN
+  );
 }
 
 // Draws possibly-wrapping text and returns the y position after it — jsPDF's
@@ -211,6 +259,23 @@ function drawIsoAndSummaryPage(doc, {
     doc.text(`${li.qty.toLocaleString()} ${li.unit}`, col.qty, y, { align: 'right' });
     doc.text(money(li.total), col.total, y, { align: 'right' });
     y = drawWrapped(doc, shortLabel(li.label), col.item, y, itemMaxWidth, 10);
+    if (li.description) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      y = drawWrapped(doc, li.description, col.item, y, itemMaxWidth, 9);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.2);
+    }
+    if (li.linkUrl) {
+      doc.setFontSize(7);
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink('Link ↗', col.item, y, { url: li.linkUrl });
+      doc.setTextColor(0);
+      doc.setFontSize(8.2);
+      y += 9;
+    }
   });
 
   y += 3;
@@ -229,20 +294,20 @@ function drawIsoAndSummaryPage(doc, {
   };
 
   totalRow('Subtotal', money(estimate.subtotal));
-  if (estimate.deals.fullWrap) totalRow('Full Wrap discount (7%)', `-${money(estimate.deals.fullWrapDiscountAmount)}`, { color: [13, 122, 62] });
+  estimate.appliedDiscounts
+    .filter((d) => d.scope === 'subtotal')
+    .forEach((d) => totalRow(`${d.name} (${Math.round(d.pct * 100)}%)`, `-${money(d.amount)}`, { color: [13, 122, 62] }));
   if (estimate.manualDiscount > 0) totalRow('Additional discount', `-${money(estimate.manualDiscount)}`, { color: [13, 122, 62] });
   totalRow('Pre-tax total', money(estimate.preTaxTotal));
-  totalRow(`GST (${(estimate.gstRate * 100).toFixed(0)}%)`, money(estimate.gst));
+  totalRow(`${estimate.taxLabel} (${formatPct(estimate.taxRate)}%)`, money(estimate.taxAmount));
   totalRow('TOTAL', money(estimate.total), { bold: true });
 
-  if (estimate.deals.soffitFasciaDeal || estimate.deals.gutterDownspoutDeal || estimate.deals.fullWrap) {
+  if (estimate.appliedDiscounts.length) {
     y += 6;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.8);
     doc.setTextColor(13, 122, 62);
-    if (estimate.deals.soffitFasciaDeal) { doc.text('✓ Soffit + Fascia package — 50% off fascia', rightX, y, { maxWidth: colW }); y += 10; }
-    if (estimate.deals.gutterDownspoutDeal) { doc.text('✓ Gutters + Downspouts package — downspouts free', rightX, y, { maxWidth: colW }); y += 10; }
-    if (estimate.deals.fullWrap) { doc.text('✓ Full Wrap package — 7% off total', rightX, y, { maxWidth: colW }); y += 10; }
+    estimate.appliedDiscounts.forEach((d) => { doc.text(d.summary, rightX, y, { maxWidth: colW }); y += 10; });
     doc.setTextColor(0);
   }
 }
@@ -499,14 +564,81 @@ function drawFacetDetailPages(doc, {
   };
 
   const roofFacetRows = roofFacesForPricing?.length
-    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, ROOF_PRODUCTS, roofProduct.id, roofColorId, facetLabels)
+    ? buildFacetTable(roofFacesForPricing, uniformFinish ? {} : facetOverrides, allRoofProducts(), roofProduct.id, roofColorId, facetLabels)
     : [];
   const wallFacetRows = wallFacesForPricing?.length
-    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, WALL_PRODUCTS, wallProduct.id, wallColorId, facetLabels)
+    ? buildFacetTable(wallFacesForPricing, uniformFinish ? {} : facetOverrides, allWallProducts(), wallProduct.id, wallColorId, facetLabels)
     : [];
 
   if (roofFacetRows.length) renderFacetTable('Roof Slopes', roofFacetRows);
   if (wallFacetRows.length) renderFacetTable('Wall Segments', wallFacetRows);
+}
+
+// Files are links only (jsPDF can't embed another PDF anyway, and this
+// keeps report generation fast regardless of file count); Photos get a
+// small embedded thumbnail (already converted to a data URL by the caller —
+// see App.jsx's handleExportPdf) that's also a link to the full-resolution
+// original, never the full-size image inline, so this page's layout time
+// and size stay predictable no matter how many photos get attached.
+function drawAttachmentsPage(doc, { brand, attachmentFiles, attachmentPhotos }) {
+  if (!attachmentFiles?.length && !attachmentPhotos?.length) return;
+  doc.addPage();
+  drawPageHeader(doc, brand, 'Attachments');
+  let y = 50;
+  const bottom = PAGE_H - MARGIN;
+
+  if (attachmentFiles?.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text('Files', MARGIN, y);
+    y += 18;
+    doc.setFontSize(9);
+    attachmentFiles.forEach((f) => {
+      if (y > bottom - 14) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink(f.file_name, MARGIN, y, { url: f.url });
+      doc.setTextColor(140);
+      doc.text(`${(f.size_bytes / (1024 * 1024)).toFixed(1)} MB`, PAGE_W - MARGIN, y, { align: 'right' });
+      doc.setTextColor(0);
+      y += 16;
+    });
+    y += 10;
+  }
+
+  if (attachmentPhotos?.length) {
+    if (y > bottom - 140) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text('Photos', MARGIN, y);
+    y += 14;
+
+    const cols = 3;
+    const gap = 12;
+    const cellW = (PAGE_W - MARGIN * 2 - gap * (cols - 1)) / cols;
+    const cellH = cellW * 0.75;
+    let col = 0;
+    attachmentPhotos.forEach((p) => {
+      if (col === 0 && y + cellH + 26 > bottom) { doc.addPage(); drawPageHeader(doc, brand, 'Attachments'); y = 50; }
+      const x = MARGIN + col * (cellW + gap);
+      try {
+        doc.setDrawColor(225);
+        doc.roundedRect(x, y, cellW, cellH, 3, 3, 'S');
+        drawImageContained(doc, p.dataUrl, x + 2, y + 2, cellW - 4, cellH - 4);
+      } catch {
+        // Skip a photo that fails to draw — keep the rest of the report.
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 90, 200);
+      doc.textWithLink('Full resolution', x, y + cellH + 11, { url: p.url });
+      doc.setTextColor(0);
+      col += 1;
+      if (col === cols) { col = 0; y += cellH + 24; }
+    });
+  }
 }
 
 function stampFootersAndPageNumbers(doc, house) {
@@ -526,10 +658,11 @@ export function buildEstimatePdf({
   brand, house, isoSnapshots, elevationViews, roofPlanView, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
+  qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, attachmentFiles, attachmentPhotos, companyProfile,
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
-  drawCoverPage(doc, brand, house);
+  drawCoverPage(doc, brand, house, qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, companyProfile);
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
@@ -544,6 +677,8 @@ export function buildEstimatePdf({
     brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
     roofFacesForPricing, wallFacesForPricing, facetLabels,
   });
+
+  drawAttachmentsPage(doc, { brand, attachmentFiles, attachmentPhotos });
 
   stampFootersAndPageNumbers(doc, house);
 

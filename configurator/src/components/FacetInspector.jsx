@@ -1,12 +1,14 @@
-import { ROOF_PRODUCTS, WALL_PRODUCTS } from '../data/pricing.js';
-import { RAL_COLORS } from '../data/colors.js';
+import { allRoofProducts, allWallProducts } from '../data/pricing.js';
+import { allColors } from '../data/colors.js';
 
 const SERIES_ORDER = ['Icecrystal Relief', 'Printech Woodgrain', 'Wrinkle Coating'];
 
 export default function FacetInspector({ facet, effectiveProductId, effectiveColorId, hasOverride, onProductChange, onColorChange, onClear, onClose }) {
   if (!facet) return null;
-  const products = facet.role === 'roof' ? ROOF_PRODUCTS : WALL_PRODUCTS;
+  const products = facet.role === 'roof' ? allRoofProducts() : allWallProducts();
   const roleLabel = facet.role === 'roof' ? 'Roof' : 'Wall';
+  const colors = allColors();
+  const seriesList = [...SERIES_ORDER, ...new Set(colors.map((c) => c.series).filter((s) => !SERIES_ORDER.includes(s)))];
 
   return (
     <div className="facet-inspector">
@@ -27,9 +29,9 @@ export default function FacetInspector({ facet, effectiveProductId, effectiveCol
 
       <label className="field-label" htmlFor="facet-color">Color</label>
       <select id="facet-color" className="control-select" value={effectiveColorId} onChange={(e) => onColorChange(e.target.value)}>
-        {SERIES_ORDER.map((series) => (
+        {seriesList.map((series) => (
           <optgroup key={series} label={series}>
-            {RAL_COLORS.filter((c) => c.series === series).map((c) => (
+            {colors.filter((c) => c.series === series).map((c) => (
               <option key={c.id} value={c.id}>{c.name} — {c.code}</option>
             ))}
           </optgroup>

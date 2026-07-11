@@ -46,6 +46,38 @@ export const DOWNSPOUT_OPTIONS = [
   { id: '3x3-square', label: '3x3 Square Downspout', pricePerLf: 10.0 },
 ];
 
+// Owner-added materials from the Materials Library (Phase 6) — same
+// fetch-once-push-in pattern as setExtraColors() in colors.js, so every
+// existing ROOF_PRODUCTS/WALL_PRODUCTS lookup (pricingEngine's product
+// resolution, ProductSelector's dropdown, FacetInspector's per-facet
+// override picker) picks up custom materials without changing how each of
+// those call sites works.
+// The merged arrays are built once here (not on every allRoofProducts()/
+// allWallProducts() call) — App.jsx calls calculateEstimate/exportPdf/
+// exportEstimate several times per render and per export pass, each doing
+// its own product lookups, so rebuilding via spread on every call adds up
+// and also hands components a fresh array reference each time (defeating
+// any reference-equality memoization downstream).
+let extraRoofProducts = [];
+let extraWallProducts = [];
+let mergedRoofProducts = ROOF_PRODUCTS;
+let mergedWallProducts = WALL_PRODUCTS;
+
+export function setExtraMaterials({ roof, wall } = {}) {
+  extraRoofProducts = Array.isArray(roof) ? roof : [];
+  extraWallProducts = Array.isArray(wall) ? wall : [];
+  mergedRoofProducts = extraRoofProducts.length ? [...ROOF_PRODUCTS, ...extraRoofProducts] : ROOF_PRODUCTS;
+  mergedWallProducts = extraWallProducts.length ? [...WALL_PRODUCTS, ...extraWallProducts] : WALL_PRODUCTS;
+}
+
+export function allRoofProducts() {
+  return mergedRoofProducts;
+}
+
+export function allWallProducts() {
+  return mergedWallProducts;
+}
+
 export const ACCESSORY_PRICING = {
   soffit: { label: 'Soffit', pricePerSqft: 10.0 },
   fascia: { label: 'Fascia', pricePerLf: 10.0 },
