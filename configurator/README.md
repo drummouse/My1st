@@ -196,11 +196,19 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   session cookie. A project saved before accounts existed (`owner_id` null)
   is auto-claimed by whichever authenticated user edits it first, rather than
   becoming permanently unownable.
-- **Company Settings** (`src/components/SettingsPanel.jsx`, admin-only —
-  hidden along with everything else in customer view) — a "Settings" button
-  in the header opens a modal for GST rate, the Full Wrap / Soffit+Fascia
-  package-deal percentages, whether Downspouts are free with the Gutters
-  package, New Project's default services/locks/colors, and a PDF footer
+- **Nav bar** (`NAV_SECTIONS` in `App.jsx`, admin-only — hidden in customer
+  view) — a thin tab strip under the header switching which section renders
+  (`Configurator`, today's main view, is the default); more tabs land here
+  as their features ship (Discounts, Custom Services, Materials). Not a
+  router — just a plain `activeSection` state toggle. Switching away from
+  Configurator hides it with `display: none` rather than unmounting it, so
+  the 3D viewer (expensive to tear down/rebuild) survives a trip to Settings
+  and back; contrast with the deliberate "Hide 3D Model" toolbar button,
+  which does fully unmount it.
+- **Company Settings** (`src/components/SettingsPanel.jsx`, its own nav
+  section) — GST rate, the Full Wrap / Soffit+Fascia package-deal
+  percentages, whether Downspouts are free with the Gutters package, New
+  Project's default services/locks/colors, a company logo, and a PDF footer
   note. Stored in a `settings` table (`api/settings/index.js`) with one row
   per owner — deliberately separate from the per-project `design` JSONB in
   `projects` since these apply across every project for that account, not to

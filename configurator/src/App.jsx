@@ -25,6 +25,14 @@ import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from './data/defaults.js';
 
+// More sections land here as their phases ship (Discounts, Custom Services,
+// Materials) — a thin shell over existing/future panel components, not a
+// router: switching sections just toggles which one renders.
+const NAV_SECTIONS = [
+  { key: 'configurator', label: 'Configurator' },
+  { key: 'settings', label: 'Settings' },
+];
+
 const BLANK_HOUSE = {
   jobNumber: '',
   customerName: '',
@@ -79,7 +87,7 @@ export default function App() {
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [approvedAt, setApprovedAt] = useState(null);
   const [approveBusy, setApproveBusy] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [activeSection, setActiveSection] = useState('configurator');
   const [companySettings, setCompanySettings] = useState(null);
   // Once a design has been saved or loaded, this freezes the GST/discount
   // rates it was quoted at — see designState.js's pricingSettings comment.
@@ -557,19 +565,35 @@ export default function App() {
         </div>
         <div className="app-header-actions">
           {!isCustomerView && (
-            <>
-              <button type="button" className="btn-secondary" onClick={() => setShowSettings(true)}>Settings</button>
-              <button type="button" className="btn-secondary" onClick={handleLogout}>Log Out</button>
-            </>
+            <button type="button" className="btn-secondary" onClick={handleLogout}>Log Out</button>
           )}
           <BrandToggle brandId={brandId} onChange={setBrandId} />
         </div>
       </header>
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} onSaved={(row) => { setCompanySettings(row); setShowSettings(false); }} />
+
+      {!isCustomerView && (
+        <nav className="app-nav">
+          {NAV_SECTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`app-nav-tab${activeSection === key ? ' active' : ''}`}
+              onClick={() => setActiveSection(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       )}
 
-      <main className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}>
+      {activeSection === 'settings' && !isCustomerView && (
+        <SettingsPanel onSaved={setCompanySettings} />
+      )}
+
+      <main
+        className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}
+        style={activeSection !== 'configurator' && !isCustomerView ? { display: 'none' } : undefined}
+      >
         <section className="viewer-pane">
           <div className="viewer-toolbar">
             <span className="viewer-toolbar-title">3D Model</span>
