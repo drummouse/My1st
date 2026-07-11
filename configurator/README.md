@@ -38,20 +38,26 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   maps (`src/data/textures/`, `src/data/colors.js`).
 - **Color picker button** (`src/components/ColorPickerButton.jsx`) — every
   colorable component (Roof, Siding, Soffit, Fascia, Gutters, Downspouts) gets
-  the same compact button showing a swatch plus the current color, instead of
-  a permanently-expanded swatch grid or a plain text dropdown. Clicking it
-  opens the full swatch palette (grouped by series, same picker for all six);
-  picking a color closes the popover and relabels the button — `Wrinkle
-  RAL 7024` / `Crystal RAL 8019` for the two RAL-coded finishes, or just the
-  name (e.g. `Rustic Wenge`) for Printech Woodgrain, which has no RAL code.
-  Positioned via a fixed-position rect computed from the button itself so it
-  floats above the scrollable sidebar instead of being clipped by it. All
-  three series are expanded by default (no accordion click needed to see the
-  full palette), and the popover is sized to comfortably fit all of them.
-  For Roof/Siding specifically, when per-facet overrides mean not every
-  facet shares the same effective color, the button reads "Various Colors"
-  (with a checkered swatch) instead of showing one facet's color as if it
-  were the color for the whole roof/wall.
+  the same compact trigger button showing a swatch plus the current color;
+  picking a color relabels it — `Wrinkle RAL 7024` / `Crystal RAL 8019` for
+  the two RAL-coded finishes, or just the name (e.g. `Rustic Wenge`) for
+  Printech Woodgrain, which has no RAL code. What opens on click is
+  responsive, not a single shared popover: on a fine pointer (desktop/laptop)
+  it's a centered **Sample Board** modal — series-as-tabs, a grid of larger
+  tactile cards (photo swatch + name + code), sized for browsing with a
+  customer in the room; on a coarse pointer at narrow widths (phone/tablet,
+  same signal `AssemblyAdjustment.jsx`'s Position dock uses) it's a **Quick
+  Drawer** bottom sheet — a search box plus series accordions collapsed by
+  default, sized for one-thumb scrolling in the field. Both are docked/centered
+  rather than anchored-and-positioned off the trigger button, which sidesteps
+  the viewport-collision bug class entirely (a popover positioned from
+  `getBoundingClientRect()` with no flip/clamp logic could previously push
+  part of itself off-screen with no way to reach it — fixed once, then
+  designed around for good in this rewrite). For Roof/Siding specifically,
+  when per-facet overrides mean not every facet shares the same effective
+  color, the button reads "Various Colors" (with a checkered swatch) instead
+  of showing one facet's color as if it were the color for the whole
+  roof/wall.
 - **Downspouts** are their own independent product selector (`Downspout
   type`), matching the three real QuickBooks line items — 3" Round, 4" Round,
   3x3 Square — instead of being implicitly tied to whichever gutter profile
