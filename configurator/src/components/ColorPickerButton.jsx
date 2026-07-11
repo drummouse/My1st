@@ -28,12 +28,26 @@ export default function ColorPickerButton({ selectedId, onChange, disabled, mixe
   // rather than a plain CSS-anchored absolute overlay — the controls sidebar
   // scrolls (overflow-y: auto), which would otherwise clip the popover
   // instead of letting it float above everything.
+  //
+  // Flips above the button (instead of always opening downward) when
+  // there's more room there, and always clamps its own max-height to
+  // whatever space is actually available in the viewport — a button near
+  // the bottom of the screen previously pushed the popover past the
+  // viewport edge with no way to reach the rest of it, since it's
+  // position: fixed and page-scroll is deliberately disabled while it's open.
   useLayoutEffect(() => {
     if (!open || !buttonRef.current) return;
+    const MARGIN = 8;
     const place = () => {
       const rect = buttonRef.current.getBoundingClientRect();
-      const left = Math.max(8, Math.min(rect.right - POPOVER_WIDTH, window.innerWidth - POPOVER_WIDTH - 8));
-      setPos({ top: rect.bottom + 6, left });
+      const left = Math.max(MARGIN, Math.min(rect.right - POPOVER_WIDTH, window.innerWidth - POPOVER_WIDTH - MARGIN));
+      const spaceBelow = window.innerHeight - rect.bottom - MARGIN;
+      const spaceAbove = rect.top - MARGIN;
+      if (spaceBelow >= spaceAbove) {
+        setPos({ top: rect.bottom + 6, left, maxHeight: spaceBelow });
+      } else {
+        setPos({ bottom: window.innerHeight - rect.top + 6, left, maxHeight: spaceAbove });
+      }
     };
     place();
     window.addEventListener('resize', place);
@@ -78,7 +92,10 @@ export default function ColorPickerButton({ selectedId, onChange, disabled, mixe
       </button>
 
       {open && pos && (
-        <div className="color-picker-popover" style={{ top: pos.top, left: pos.left }}>
+        <div
+          className="color-picker-popover"
+          style={{ top: pos.top, bottom: pos.bottom, left: pos.left, maxHeight: Math.min(620, pos.maxHeight) }}
+        >
           {SERIES_ORDER.map((series) => (
             <details key={series} className="color-series" open>
               <summary className="color-series-label">
