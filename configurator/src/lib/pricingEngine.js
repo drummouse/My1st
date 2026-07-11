@@ -89,6 +89,33 @@ function ruleApplies(rule, active) {
   return rule.requireAll === false ? keys.some((k) => active[k]) : keys.every((k) => active[k]);
 }
 
+// Applies a matching service-level rule (if any) to one qty*rate accessory
+// line and records it in appliedDiscounts — the single mechanism every
+// accessory service uses, not just the two (fascia, downspouts) the
+// original hardcoded deals happened to touch. DiscountsPanel.jsx lets an
+// admin target any of soffit/fascia/gutters/downspouts/snowRetention/
+// capFlashing/garageDoorCapping, so all of them need to actually consult a
+// matching rule, or a rule saved against one of the others would silently
+// do nothing. (Roof/wall are deliberately not routed through this helper —
+// each is a *group* of possibly several per-facet-override line items, not
+// one line, so a proportional-per-item split would be needed to keep the
+// itemized breakdown summing to the discounted subtotal; not attempted here.)
+function buildAccessoryLine(key, label, qty, unit, rate, serviceRuleFor, appliedDiscounts) {
+  const base = qty * rate;
+  const rule = serviceRuleFor(key);
+  let discount = 0;
+  let lineLabel = label;
+  if (rule) {
+    discount = rule.effect.type === 'free' ? base : base * rule.effect.value;
+    lineLabel += rule.effect.type === 'free' ? ` (FREE — ${rule.name})` : ` (${Math.round(rule.effect.value * 100)}% off — ${rule.name})`;
+    appliedDiscounts.push({
+      id: rule.id, name: rule.name, scope: 'service', serviceKey: key, amount: discount,
+      summary: rule.effect.type === 'free' ? `✓ ${rule.name} — ${label} free` : `✓ ${rule.name} — ${Math.round(rule.effect.value * 100)}% off ${label}`,
+    });
+  }
+  return { key, label: lineLabel, qty, unit, rate, total: base - discount };
+}
+
 /**
  * @param {object} measurements - { soffitSqft, fasciaLf, gutterLf, downspoutLf, snowRetentionLf, capFlashingLf, garageDoorCappingLf }
  * @param {object} selections - { roofProduct, wallProduct, roofFaces, wallFaces, facetOverrides,
@@ -148,70 +175,53 @@ export function calculateEstimate(measurements, selections) {
 
   let soffitTotal = 0;
   if (services.soffit) {
-    soffitTotal = measurements.soffitSqft * ACCESSORY_PRICING.soffit.pricePerSqft;
-    line.push({ key: 'soffit', label: ACCESSORY_PRICING.soffit.label, qty: measurements.soffitSqft, unit: 'sqft', rate: ACCESSORY_PRICING.soffit.pricePerSqft, total: soffitTotal });
+    const li = buildAccessoryLine('soffit', ACCESSORY_PRICING.soffit.label, measurements.soffitSqft, 'sqft', ACCESSORY_PRICING.soffit.pricePerSqft, serviceRuleFor, appliedDiscounts);
+    soffitTotal = li.total;
+    line.push(li);
   }
 
   let fasciaTotal = 0;
   if (services.fascia) {
-    const base = measurements.fasciaLf * ACCESSORY_PRICING.fascia.pricePerLf;
-    const rule = serviceRuleFor('fascia');
-    let discount = 0;
-    let label = ACCESSORY_PRICING.fascia.label;
-    if (rule) {
-      discount = rule.effect.type === 'free' ? base : base * rule.effect.value;
-      label += rule.effect.type === 'free' ? ` (FREE — ${rule.name})` : ` (${Math.round(rule.effect.value * 100)}% off — ${rule.name})`;
-      appliedDiscounts.push({
-        id: rule.id, name: rule.name, scope: 'service', serviceKey: 'fascia', amount: discount,
-        summary: rule.effect.type === 'free' ? `✓ ${rule.name} — Fascia free` : `✓ ${rule.name} — ${Math.round(rule.effect.value * 100)}% off Fascia`,
-      });
-    }
-    fasciaTotal = base - discount;
-    line.push({ key: 'fascia', label, qty: measurements.fasciaLf, unit: 'LF', rate: ACCESSORY_PRICING.fascia.pricePerLf, total: fasciaTotal });
+    const li = buildAccessoryLine('fascia', ACCESSORY_PRICING.fascia.label, measurements.fasciaLf, 'LF', ACCESSORY_PRICING.fascia.pricePerLf, serviceRuleFor, appliedDiscounts);
+    fasciaTotal = li.total;
+    line.push(li);
   }
 
   const gutterOption = findGutter(selections.gutterOption);
   let gutterTotal = 0;
   if (services.gutters) {
-    gutterTotal = measurements.gutterLf * gutterOption.pricePerLf;
-    line.push({ key: 'gutters', label: gutterOption.label, qty: measurements.gutterLf, unit: 'LF', rate: gutterOption.pricePerLf, total: gutterTotal });
+    const li = buildAccessoryLine('gutters', gutterOption.label, measurements.gutterLf, 'LF', gutterOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+    gutterTotal = li.total;
+    line.push(li);
   }
 
   const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
   if (services.downspouts) {
-    const base = measurements.downspoutLf * downspoutOption.pricePerLf;
-    const rule = serviceRuleFor('downspouts');
-    let discount = 0;
-    let label = downspoutOption.label;
-    if (rule) {
-      discount = rule.effect.type === 'free' ? base : base * rule.effect.value;
-      label += rule.effect.type === 'free' ? ` (FREE — ${rule.name})` : ` (${Math.round(rule.effect.value * 100)}% off — ${rule.name})`;
-      appliedDiscounts.push({
-        id: rule.id, name: rule.name, scope: 'service', serviceKey: 'downspouts', amount: discount,
-        summary: rule.effect.type === 'free' ? `✓ ${rule.name} — Downspouts free` : `✓ ${rule.name} — ${Math.round(rule.effect.value * 100)}% off Downspouts`,
-      });
-    }
-    downspoutTotal = base - discount;
-    line.push({ key: 'downspouts', label, qty: measurements.downspoutLf, unit: 'LF', rate: downspoutOption.pricePerLf, total: downspoutTotal });
+    const li = buildAccessoryLine('downspouts', downspoutOption.label, measurements.downspoutLf, 'LF', downspoutOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+    downspoutTotal = li.total;
+    line.push(li);
   }
 
   let snowRetentionTotal = 0;
   if (services.snowRetention) {
-    snowRetentionTotal = measurements.snowRetentionLf * ACCESSORY_PRICING.snowRetention.pricePerLf;
-    line.push({ key: 'snowRetention', label: ACCESSORY_PRICING.snowRetention.label, qty: measurements.snowRetentionLf, unit: 'LF', rate: ACCESSORY_PRICING.snowRetention.pricePerLf, total: snowRetentionTotal });
+    const li = buildAccessoryLine('snowRetention', ACCESSORY_PRICING.snowRetention.label, measurements.snowRetentionLf, 'LF', ACCESSORY_PRICING.snowRetention.pricePerLf, serviceRuleFor, appliedDiscounts);
+    snowRetentionTotal = li.total;
+    line.push(li);
   }
 
   let capFlashingTotal = 0;
   if (services.capFlashing) {
-    capFlashingTotal = measurements.capFlashingLf * ACCESSORY_PRICING.capFlashing.pricePerLf;
-    line.push({ key: 'capFlashing', label: ACCESSORY_PRICING.capFlashing.label, qty: measurements.capFlashingLf, unit: 'LF', rate: ACCESSORY_PRICING.capFlashing.pricePerLf, total: capFlashingTotal });
+    const li = buildAccessoryLine('capFlashing', ACCESSORY_PRICING.capFlashing.label, measurements.capFlashingLf, 'LF', ACCESSORY_PRICING.capFlashing.pricePerLf, serviceRuleFor, appliedDiscounts);
+    capFlashingTotal = li.total;
+    line.push(li);
   }
 
   let garageDoorCappingTotal = 0;
   if (services.garageDoorCapping) {
-    garageDoorCappingTotal = measurements.garageDoorCappingLf * ACCESSORY_PRICING.garageDoorCapping.pricePerLf;
-    line.push({ key: 'garageDoorCapping', label: ACCESSORY_PRICING.garageDoorCapping.label, qty: measurements.garageDoorCappingLf, unit: 'LF', rate: ACCESSORY_PRICING.garageDoorCapping.pricePerLf, total: garageDoorCappingTotal });
+    const li = buildAccessoryLine('garageDoorCapping', ACCESSORY_PRICING.garageDoorCapping.label, measurements.garageDoorCappingLf, 'LF', ACCESSORY_PRICING.garageDoorCapping.pricePerLf, serviceRuleFor, appliedDiscounts);
+    garageDoorCappingTotal = li.total;
+    line.push(li);
   }
 
   // Owner-defined custom services — a simple qty * price line each, frozen

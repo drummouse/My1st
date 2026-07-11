@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { upload } from '@vercel/blob/client';
-
-const money = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+import { formatBytes as money } from '../lib/fileUtils.js';
 
 export default function AttachmentsPanel({ projectId, isCustomerView, onChanged }) {
   const [attachments, setAttachments] = useState([]);

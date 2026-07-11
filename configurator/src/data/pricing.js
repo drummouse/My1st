@@ -52,20 +52,30 @@ export const DOWNSPOUT_OPTIONS = [
 // resolution, ProductSelector's dropdown, FacetInspector's per-facet
 // override picker) picks up custom materials without changing how each of
 // those call sites works.
+// The merged arrays are built once here (not on every allRoofProducts()/
+// allWallProducts() call) — App.jsx calls calculateEstimate/exportPdf/
+// exportEstimate several times per render and per export pass, each doing
+// its own product lookups, so rebuilding via spread on every call adds up
+// and also hands components a fresh array reference each time (defeating
+// any reference-equality memoization downstream).
 let extraRoofProducts = [];
 let extraWallProducts = [];
+let mergedRoofProducts = ROOF_PRODUCTS;
+let mergedWallProducts = WALL_PRODUCTS;
 
 export function setExtraMaterials({ roof, wall } = {}) {
   extraRoofProducts = Array.isArray(roof) ? roof : [];
   extraWallProducts = Array.isArray(wall) ? wall : [];
+  mergedRoofProducts = extraRoofProducts.length ? [...ROOF_PRODUCTS, ...extraRoofProducts] : ROOF_PRODUCTS;
+  mergedWallProducts = extraWallProducts.length ? [...WALL_PRODUCTS, ...extraWallProducts] : WALL_PRODUCTS;
 }
 
 export function allRoofProducts() {
-  return extraRoofProducts.length ? [...ROOF_PRODUCTS, ...extraRoofProducts] : ROOF_PRODUCTS;
+  return mergedRoofProducts;
 }
 
 export function allWallProducts() {
-  return extraWallProducts.length ? [...WALL_PRODUCTS, ...extraWallProducts] : WALL_PRODUCTS;
+  return mergedWallProducts;
 }
 
 export const ACCESSORY_PRICING = {

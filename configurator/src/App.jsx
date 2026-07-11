@@ -71,6 +71,16 @@ function toColorEntry(c) {
   return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: c.thumbnail_url || undefined };
 }
 
+// Shared by every plain "fetch JSON, bail on non-2xx" call in this file —
+// several mount-time effects below otherwise repeat the same
+// then/throw/then/catch chain with only the URL and setter changing.
+function fetchJson(url) {
+  return fetch(url).then((res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  });
+}
+
 function extractProductOverrides(overrides) {
   const result = {};
   Object.entries(overrides).forEach(([key, val]) => {
@@ -151,24 +161,29 @@ export default function App() {
   // recalculate live).
   const [isCustomerView, setIsCustomerView] = useState(false);
 
+  // A design that's already been saved/loaded prices off the rates it was
+  // frozen at (pricingSettings); a brand-new one still tracks whatever
+  // Settings currently says (companySettings). Computed once here and
+  // reused both to freeze into a saved project (buildDesignSnapshot below)
+  // and to feed the live `estimate` calculation, rather than repeating the
+  // same pricingSettings-or-companySettings fallback per field in each.
+  const effectivePricingSettings = pricingSettings || (companySettings ? {
+    gstRate: Number(companySettings.gst_rate),
+    fullWrapDiscountPct: Number(companySettings.full_wrap_discount_pct),
+    soffitFasciaDiscountPct: Number(companySettings.soffit_fascia_discount_pct),
+    gutterDownspoutFree: companySettings.gutter_downspout_free,
+    discountRules: companySettings.discount_rules || null,
+    municipalTaxRate: Number(companySettings.municipal_tax_rate || 0),
+    taxLabel: companySettings.tax_label || 'GST',
+  } : null);
+
   const buildDesignSnapshot = () =>
     captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
       wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors,
       uniformFinish, facetOverrides, customServiceLines,
-      // Freeze live company rates the first time a project is saved; once
-      // frozen, keep re-saving the same frozen values rather than whatever
-      // Settings currently says.
-      pricingSettings: pricingSettings || (companySettings ? {
-        gstRate: Number(companySettings.gst_rate),
-        fullWrapDiscountPct: Number(companySettings.full_wrap_discount_pct),
-        soffitFasciaDiscountPct: Number(companySettings.soffit_fascia_discount_pct),
-        gutterDownspoutFree: companySettings.gutter_downspout_free,
-        discountRules: companySettings.discount_rules || null,
-        municipalTaxRate: Number(companySettings.municipal_tax_rate || 0),
-        taxLabel: companySettings.tax_label || 'GST',
-      } : null),
+      pricingSettings: effectivePricingSettings,
     });
 
   const applyDesignSnapshot = (snapshot, lock) => {
@@ -224,11 +239,7 @@ export default function App() {
   useEffect(() => {
     const projectId = new URLSearchParams(window.location.search).get('p');
     if (!projectId) return;
-    fetch(`/api/projects/${projectId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+    fetchJson(`/api/projects/${projectId}`)
       .then((row) => {
         applyDesignSnapshot(row.design, true);
         setCurrentProjectId(projectId);
@@ -264,41 +275,11 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (window.__IRONWRAP_DESIGN__ || params.has('p') || params.has('d')) return;
-    fetch('/api/settings')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(setCompanySettings)
-      .catch((err) => console.error('Failed to load company settings:', err));
-    fetch('/api/auth/me')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(setCompanyProfile)
-      .catch((err) => console.error('Failed to load company profile:', err));
-    fetch('/api/custom-services')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(setCustomServiceCatalog)
-      .catch((err) => console.error('Failed to load custom services catalog:', err));
-    fetch('/api/colors')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((rows) => setExtraColors(rows.map(toColorEntry)))
-      .catch((err) => console.error('Failed to load colors library:', err));
-    fetch('/api/materials')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(applyMaterialsCatalog)
-      .catch((err) => console.error('Failed to load materials library:', err));
+    fetchJson('/api/settings').then(setCompanySettings).catch((err) => console.error('Failed to load company settings:', err));
+    fetchJson('/api/auth/me').then(setCompanyProfile).catch((err) => console.error('Failed to load company profile:', err));
+    fetchJson('/api/custom-services').then(setCustomServiceCatalog).catch((err) => console.error('Failed to load custom services catalog:', err));
+    fetchJson('/api/colors').then((rows) => setExtraColors(rows.map(toColorEntry))).catch((err) => console.error('Failed to load colors library:', err));
+    fetchJson('/api/materials').then(applyMaterialsCatalog).catch((err) => console.error('Failed to load materials library:', err));
   }, []);
 
   // Re-parses only when a layer's content/visibility/order changes (offset
@@ -388,16 +369,10 @@ export default function App() {
         gutterOption: gutterOptionId,
         downspoutOption: downspoutOptionId,
         manualDiscount,
-        // A design that's already been saved/loaded prices off the rates it
-        // was frozen at (pricingSettings); a brand-new one still tracks
-        // whatever Settings currently says (companySettings).
-        gstRate: pricingSettings ? pricingSettings.gstRate : (companySettings ? Number(companySettings.gst_rate) : undefined),
-        fullWrapDiscountPct: pricingSettings ? pricingSettings.fullWrapDiscountPct : (companySettings ? Number(companySettings.full_wrap_discount_pct) : undefined),
-        soffitFasciaDiscountPct: pricingSettings ? pricingSettings.soffitFasciaDiscountPct : (companySettings ? Number(companySettings.soffit_fascia_discount_pct) : undefined),
-        gutterDownspoutFree: pricingSettings ? pricingSettings.gutterDownspoutFree : (companySettings ? companySettings.gutter_downspout_free : undefined),
-        discountRules: pricingSettings ? pricingSettings.discountRules : (companySettings ? companySettings.discount_rules : undefined),
-        municipalTaxRate: pricingSettings ? pricingSettings.municipalTaxRate : (companySettings ? Number(companySettings.municipal_tax_rate || 0) : undefined),
-        taxLabel: pricingSettings ? pricingSettings.taxLabel : (companySettings ? (companySettings.tax_label || 'GST') : undefined),
+        // effectivePricingSettings already resolves "frozen rates from a
+        // saved project, else whatever Settings currently says, else
+        // undefined for everything" — see its definition above.
+        ...(effectivePricingSettings || {}),
         customServiceLines,
       }),
     [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings, customServiceLines]
@@ -421,14 +396,13 @@ export default function App() {
   // True when at least one facet has been overridden to a color different
   // from the global default — the Roof/Siding Color button can't show a
   // single swatch in that case, so it reads "Various Colors" instead.
-  const roofColorMixed = !uniformFinish && roofFacesForPricing.some(({ key }) => {
-    const c = facetOverrides[key]?.colorId;
-    return c && c !== roofColorId;
-  });
-  const wallColorMixed = !uniformFinish && wallFacesForPricing.some(({ key }) => {
-    const c = facetOverrides[key]?.colorId;
-    return c && c !== wallColorId;
-  });
+  const isColorMixed = (faces, colorId) =>
+    !uniformFinish && faces.some(({ key }) => {
+      const c = facetOverrides[key]?.colorId;
+      return c && c !== colorId;
+    });
+  const roofColorMixed = isColorMixed(roofFacesForPricing, roofColorId);
+  const wallColorMixed = isColorMixed(wallFacesForPricing, wallColorId);
 
   // Resets every field back to a blank slate — job#/customer/address, all
   // layers, product/color selections, overrides, everything — so starting a
@@ -581,39 +555,32 @@ export default function App() {
     // Only a saved project has a `?p=<id>` link to encode — a brand-new,
     // never-saved design has nothing to point the QR at, so it's omitted
     // rather than forcing a save as a side effect of exporting a PDF.
-    let qrDataUrl = null;
-    let shareUrl = null;
-    if (currentProjectId) {
-      shareUrl = `${window.location.origin}${window.location.pathname}?p=${currentProjectId}`;
-      try {
-        qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 300 });
-      } catch (err) {
-        console.error('QR code generation failed:', err);
-      }
-    }
-    let logoDataUrl = null;
-    if (companySettings?.logo_url) {
-      try {
-        logoDataUrl = await urlToDataUrl(companySettings.logo_url);
-      } catch (err) {
-        console.error('Logo fetch failed:', err);
-      }
-    }
-    // jsPDF's addImage needs an already-loaded image, not a remote URL —
-    // convert each photo attachment once here rather than inside exportPdf.js,
-    // matching the same pattern already used for the company logo above. A
-    // photo that fails to fetch (network hiccup, since-deleted Blob) is
-    // simply skipped rather than failing the whole export.
-    const attachmentPhotos = await Promise.all(
-      attachments.filter((a) => a.kind === 'photo').map(async (a) => {
-        try {
-          return { ...a, dataUrl: await urlToDataUrl(a.url) };
-        } catch (err) {
-          console.error('Attachment photo fetch failed:', err);
-          return null;
-        }
-      })
-    );
+    const shareUrl = currentProjectId ? `${window.location.origin}${window.location.pathname}?p=${currentProjectId}` : null;
+
+    // These three don't depend on each other, so they run concurrently
+    // instead of one `await` blocking the next. jsPDF's addImage needs an
+    // already-loaded image, not a remote URL — logo and photo attachments
+    // get converted to data URLs here rather than inside exportPdf.js. A
+    // failure in any one (bad QR input, deleted Blob, network hiccup) is
+    // swallowed so it doesn't block the rest of the export.
+    const [qrDataUrl, logoDataUrl, attachmentPhotos] = await Promise.all([
+      shareUrl
+        ? QRCode.toDataURL(shareUrl, { margin: 1, width: 300 }).catch((err) => { console.error('QR code generation failed:', err); return null; })
+        : Promise.resolve(null),
+      companySettings?.logo_url
+        ? urlToDataUrl(companySettings.logo_url).catch((err) => { console.error('Logo fetch failed:', err); return null; })
+        : Promise.resolve(null),
+      Promise.all(
+        attachments.filter((a) => a.kind === 'photo').map(async (a) => {
+          try {
+            return { ...a, dataUrl: await urlToDataUrl(a.url) };
+          } catch (err) {
+            console.error('Attachment photo fetch failed:', err);
+            return null;
+          }
+        })
+      ),
+    ]);
     buildEstimatePdf({
       brand,
       house,

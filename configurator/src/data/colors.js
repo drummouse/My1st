@@ -77,14 +77,21 @@ export const RAL_COLORS = [
 // reads it during the render that happens before the fetch resolves except
 // ColorPickerButton, which re-reads allColors() fresh every time its picker
 // opens, so it never shows a stale list.
+// The merged array is built once here (not on every allColors() call) —
+// ColorPickerButton alone calls it on every render plus once per keystroke
+// in its search box, so rebuilding via spread each time adds up and also
+// hands callers a fresh array reference on every call (defeating any
+// reference-equality memoization downstream).
 let extraColors = [];
+let mergedColors = RAL_COLORS;
 
 export function setExtraColors(colors) {
   extraColors = Array.isArray(colors) ? colors : [];
+  mergedColors = extraColors.length ? [...RAL_COLORS, ...extraColors] : RAL_COLORS;
 }
 
 export function allColors() {
-  return extraColors.length ? [...RAL_COLORS, ...extraColors] : RAL_COLORS;
+  return mergedColors;
 }
 
 export function colorById(id) {
