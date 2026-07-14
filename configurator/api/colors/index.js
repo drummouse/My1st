@@ -3,8 +3,8 @@ import { requireUserId } from '../_lib/auth.js';
 import { handleFolderList, handleFolderItem } from '../_lib/folders.js';
 import { canActOnOwner } from '../_lib/roles.js';
 
-// Merged list/create/update/delete into one function via an optional
-// catch-all path — see api/auth/[action].js for why. Also carries this
+// Merged list/create/update/delete into one function (id supplied as ?id= by
+// vercel.json's rewrites) — see api/auth/[action].js for why. Also carries this
 // library's folder tree (`?folders=1`, kind='color' — shared CRUD with
 // api/materials/[[...id]].js, see _lib/folders.js) rather than adding
 // another top-level route file — see README's "API route layout" note.

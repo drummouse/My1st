@@ -2,8 +2,8 @@ import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
 
-// Merged list/create/update/delete into one function via an optional
-// catch-all path — see api/auth/[action].js for why.
+// Merged list/create/update/delete into one function (id supplied as ?id= by
+// vercel.json's rewrites) — see api/auth/[action].js for why.
 export default async function handler(req, res) {
   const [id] = [].concat(req.query.id || []);
 
