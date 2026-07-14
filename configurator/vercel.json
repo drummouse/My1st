@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/projects/:id/approve", "destination": "/api/projects?id=:id&sub=approve" },
+    { "source": "/api/projects/:id", "destination": "/api/projects?id=:id" },
+    { "source": "/api/materials/:id", "destination": "/api/materials?id=:id" },
+    { "source": "/api/colors/:id", "destination": "/api/colors?id=:id" },
+    { "source": "/api/custom-services/:id", "destination": "/api/custom-services?id=:id" },
+    { "source": "/api/attachments/:id", "destination": "/api/attachments?id=:id" }
+  ]
+}

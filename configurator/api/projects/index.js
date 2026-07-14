@@ -2,13 +2,17 @@ import { sql, ensureSchema } from '../_lib/db.js';
 import { getUserId, requireUserId } from '../_lib/auth.js';
 import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
 
-// Merged list/create/read/update/delete/approve into one function via an
-// optional catch-all path — see api/auth/[action].js for why (Vercel's
-// Hobby-plan serverless function cap). `id` is the path after /api/projects:
-// [] -> list/create, ['<id>'] -> single project, ['<id>', 'approve'] -> approve.
+// Merged list/create/read/update/delete/approve into one function to stay
+// under Vercel's Hobby-plan serverless function cap — see api/auth/[action].js
+// for why. The path after /api/projects is supplied as query params by the
+// rewrites in vercel.json (Vercel's zero-config /api routing doesn't support
+// the optional-catch-all `[[...id]]` filename this project once used):
+//   /api/projects            -> (no id)            list/create
+//   /api/projects/<id>       -> ?id=<id>           single project
+//   /api/projects/<id>/approve -> ?id=<id>&sub=approve
 export default async function handler(req, res) {
-  const segments = [].concat(req.query.id || []);
-  const [id, sub] = segments;
+  const id = [].concat(req.query.id || [])[0];
+  const sub = req.query.sub;
 
   try {
     await ensureSchema();
