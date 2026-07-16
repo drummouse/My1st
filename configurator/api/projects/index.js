@@ -74,21 +74,33 @@ export default async function handler(req, res) {
         return;
       }
       const { approvedByName } = req.body || {};
-      const [row] = await sql`
+      let [row] = await sql`
         update projects
         set approved_at = now(),
             approved_by_name = ${approvedByName || null}
-        where id = ${id}
+        where id = ${id} and approved_at is null
         returning id, owner_id, job_number, customer_name, address, approved_at, approved_by_name
       `;
+      const newlyApproved = Boolean(row);
+
+      // A repeated click is a successful no-op. Preserve the original
+      // timestamp/name and do not notify the webhook again.
+      if (!row) {
+        [row] = await sql`
+          select id, owner_id, job_number, customer_name, address, approved_at, approved_by_name
+          from projects
+          where id = ${id}
+        `;
+      }
       if (!row) {
         res.status(404).json({ error: 'Not found' });
         return;
       }
+
       // design.approved event — see INTEGRATIONS.md. Best-effort: a slow or
       // failing webhook (or no owner/no URL configured) never changes the
-      // approval response the customer sees.
-      if (row.owner_id) {
+      // approval response the customer sees. Only the first approval emits it.
+      if (newlyApproved && row.owner_id) {
         try {
           const [settingsRow] = await sql`select notification_webhook_url from settings where owner_id = ${row.owner_id}`;
           if (settingsRow?.notification_webhook_url) {

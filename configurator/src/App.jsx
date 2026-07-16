@@ -23,6 +23,7 @@ import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib/designState.js';
 import { saveOrUpdateProject } from './lib/projects.js';
+import { getEditProjectId, replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
 import { colorById, setExtraColors } from './data/colors.js';
@@ -152,6 +153,15 @@ export default function App() {
   // without a second fetch.
   const [attachments, setAttachments] = useState([]);
 
+  // Owner editing uses its own URL state (`?edit=`), separate from the
+  // public customer link (`?p=`). Keeping it in the URL makes refreshes
+  // deterministic without leaking a previous account's project through
+  // localStorage on a shared computer.
+  const setOwnerProjectId = (projectId) => {
+    setCurrentProjectId(projectId);
+    replaceEditProjectId(projectId);
+  };
+
   const viewerRef = useRef(null);
   const brand = BRANDS[brandId];
 
@@ -266,6 +276,21 @@ export default function App() {
         }
       })
       .catch((err) => console.error('Failed to load project link:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Restore the owner's editable project after a refresh. Unlike `?p=`,
+  // this does not enter customer mode or lock owner-only controls.
+  useEffect(() => {
+    const projectId = getEditProjectId(window.location.search);
+    if (!projectId) return;
+    fetchJson(`/api/projects/${projectId}`)
+      .then((row) => {
+        applyDesignSnapshot(row.design, false);
+        setCurrentProjectId(projectId);
+        setApprovedAt(row.approved_at || null);
+      })
+      .catch((err) => console.error('Failed to restore editable project:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -444,7 +469,7 @@ export default function App() {
     setUniformFinish(true);
     setFacetOverrides({});
     setSelectedFacet(null);
-    setCurrentProjectId(null);
+    setOwnerProjectId(null);
     setApprovedAt(null);
     setPricingSettings(null);
     const defaultCustomServiceIds = companySettings?.default_custom_service_ids || [];
@@ -585,7 +610,7 @@ export default function App() {
       );
       if (!proceed) return;
     }
-    if (saved?.id) setCurrentProjectId(saved.id);
+    if (saved?.id) setOwnerProjectId(saved.id);
     const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
 
     // Escape "</script>" sequences that could appear inside string values
@@ -828,7 +853,7 @@ export default function App() {
               getCurrentDesign={buildDesignSnapshot}
               onOpenProject={(design) => applyDesignSnapshot(design, false)}
               currentProjectId={currentProjectId}
-              onProjectIdChange={setCurrentProjectId}
+              onProjectIdChange={setOwnerProjectId}
             />
           )}
 

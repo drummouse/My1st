@@ -4,13 +4,13 @@
 // running app fetches this at export time, injects the customer's current
 // design as window.__IRONWRAP_DESIGN__, and offers it as a standalone
 // downloadable file — so it must have zero external asset requests.
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url)) + '/..';
 const artifactDir = resolve(root, 'dist-artifact');
-const outPath = resolve(root, 'dist/snapshot-template.html');
+const outPath = resolve(root, process.argv[2] || 'dist/snapshot-template.html');
 
 let html = readFileSync(resolve(artifactDir, 'index.html'), 'utf8');
 
@@ -46,5 +46,6 @@ if (remainingAssetRefs) {
   );
 }
 
+mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, html);
 console.log(`snapshot-template.html written (${(html.length / 1024).toFixed(0)} KB) -> ${outPath}`);
