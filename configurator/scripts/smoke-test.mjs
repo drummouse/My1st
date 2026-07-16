@@ -1,4 +1,5 @@
 const baseUrl = (process.env.SMOKE_BASE_URL || '').replace(/\/$/, '');
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '';
 
 if (!baseUrl) {
   console.error('SMOKE_BASE_URL is required. Example: SMOKE_BASE_URL=https://your-preview.vercel.app npm run smoke');
@@ -6,13 +7,17 @@ if (!baseUrl) {
 }
 
 const failures = [];
+const requestHeaders = {
+  'user-agent': 'ironwrap-smoke-test/1.0',
+  ...(bypassSecret ? { 'x-vercel-protection-bypass': bypassSecret } : {}),
+};
 
 async function check(name, path, validate) {
   const started = Date.now();
   try {
     const response = await fetch(`${baseUrl}${path}`, {
       redirect: 'follow',
-      headers: { 'user-agent': 'ironwrap-smoke-test/1.0' },
+      headers: requestHeaders,
     });
     const text = await response.text();
     let body = text;
