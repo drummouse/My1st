@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "devCommand": "npm run dev -- --port $PORT",
   "rewrites": [
     { "source": "/api/projects/:id/approve", "destination": "/api/projects?id=:id&sub=approve" },
     { "source": "/api/projects/:id", "destination": "/api/projects?id=:id" },
