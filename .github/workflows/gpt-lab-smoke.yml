@@ -46,6 +46,7 @@ jobs:
         working-directory: configurator
     env:
       SMOKE_BASE_URL: https://ironwrap-configurator-gpt-lab-git-ch-084f70-drummouses-projects.vercel.app
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,7 +64,9 @@ jobs:
       - name: Wait for Vercel deployment
         run: |
           for attempt in {1..24}; do
-            if curl --fail --silent --show-error "$SMOKE_BASE_URL/api/health" >/dev/null; then
+            if curl --fail --silent --show-error \
+              -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+              "$SMOKE_BASE_URL/api/health" >/dev/null; then
               exit 0
             fi
             echo "Waiting for Vercel deployment (attempt $attempt/24)..."
