@@ -45,7 +45,7 @@ jobs:
       run:
         working-directory: configurator
     env:
-      SMOKE_BASE_URL: https://ironwrap-configurator-gpt-lab-drummouses-projects.vercel.app
+      SMOKE_BASE_URL: https://ironwrap-configurator-gpt-lab-git-ch-084f70-drummouses-projects.vercel.app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
