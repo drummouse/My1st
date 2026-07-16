@@ -77,3 +77,5 @@ jobs:
 
       - name: Run smoke tests
         run: npm run smoke
+
+# Triggered after repository secret update.
