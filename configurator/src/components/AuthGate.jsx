@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { cloneElement, useEffect, useState } from 'react';
 import { COUNTRIES, REGIONS } from '../data/taxRates.js';
 import { formatPostalOrZip } from '../lib/address.js';
 
@@ -27,6 +27,7 @@ export default function AuthGate({ children }) {
   const [form, setForm] = useState({ email: '', password: '', ...BLANK_SIGNUP });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     if (status !== 'checking') return;
@@ -40,11 +41,18 @@ export default function AuthGate({ children }) {
       // A 200 with no real user id (e.g. a dev/preview server's SPA
       // fallback serving index.html for an unmatched API path with a
       // misleadingly-ok status) must never be treated as authenticated.
-      .then((body) => setStatus(body?.id ? 'authed' : 'anon'))
+      .then((body) => {
+        setUser(body?.id ? body : null);
+        setStatus(body?.id ? 'authed' : 'anon');
+      })
       .catch(() => setStatus('anon'));
   }, [status]);
 
-  if (status === 'public' || status === 'authed') return children;
+  if (status === 'public') return cloneElement(children, { currentUser: null });
+  if (status === 'authed' && user?.mustChangePassword) {
+    return <PasswordChangeGate onChanged={(nextUser) => setUser(nextUser)} />;
+  }
+  if (status === 'authed') return cloneElement(children, { currentUser: user });
   if (status === 'checking') return null;
 
   const hasName = form.firstName.trim() && form.lastName.trim();
@@ -76,6 +84,7 @@ export default function AuthGate({ children }) {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      setUser(body);
       setStatus('authed');
     } catch (err) {
       setError(err.message || 'Something went wrong — please try again.');
@@ -206,6 +215,47 @@ export default function AuthGate({ children }) {
         >
           {mode === 'login' ? "Need an account? Sign up" : 'Already have an account? Log in'}
         </button>
+      </form>
+    </div>
+  );
+}
+
+function PasswordChangeGate({ onChanged }) {
+  const [form, setForm] = useState({ password: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (form.password !== form.confirm) return setError('Passwords do not match.');
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: form.password }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+      onChanged(body);
+    } catch (err) {
+      setError(err.message || 'Password change failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="auth-gate">
+      <form className="auth-gate-card" onSubmit={submit}>
+        <div className="app-title">Choose a new password</div>
+        <p className="control-sublabel">Your temporary password must be replaced before continuing.</p>
+        <label className="field-label" htmlFor="new-password">New password</label>
+        <input id="new-password" className="control-select" type="password" required minLength={12} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <label className="field-label" htmlFor="confirm-password">Confirm password</label>
+        <input id="confirm-password" className="control-select" type="password" required minLength={12} value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
+        {error && <div className="control-sublabel" style={{ color: '#b91c1c' }}>{error}</div>}
+        <button className="btn-primary" type="submit" disabled={busy} style={{ width: '100%', marginTop: '0.75rem' }}>Change password</button>
       </form>
     </div>
   );

@@ -392,11 +392,13 @@ Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.j
   line only for whichever of those are actually set. Profile fields live on `users` (not
   `settings`) and are edited via a dedicated `profile` action on `api/auth/[action].js`, kept
   separate from the Settings save flow since it's identity/contact info, not a business setting.
-- **Developer role** — every account is `owner` by default (full access to only their own tenant,
-  as everywhere else in this doc). A `developer` role exists for cross-tenant support/debugging
-  access, granted only via direct database access (never through the app itself) — see
-  `DEVELOPER_ACCESS.md` for how to grant it, what it does and doesn't currently unlock, and the
-  security policy around not storing real credentials anywhere in this repo.
+- **SuperAdmin platform operations** — every contractor account is `owner` by default and remains
+  isolated to its own tenant. Emails listed in the server-only `SUPERADMIN_EMAILS` environment
+  variable are promoted to the persistent, capability-checked `superadmin` role. SuperAdmin has a
+  separate Platform Console for account state, privacy-safe diagnostics, audit, and notification
+  operations; it cannot enter or impersonate a contractor tenant. See
+  [`docs/SUPERADMIN_OPERATIONS.md`](docs/SUPERADMIN_OPERATIONS.md) for bootstrap, privacy,
+  restriction, password-reset, delivery, verification, and rollback procedures.
 
 ## Known simplification
 

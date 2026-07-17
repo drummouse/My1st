@@ -1,6 +1,5 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
-import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
 
 // Merged list/create/update/delete into one function (id supplied as ?id= by
 // vercel.json's rewrites) — see api/auth/[action].js for why.
@@ -14,10 +13,7 @@ export default async function handler(req, res) {
 
     if (!id) {
       if (req.method === 'GET') {
-        // A developer can pass ?asOwner=<id> to view a different tenant's
-        // custom services for support/debugging — see api/_lib/roles.js.
-        const ownerId = await resolveOwnerId(req, userId);
-        const rows = await sql`select * from custom_services where owner_id = ${ownerId} order by created_at asc`;
+        const rows = await sql`select * from custom_services where owner_id = ${userId} order by created_at asc`;
         res.status(200).json(rows);
         return;
       }
@@ -43,7 +39,7 @@ export default async function handler(req, res) {
     }
 
     const [existing] = await sql`select owner_id from custom_services where id = ${id}`;
-    if (!existing || (existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id)))) {
+    if (!existing || existing.owner_id !== userId) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

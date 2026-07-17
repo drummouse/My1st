@@ -16,6 +16,7 @@ import CustomServicesPanel from './components/CustomServicesPanel.jsx';
 import MaterialsPanel from './components/MaterialsPanel.jsx';
 import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
+import PlatformConsole from './components/PlatformConsole.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -91,7 +92,7 @@ function extractProductOverrides(overrides) {
   return result;
 }
 
-export default function App() {
+export default function App({ currentUser = null }) {
   const [brandId, setBrandId] = useState('ironwrap');
   const [house, setHouse] = useState(SAMPLE_HOUSE);
 
@@ -122,6 +123,7 @@ export default function App() {
   const [approvedAt, setApprovedAt] = useState(null);
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
+  const canViewPlatform = currentUser?.capabilities?.includes('platform.diagnostics.read');
   const [companySettings, setCompanySettings] = useState(null);
   // Business identity/contact (name, phone, address, website/social) — on
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
@@ -751,8 +753,19 @@ export default function App() {
               {label}
             </button>
           ))}
+          {canViewPlatform && (
+            <button
+              type="button"
+              className={`app-nav-tab${activeSection === 'platform' ? ' active' : ''}`}
+              onClick={() => setActiveSection('platform')}
+            >
+              Platform
+            </button>
+          )}
         </nav>
       )}
+
+      {activeSection === 'platform' && canViewPlatform && <PlatformConsole />}
 
       {activeSection === 'settings' && !isCustomerView && (
         <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />

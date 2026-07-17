@@ -1,8 +1,14 @@
 import bcrypt from 'bcryptjs';
 import { sql, ensureSchema } from '../_lib/db.js';
-import { createSessionCookie, clearSessionCookie, getUserId } from '../_lib/auth.js';
+import { createSessionCookie, clearSessionCookie, getSessionClaims } from '../_lib/auth.js';
 import { formatPostalOrZip } from '../../src/lib/address.js';
 import { regionByCode } from '../../src/data/taxRates.js';
+import {
+  capabilitiesForRole,
+  parseSuperAdminEmails,
+  roleForBootstrap,
+} from '../_lib/superadminPolicy.js';
+import { requireActiveUser } from '../_lib/access.js';
 
 // Merged signup/login/logout/me/profile into one function (dispatched on
 // the [action] path segment) — Vercel's Hobby plan caps the number of
@@ -24,7 +30,17 @@ export default async function handler(req, res) {
     regionCode: u.region_code, postalCode: u.postal_code,
     website: u.website, socialUrl: u.social_url,
     role: u.role || 'owner',
+    status: u.status || 'active',
+    capabilities: capabilitiesForRole(u.role || 'owner'),
+    mustChangePassword: Boolean(u.must_change_password),
   });
+
+  const applySuperAdminBootstrap = async (user) => {
+    const role = roleForBootstrap(user, parseSuperAdminEmails(process.env.SUPERADMIN_EMAILS));
+    if (role === user.role) return user;
+    const [updated] = await sql`update users set role = ${role} where id = ${user.id} returning *`;
+    return updated;
+  };
 
   if (action === 'signup') {
     if (req.method !== 'POST') {
@@ -94,7 +110,7 @@ export default async function handler(req, res) {
           on conflict (owner_id) do nothing
         `;
       }
-      res.setHeader('Set-Cookie', await createSessionCookie(user.id));
+      res.setHeader('Set-Cookie', await createSessionCookie(user.id, user.session_version || 1));
       res.status(201).json(serializeUser(user));
     } catch (err) {
       console.error('Signup error:', err);
@@ -117,14 +133,20 @@ export default async function handler(req, res) {
     try {
       await ensureSchema();
       const normalizedEmail = String(email).trim().toLowerCase();
-      const [user] = await sql`select * from users where email = ${normalizedEmail}`;
+      let [user] = await sql`select * from users where email = ${normalizedEmail}`;
       // Same generic error whether the email doesn't exist or the password
       // is wrong — doesn't tell an attacker which emails have accounts.
       if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         res.status(401).json({ error: 'Invalid email or password' });
         return;
       }
-      res.setHeader('Set-Cookie', await createSessionCookie(user.id));
+      if (user.deleted_at || (user.status || 'active') !== 'active') {
+        res.status(403).json({ error: 'Account access is restricted. Please contact the platform administrator.' });
+        return;
+      }
+      user = await applySuperAdminBootstrap(user);
+      [user] = await sql`update users set last_login_at = now() where id = ${user.id} returning *`;
+      res.setHeader('Set-Cookie', await createSessionCookie(user.id, user.session_version || 1));
       res.status(200).json(serializeUser(user));
     } catch (err) {
       console.error('Login error:', err);
@@ -151,21 +173,59 @@ export default async function handler(req, res) {
       return;
     }
     try {
-      const userId = await getUserId(req);
-      if (!userId) {
+      const session = await getSessionClaims(req);
+      if (!session?.sub) {
         res.status(401).json({ error: 'Not authenticated' });
         return;
       }
       await ensureSchema();
-      const [user] = await sql`select * from users where id = ${userId}`;
+      let [user] = await sql`select * from users where id = ${session.sub}`;
       if (!user) {
         res.status(401).json({ error: 'Not authenticated' });
         return;
       }
+      if (user.deleted_at || (user.status || 'active') !== 'active') {
+        res.status(403).json({ error: 'Account access is restricted. Please contact the platform administrator.' });
+        return;
+      }
+      if (Number(user.session_version || 1) !== Number(session.sv || 1)) {
+        res.status(401).json({ error: 'Session expired', code: 'SESSION_REVOKED' });
+        return;
+      }
+      user = await applySuperAdminBootstrap(user);
       res.status(200).json(serializeUser(user));
     } catch (err) {
       console.error('Me error:', err);
       res.status(500).json({ error: 'Internal error — the accounts database may not be reachable yet.' });
+    }
+    return;
+  }
+
+  if (action === 'change-password') {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    try {
+      const user = await requireActiveUser(req, res);
+      if (!user) return;
+      const password = String(req.body?.password || '');
+      if (password.length < 12) {
+        res.status(400).json({ error: 'Password must be at least 12 characters' });
+        return;
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const [updated] = await sql`
+        update users set password_hash = ${passwordHash}, must_change_password = false,
+          session_version = session_version + 1
+        where id = ${user.id} returning *
+      `;
+      res.setHeader('Set-Cookie', await createSessionCookie(updated.id, updated.session_version));
+      res.status(200).json(serializeUser(updated));
+    } catch (err) {
+      console.error('Password change error:', err);
+      res.status(500).json({ error: 'Password change failed' });
     }
     return;
   }
@@ -180,11 +240,9 @@ export default async function handler(req, res) {
       return;
     }
     try {
-      const userId = await getUserId(req);
-      if (!userId) {
-        res.status(401).json({ error: 'Not authenticated' });
-        return;
-      }
+      const activeUser = await requireActiveUser(req, res);
+      if (!activeUser) return;
+      const userId = activeUser.id;
       await ensureSchema();
       const {
         companyName, firstName, lastName, businessName, phone,

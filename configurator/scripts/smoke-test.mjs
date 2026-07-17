@@ -56,6 +56,13 @@ for (const path of ['/api/projects', '/api/settings', '/api/materials', '/api/co
   });
 }
 
+for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/superadmin/audit']) {
+  await check(`SuperAdmin auth guard ${path}`, path, (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  });
+}
+
 await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',

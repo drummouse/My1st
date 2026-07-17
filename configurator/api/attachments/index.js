@@ -1,6 +1,6 @@
 import { sql, ensureSchema } from '../_lib/db.js';
-import { getUserId } from '../_lib/auth.js';
-import { canActOnOwner } from '../_lib/roles.js';
+import { requireUserId } from '../_lib/auth.js';
+import { publicTenantAccess } from '../_lib/publicAccess.js';
 
 const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 const FILE_MAX_BYTES = 25 * 1024 * 1024;
@@ -27,23 +27,27 @@ export default async function handler(req, res) {
       // should see its attachments with no account of their own, same as
       // the project itself.
       if (req.method === 'GET') {
+        const [project] = await sql`
+          select u.status as owner_status from projects p left join users u on u.id = p.owner_id
+          where p.id = ${projectId}
+        `;
+        if (!project) return res.status(404).json({ error: 'Not found' });
+        const access = publicTenantAccess(project.owner_status);
+        if (!access.allowed) return res.status(access.status).json(access.body);
         const rows = await sql`select * from attachments where project_id = ${projectId} order by uploaded_at asc`;
         res.status(200).json(rows);
         return;
       }
 
       if (req.method === 'POST') {
-        const userId = await getUserId(req);
-        if (!userId) {
-          res.status(401).json({ error: 'Not authenticated' });
-          return;
-        }
+        const userId = await requireUserId(req, res);
+        if (!userId) return;
         const [project] = await sql`select owner_id from projects where id = ${projectId}`;
         if (!project) {
           res.status(404).json({ error: 'Project not found' });
           return;
         }
-        if (project.owner_id && project.owner_id !== userId && !(await canActOnOwner(userId, project.owner_id))) {
+        if (project.owner_id && project.owner_id !== userId) {
           res.status(403).json({ error: 'This project belongs to a different account' });
           return;
         }
@@ -80,11 +84,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const userId = await getUserId(req);
-      if (!userId) {
-        res.status(401).json({ error: 'Not authenticated' });
-        return;
-      }
+      const userId = await requireUserId(req, res);
+      if (!userId) return;
       const [existing] = await sql`
         select a.id, p.owner_id
         from attachments a
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
         res.status(404).json({ error: 'Not found' });
         return;
       }
-      if (existing.owner_id && existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id))) {
+      if (existing.owner_id && existing.owner_id !== userId) {
         res.status(403).json({ error: 'This project belongs to a different account' });
         return;
       }

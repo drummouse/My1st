@@ -1,6 +1,6 @@
 import { sql } from './db.js';
 import { requireUserId } from './auth.js';
-import { canActOnOwner } from './roles.js';
+import { requirePublicTenant } from './publicTenant.js';
 
 // Shared folder CRUD for both the Materials and Colors libraries — one
 // tree per `kind` ('material'|'color') over the same `folders` table (see
@@ -11,6 +11,7 @@ import { canActOnOwner } from './roles.js';
 export async function handleFolderList(req, res, kind) {
   if (req.method === 'GET') {
     const { ownerId } = req.query;
+    if (ownerId && !(await requirePublicTenant(ownerId, res))) return;
     const targetOwnerId = ownerId || (await requireUserId(req, res));
     if (!targetOwnerId) return;
     const rows = await sql`select * from folders where owner_id = ${targetOwnerId} and kind = ${kind} order by name asc`;
@@ -44,7 +45,7 @@ export async function handleFolderItem(req, res, kind, id) {
   if (!userId) return;
 
   const [existing] = await sql`select owner_id from folders where id = ${id} and kind = ${kind}`;
-  if (!existing || (existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id)))) {
+  if (!existing || existing.owner_id !== userId) {
     res.status(404).json({ error: 'Not found' });
     return;
   }
