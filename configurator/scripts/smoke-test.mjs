@@ -62,7 +62,6 @@ for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/
     return true;
   });
 }
-
 await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',
