@@ -22,6 +22,11 @@ export default function LibraryConsole({ capabilities = [], tenants = [] }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const can = (capability) => capabilities.includes(capability);
+  const tenantName = (tenantId) => {
+    if (!tenantId) return 'Global';
+    const tenant = tenants.find((item) => item.id === tenantId);
+    return tenant?.companyName || tenant?.email || tenantId;
+  };
   const visibleTypes = tab === 'Organizations' ? ['manufacturer', 'supplier'] : tab === 'Taxonomy' ? ['category', 'collection', 'catalog'] : ['product', 'profile', 'color'];
 
   const run = async (operation) => {
@@ -90,7 +95,7 @@ export default function LibraryConsole({ capabilities = [], tenants = [] }) {
       <div className="library-filters">
         <input aria-label="Search Library" placeholder="Search name or code" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
         <select value={filters.scope} onChange={(e) => setFilters({ ...filters, scope: e.target.value })}><option value="">All scopes</option><option value="global">Global</option><option value="tenant">Tenant</option></select>
-        <select value={filters.tenantId} onChange={(e) => setFilters({ ...filters, tenantId: e.target.value })}><option value="">No tenant selected</option>{tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.companyName || tenant.email}</option>)}</select>
+        <select value={filters.tenantId} onChange={(e) => setFilters({ ...filters, tenantId: e.target.value })}><option value="">All tenants</option>{tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.companyName || tenant.email}</option>)}</select>
         <select value={filters.reviewStatus} onChange={(e) => setFilters({ ...filters, reviewStatus: e.target.value })}><option value="">All review states</option>{['draft', 'pending_review', 'approved', 'rejected'].map((value) => <option key={value}>{value}</option>)}</select>
         <select value={filters.qualityLevel} onChange={(e) => setFilters({ ...filters, qualityLevel: e.target.value })}><option value="">All quality levels</option>{['test', 'low', 'standard', 'verified'].map((value) => <option key={value}>{value}</option>)}</select>
       </div>
@@ -103,7 +108,7 @@ export default function LibraryConsole({ capabilities = [], tenants = [] }) {
         <input placeholder="Description" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <button disabled={busy}>{form.id ? 'Save record' : 'Create record'}</button>{form.id && <button type="button" onClick={() => setForm(emptyRecord)}>Cancel</button>}
       </form>}
-      <div className="platform-table-wrap"><table className="platform-table"><thead><tr><th>Name</th><th>Type</th><th>Scope</th><th>Review / quality</th><th>Version</th><th>Actions</th></tr></thead><tbody>{filteredRecords.map((record) => <tr key={record.id}><td><strong>{record.name}</strong><small>{record.code || 'No code'}</small></td><td>{record.recordType}</td><td>{record.scope}</td><td>{record.reviewStatus}<small>{record.qualityLevel}</small></td><td>{record.version}</td><td className="platform-actions">{can('catalog.write') && <><button onClick={() => setForm(record)}>Edit</button><button onClick={() => changeLifecycle(record)}>{record.lifecycleStatus === 'archived' ? 'Restore' : 'Archive'}</button></>}</td></tr>)}</tbody></table></div>
+      <div className="platform-table-wrap"><table className="platform-table"><thead><tr><th>Name</th><th>Type</th><th>Scope / tenant</th><th>Review / quality</th><th>Version</th><th>Actions</th></tr></thead><tbody>{filteredRecords.map((record) => <tr key={record.id}><td><strong>{record.name}</strong><small>{record.code || 'No code'}</small></td><td>{record.recordType}</td><td>{record.scope}<small>{tenantName(record.tenantId)}</small></td><td>{record.reviewStatus}<small>{record.qualityLevel}</small></td><td>{record.version}</td><td className="platform-actions">{can('catalog.write') && <><button onClick={() => setForm(record)}>Edit</button><button onClick={() => changeLifecycle(record)}>{record.lifecycleStatus === 'archived' ? 'Restore' : 'Archive'}</button></>}</td></tr>)}</tbody></table></div>
     </>}
 
     {tab === 'Relationships' && <div className="library-relationships">

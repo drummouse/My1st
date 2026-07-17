@@ -11,7 +11,7 @@ Branch: `chatgpt/library-core`
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Baseline before implementation | Pass | 32/32 tests |
-| Current complete test suite | Pass | 62/62 tests on 2026-07-17 |
+| Current complete test suite | Pass | 65/65 tests on 2026-07-17 |
 | Policy, relationship matrix, category cycles | Pass | `libraryPolicy.test.mjs` |
 | Runtime/reference schema parity | Pass | `librarySchema.test.mjs` |
 | DTO privacy and JSON/CSV round trip | Pass | `libraryExchange.test.mjs` |

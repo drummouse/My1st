@@ -15,6 +15,6 @@ test('operations and Capture handoff document stable contracts', async () => {
 
 test('milestone report records automated verification and deployment boundary', async () => {
   const report = await readFile(new URL('../docs/milestones/2026-07-17-library-core-verification.md', import.meta.url), 'utf8');
-  assert.match(report, /62\/62/);
+  assert.match(report, /65\/65/);
   assert.match(report, /Production.*requires deployment/is);
 });

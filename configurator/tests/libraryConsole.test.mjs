@@ -24,3 +24,9 @@ test('import commit remains separate from file selection and dry run', async () 
   assert.match(source, /Commit approved import/);
   assert.match(source, /allConflictsDecided/);
 });
+
+test('unfiltered SuperAdmin view communicates all-tenant visibility', async () => {
+  const source = await readFile(new URL('../src/components/LibraryConsole.jsx', import.meta.url), 'utf8');
+  assert.match(source, /All tenants/);
+  assert.match(source, /tenantName/);
+});

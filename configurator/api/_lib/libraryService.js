@@ -38,7 +38,11 @@ export function createLibraryService({ store, randomUUID = nodeRandomUUID }) {
 
   return {
     async listRecords(actor, filters = {}) {
-      return (await store.listRecords({ ...filters, actorTenantId: actor.tenantId || null })).map(toLibraryRecord);
+      return (await store.listRecords({
+        ...filters,
+        actorTenantId: actor.tenantId || null,
+        includeAllTenants: actor.role === 'superadmin' && !actor.tenantId,
+      })).map(toLibraryRecord);
     },
     async getRecord(actor, id) {
       const row = await store.getRecord(id);
@@ -175,7 +179,7 @@ export function createNeonLibraryStore(sql) {
           and (${filters.reviewStatus || null}::text is null or review_status = ${filters.reviewStatus || null})
           and (${filters.qualityLevel || null}::text is null or quality_level = ${filters.qualityLevel || null})
           and (${search} = '' or name ilike ${`%${search}%`} or code ilike ${`%${search}%`})
-          and (scope = 'global' or tenant_id = ${filters.actorTenantId || null})
+          and (scope = 'global' or ${Boolean(filters.includeAllTenants)} or tenant_id = ${filters.actorTenantId || null})
         order by updated_at desc limit ${limit}`;
     },
     async getRecord(id) { const [row] = await sql`select * from library_records where id = ${id}`; return row || null; },
