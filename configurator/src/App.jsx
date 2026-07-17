@@ -17,6 +17,13 @@ import MaterialsPanel from './components/MaterialsPanel.jsx';
 import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import PlatformConsole from './components/PlatformConsole.jsx';
+import StudioShell from './components/StudioShell.jsx';
+import StudioTopBar from './components/StudioTopBar.jsx';
+import GuidedStepRail from './components/GuidedStepRail.jsx';
+import ViewerWorkspace from './components/ViewerWorkspace.jsx';
+import ContextInspector from './components/ContextInspector.jsx';
+import EstimateDock from './components/EstimateDock.jsx';
+import SalesStepContent from './components/SalesStepContent.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -26,6 +33,9 @@ import { captureDesignState, applyDesignState, decodeDesignFromUrl } from './lib
 import { saveOrUpdateProject } from './lib/projects.js';
 import { getEditProjectId, replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
+import { getInitialCustomerContext } from './lib/customerContext.js';
+import { canEnterExpert, resolveStudioMode } from './lib/studioMode.js';
+import { STUDIO_STEPS, nextStudioStep, previousStudioStep } from './lib/studioSteps.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
 import { colorById, setExtraColors } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -123,7 +133,11 @@ export default function App({ currentUser = null }) {
   const [approvedAt, setApprovedAt] = useState(null);
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
-  const canViewPlatform = currentUser?.capabilities?.includes('platform.diagnostics.read');
+  const [activeStudioStep, setActiveStudioStep] = useState('project');
+  const [expertRequested, setExpertRequested] = useState(false);
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(true);
+  const capabilities = currentUser?.capabilities || [];
+  const canViewPlatform = capabilities.includes('platform.diagnostics.read');
   const [companySettings, setCompanySettings] = useState(null);
   // Business identity/contact (name, phone, address, website/social) — on
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
@@ -172,7 +186,14 @@ export default function App({ currentUser = null }) {
   // manual/override discount field gets locked (they can still explore
   // colors/profiles and see any automatic package-deal discounts
   // recalculate live).
-  const [isCustomerView, setIsCustomerView] = useState(false);
+  const [isCustomerView, setIsCustomerView] = useState(getInitialCustomerContext);
+  const studioMode = resolveStudioMode({
+    isCustomerView,
+    activeSection,
+    role: currentUser?.role || null,
+    capabilities,
+    expertRequested,
+  });
 
   // A design that's already been saved/loaded prices off the rates it was
   // frozen at (pricingSettings); a brand-new one still tracks whatever
@@ -723,272 +744,381 @@ export default function App({ currentUser = null }) {
     }
   };
 
-  return (
-    <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
-      <header className="app-header">
-        <div className="app-header-brand">
-          {companySettings?.logo_url && <img src={companySettings.logo_url} alt="Company logo" className="app-header-logo" />}
-          <div>
-            <div className="app-title">{brand.name} 3D Configurator</div>
-            <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
-          </div>
-        </div>
-        <div className="app-header-actions">
-          {!isCustomerView && (
-            <button type="button" className="btn-secondary" onClick={handleLogout}>Log Out</button>
-          )}
-          <BrandToggle brandId={brandId} onChange={setBrandId} />
-        </div>
-      </header>
+  const projectContent = (
+    <>
+      <LayersPanel
+        house={house}
+        onMetaChange={handleHouseMetaChange}
+        onAddLayer={handleAddLayer}
+        onRemoveLayer={handleRemoveLayer}
+        onToggleVisibility={handleToggleLayerVisibility}
+        onRenameLayer={handleRenameLayer}
+        onNewProject={handleNewProject}
+        readOnly={isCustomerView}
+      />
 
       {!isCustomerView && (
-        <nav className="app-nav">
-          {NAV_SECTIONS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              className={`app-nav-tab${activeSection === key ? ' active' : ''}`}
-              onClick={() => setActiveSection(key)}
-            >
-              {label}
-            </button>
-          ))}
-          {canViewPlatform && (
-            <button
-              type="button"
-              className={`app-nav-tab${activeSection === 'platform' ? ' active' : ''}`}
-              onClick={() => setActiveSection('platform')}
-            >
-              Platform
-            </button>
-          )}
-        </nav>
+        <ProjectsPanel
+          house={house}
+          getCurrentDesign={buildDesignSnapshot}
+          onOpenProject={(design) => applyDesignSnapshot(design, false)}
+          currentProjectId={currentProjectId}
+          onProjectIdChange={setOwnerProjectId}
+        />
       )}
 
-      {activeSection === 'platform' && canViewPlatform && <PlatformConsole capabilities={currentUser?.capabilities || []} />}
+      {currentProjectId && (
+        <AttachmentsPanel
+          projectId={currentProjectId}
+          isCustomerView={isCustomerView}
+          onChanged={setAttachments}
+        />
+      )}
+    </>
+  );
 
-      {activeSection === 'settings' && !isCustomerView && (
+  const uniformFinishContent = (
+    <div className="control-block">
+      <label className="uniform-toggle">
+        <input type="checkbox" checked={uniformFinish} onChange={(e) => setUniformFinish(e.target.checked)} />
+        <span>All roof slopes / wall segments use the same profile and color</span>
+      </label>
+      {!uniformFinish && (
+        <div className="control-sublabel">
+          Click a roof slope or wall segment in the 3D model to set its own material and color.
+          {Object.keys(facetOverrides).length > 0 ? ` ${Object.keys(facetOverrides).length} facet(s) customized.` : ''}
+        </div>
+      )}
+    </div>
+  );
+
+  const roofSelectionContent = hasRoofFaces && (
+    <>
+      <ServiceRow
+        label="Roof" checked={services.roof} onToggle={(val) => setServices((s) => ({ ...s, roof: val }))}
+        readOnly={isCustomerView} locked={lockedServices?.roof}
+        onToggleLock={(val) => setLockedServices((s) => ({ ...s, roof: val }))} showLockToggle={!isCustomerView}
+      />
+      <ProductSelector
+        label="Roof Material"
+        products={allRoofProducts()}
+        profiles={ROOF_PROFILES}
+        selectedId={roofProductId}
+        selectedProfile={roofProfile}
+        onProductChange={handleRoofProductChange}
+        onProfileChange={setRoofProfile}
+      />
+      <div className="control-block color-row">
+        <span className="control-label">Roof Color</span>
+        <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === roofProductId)?.colorIds} />
+      </div>
+    </>
+  );
+
+  const roofContent = (
+    <>
+      {uniformFinishContent}
+      {roofSelectionContent}
+    </>
+  );
+
+  const sidingSelectionContent = hasWallFaces && (
+    <>
+      <ServiceRow
+        label="Wall" checked={services.wall} onToggle={(val) => setServices((s) => ({ ...s, wall: val }))}
+        readOnly={isCustomerView} locked={lockedServices?.wall}
+        onToggleLock={(val) => setLockedServices((s) => ({ ...s, wall: val }))} showLockToggle={!isCustomerView}
+      />
+      <ProductSelector
+        label="Siding Material"
+        products={allWallProducts()}
+        profiles={WALL_PROFILES}
+        selectedId={wallProductId}
+        selectedProfile={wallProfile}
+        onProductChange={handleWallProductChange}
+        onProfileChange={setWallProfile}
+      />
+      <div className="control-block color-row">
+        <span className="control-label">Siding Color</span>
+        <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === wallProductId)?.colorIds} />
+      </div>
+    </>
+  );
+
+  const sidingContent = (
+    <>
+      {uniformFinishContent}
+      {sidingSelectionContent}
+    </>
+  );
+
+  const servicesPanelProps = {
+    services,
+    onServicesChange: setServices,
+    lockedServices,
+    onLockedServicesChange: setLockedServices,
+    measurements,
+    onMeasurementsChange: setMeasurements,
+    gutterOptionId,
+    onGutterOptionChange: setGutterOptionId,
+    downspoutOptionId,
+    onDownspoutOptionChange: setDownspoutOptionId,
+    accessoryColors,
+    onAccessoryColorsChange: setAccessoryColors,
+    readOnlyQuantities: isCustomerView,
+    isCustomerView,
+    customServiceLines,
+    onCustomServiceLinesChange: setCustomServiceLines,
+    customServiceCatalog,
+  };
+
+  const servicesContent = (
+    <ServicesPanel section="services" {...servicesPanelProps} />
+  );
+
+  const accentsContent = (
+    <>
+      <ServicesPanel section="accents" {...servicesPanelProps} />
+      <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
+    </>
+  );
+
+  const priceSummaryContent = (
+    <PriceSummary
+      estimate={estimate}
+      manualDiscount={manualDiscount}
+      onManualDiscountChange={setManualDiscount}
+      readOnlyDiscount={isCustomerView}
+    />
+  );
+
+  const approvalContent = isCustomerView && currentProjectId && (
+    <div className="control-block">
+      {approvedAt ? (
+        <div className="control-sublabel">
+          Approved on {new Date(approvedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}.
+        </div>
+      ) : (
+        <button type="button" className="btn-primary" onClick={handleApproveDesign} disabled={approveBusy} style={{ width: '100%' }}>
+          Approve This Design
+        </button>
+      )}
+    </div>
+  );
+
+  const exportContent = !isCustomerView && (
+    <div className="export-buttons">
+      <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
+      <button type="button" className="btn-secondary" onClick={handleExportHtml}>Share Design</button>
+      <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
+    </div>
+  );
+
+  const reviewContent = (
+    <>
+      {priceSummaryContent}
+      {approvalContent}
+      {exportContent}
+    </>
+  );
+
+  const fullControlsContent = (
+    <div className="controls-pane">
+      {uniformFinishContent}
+      {roofSelectionContent}
+      {sidingSelectionContent}
+      <ServicesPanel {...servicesPanelProps} />
+      <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
+      {priceSummaryContent}
+      {approvalContent}
+      {exportContent}
+    </div>
+  );
+
+  const viewerContent = (
+    <div className="viewer-pane" style={{ height: '100%' }}>
+      <div className="viewer3d-canvas-wrap">
+        <Viewer3D
+          ref={viewerRef}
+          parsedLayers={parsedLayers}
+          layerOffsets={layerOffsets}
+          facetColors={facetColors}
+          facetLabels={facetLabels}
+          photoOverlay={photoOverlay}
+          facetSelectionEnabled={!uniformFinish}
+          selectedFacetId={selectedFacet?.key}
+          onFacetClick={handleFacetClick}
+        />
+        {!uniformFinish && (
+          <FacetInspector
+            facet={selectedFacet}
+            effectiveProductId={facetOverrideState?.productId || facetGlobalProductId}
+            effectiveColorId={facetOverrideState?.colorId || facetGlobalColorId}
+            hasOverride={!!facetOverrideState}
+            onProductChange={(id) => setFacetOverride({ productId: id })}
+            onColorChange={(id) => setFacetOverride({ colorId: id })}
+            onClear={clearFacetOverride}
+            onClose={() => setSelectedFacet(null)}
+          />
+        )}
+        <AssemblyAdjustment
+          layers={house.layers}
+          layerOffsets={layerOffsets}
+          activeLayerId={activeLayerId}
+          onActiveLayerChange={setActiveLayerId}
+          onChange={handleLayerOffsetChange}
+          onReset={handleResetLayerOffset}
+        />
+      </div>
+    </div>
+  );
+
+  const activeStudioStepIndex = STUDIO_STEPS.findIndex((step) => step.key === activeStudioStep);
+  const activeStudioStepLabel = STUDIO_STEPS[activeStudioStepIndex]?.label || STUDIO_STEPS[0].label;
+  const configuratorActive = activeSection === 'configurator' || isCustomerView;
+  const legacySectionContent = !isCustomerView && (
+    <>
+      {activeSection === 'settings' && (
         <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />
       )}
-      {activeSection === 'discounts' && !isCustomerView && (
-        <DiscountsPanel onSaved={setCompanySettings} />
-      )}
-      {activeSection === 'customServices' && !isCustomerView && (
+      {activeSection === 'discounts' && <DiscountsPanel onSaved={setCompanySettings} />}
+      {activeSection === 'customServices' && (
         <CustomServicesPanel onChanged={setCustomServiceCatalog} />
       )}
-      {activeSection === 'materials' && !isCustomerView && (
+      {activeSection === 'materials' && (
         <MaterialsPanel
           onColorsChanged={(rows) => setExtraColors(rows.map(toColorEntry))}
           onMaterialsChanged={applyMaterialsCatalog}
         />
       )}
+    </>
+  );
 
-      <main
-        className={`app-body${viewerMode !== 'normal' ? ` viewer-${viewerMode}` : ''}`}
-        style={activeSection !== 'configurator' && !isCustomerView ? { display: 'none' } : undefined}
-      >
-        <section className="viewer-pane">
-          <div className="viewer-toolbar">
-            <span className="viewer-toolbar-title">3D Model</span>
-            <div className="viewer-toolbar-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setViewerMode(viewerMode === 'minimized' ? 'normal' : 'minimized')}
-              >
-                {viewerMode === 'minimized' ? 'Show 3D Model' : 'Hide'}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setViewerMode(viewerMode === 'maximized' ? 'normal' : 'maximized')}
-                disabled={viewerMode === 'minimized'}
-              >
-                {viewerMode === 'maximized' ? 'Restore' : 'Full Screen'}
-              </button>
-            </div>
-          </div>
-
-          {viewerMode !== 'minimized' && (
-            <>
-              <div className="viewer3d-canvas-wrap">
-                <Viewer3D
-                  ref={viewerRef}
-                  parsedLayers={parsedLayers}
-                  layerOffsets={layerOffsets}
-                  facetColors={facetColors}
-                  facetLabels={facetLabels}
-                  photoOverlay={photoOverlay}
-                  facetSelectionEnabled={!uniformFinish}
-                  selectedFacetId={selectedFacet?.key}
-                  onFacetClick={handleFacetClick}
-                />
-                {!uniformFinish && (
-                  <FacetInspector
-                    facet={selectedFacet}
-                    effectiveProductId={facetOverrideState?.productId || facetGlobalProductId}
-                    effectiveColorId={facetOverrideState?.colorId || facetGlobalColorId}
-                    hasOverride={!!facetOverrideState}
-                    onProductChange={(id) => setFacetOverride({ productId: id })}
-                    onColorChange={(id) => setFacetOverride({ colorId: id })}
-                    onClear={clearFacetOverride}
-                    onClose={() => setSelectedFacet(null)}
-                  />
-                )}
-                <AssemblyAdjustment
-                  layers={house.layers}
-                  layerOffsets={layerOffsets}
-                  activeLayerId={activeLayerId}
-                  onActiveLayerChange={setActiveLayerId}
-                  onChange={handleLayerOffsetChange}
-                  onReset={handleResetLayerOffset}
-                />
-              </div>
-            </>
-          )}
-        </section>
-
-        <aside className="controls-pane">
-          <LayersPanel
-            house={house}
-            onMetaChange={handleHouseMetaChange}
-            onAddLayer={handleAddLayer}
-            onRemoveLayer={handleRemoveLayer}
-            onToggleVisibility={handleToggleLayerVisibility}
-            onRenameLayer={handleRenameLayer}
-            onNewProject={handleNewProject}
-            readOnly={isCustomerView}
-          />
-
-          {!isCustomerView && (
-            <ProjectsPanel
-              house={house}
-              getCurrentDesign={buildDesignSnapshot}
-              onOpenProject={(design) => applyDesignSnapshot(design, false)}
-              currentProjectId={currentProjectId}
-              onProjectIdChange={setOwnerProjectId}
-            />
-          )}
-
-          {currentProjectId && (
-            <AttachmentsPanel
-              projectId={currentProjectId}
-              isCustomerView={isCustomerView}
-              onChanged={setAttachments}
-            />
-          )}
-
-          <div className="control-block">
-            <label className="uniform-toggle">
-              <input type="checkbox" checked={uniformFinish} onChange={(e) => setUniformFinish(e.target.checked)} />
-              <span>All roof slopes / wall segments use the same profile and color</span>
-            </label>
-            {!uniformFinish && (
-              <div className="control-sublabel">
-                Click a roof slope or wall segment in the 3D model to set its own material and color.
-                {Object.keys(facetOverrides).length > 0 ? ` ${Object.keys(facetOverrides).length} facet(s) customized.` : ''}
-              </div>
-            )}
-          </div>
-
-          {hasRoofFaces && (
-            <>
-              <ServiceRow
-                label="Roof" checked={services.roof} onToggle={(val) => setServices((s) => ({ ...s, roof: val }))}
-                readOnly={isCustomerView} locked={lockedServices?.roof}
-                onToggleLock={(val) => setLockedServices((s) => ({ ...s, roof: val }))} showLockToggle={!isCustomerView}
-              />
-              <ProductSelector
-                label="Roof Material"
-                products={allRoofProducts()}
-                profiles={ROOF_PROFILES}
-                selectedId={roofProductId}
-                selectedProfile={roofProfile}
-                onProductChange={handleRoofProductChange}
-                onProfileChange={setRoofProfile}
-              />
-              <div className="control-block color-row">
-                <span className="control-label">Roof Color</span>
-                <ColorPickerButton selectedId={roofColorId} onChange={setRoofColorId} mixed={roofColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === roofProductId)?.colorIds} />
-              </div>
-            </>
-          )}
-
-          {hasWallFaces && (
-            <>
-              <ServiceRow
-                label="Wall" checked={services.wall} onToggle={(val) => setServices((s) => ({ ...s, wall: val }))}
-                readOnly={isCustomerView} locked={lockedServices?.wall}
-                onToggleLock={(val) => setLockedServices((s) => ({ ...s, wall: val }))} showLockToggle={!isCustomerView}
-              />
-              <ProductSelector
-                label="Siding Material"
-                products={allWallProducts()}
-                profiles={WALL_PROFILES}
-                selectedId={wallProductId}
-                selectedProfile={wallProfile}
-                onProductChange={handleWallProductChange}
-                onProfileChange={setWallProfile}
-              />
-              <div className="control-block color-row">
-                <span className="control-label">Siding Color</span>
-                <ColorPickerButton selectedId={wallColorId} onChange={setWallColorId} mixed={wallColorMixed} allowedColorIds={materialsCatalog.find((m) => m.id === wallProductId)?.colorIds} />
-              </div>
-            </>
-          )}
-
-          <ServicesPanel
-            services={services}
-            onServicesChange={setServices}
-            lockedServices={lockedServices}
-            onLockedServicesChange={setLockedServices}
-            measurements={measurements}
-            onMeasurementsChange={setMeasurements}
-            gutterOptionId={gutterOptionId}
-            onGutterOptionChange={setGutterOptionId}
-            downspoutOptionId={downspoutOptionId}
-            onDownspoutOptionChange={setDownspoutOptionId}
-            accessoryColors={accessoryColors}
-            onAccessoryColorsChange={setAccessoryColors}
-            readOnlyQuantities={isCustomerView}
-            isCustomerView={isCustomerView}
-            customServiceLines={customServiceLines}
-            onCustomServiceLinesChange={setCustomServiceLines}
-            customServiceCatalog={customServiceCatalog}
-          />
-
-          <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
-
-          <PriceSummary
-            estimate={estimate}
-            manualDiscount={manualDiscount}
-            onManualDiscountChange={setManualDiscount}
-            readOnlyDiscount={isCustomerView}
-          />
-
-          {isCustomerView && currentProjectId && (
-            <div className="control-block">
-              {approvedAt ? (
-                <div className="control-sublabel">
-                  Approved on {new Date(approvedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}.
+  return (
+    <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
+      <StudioShell
+        mode={studioMode}
+        topBar={(
+          <>
+            {isCustomerView ? (
+              <header className="app-header">
+                <div className="app-header-brand">
+                  {companySettings?.logo_url && <img src={companySettings.logo_url} alt="Company logo" className="app-header-logo" />}
+                  <div>
+                    <div className="app-title">{brand.name} 3D Configurator</div>
+                    <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
+                  </div>
                 </div>
-              ) : (
-                <button type="button" className="btn-primary" onClick={handleApproveDesign} disabled={approveBusy} style={{ width: '100%' }}>
-                  Approve This Design
-                </button>
-              )}
-            </div>
-          )}
+                <BrandToggle brandId={brandId} onChange={setBrandId} />
+              </header>
+            ) : (
+              <StudioTopBar
+                title={`${brand.name} 3D Configurator`}
+                subtitle={`${brand.tagline} — Job ${house.jobNumber} · ${house.customerName}`}
+                logoUrl={companySettings?.logo_url}
+                canUseExpert={canEnterExpert(currentUser?.role || null)}
+                expertActive={studioMode === 'expert'}
+                onToggleExpert={() => {
+                  setActiveSection('configurator');
+                  setExpertRequested((requested) => !requested);
+                }}
+                onLogout={handleLogout}
+                onOpenNavigation={() => setActiveSection('configurator')}
+              />
+            )}
 
-          {!isCustomerView && (
-            <div className="export-buttons">
-              <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
-              <button type="button" className="btn-secondary" onClick={handleExportHtml}>Share Design</button>
-              <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
+            {!isCustomerView && (
+              <nav className="app-nav">
+                {NAV_SECTIONS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`app-nav-tab${activeSection === key ? ' active' : ''}`}
+                    onClick={() => setActiveSection(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {canViewPlatform && (
+                  <button
+                    type="button"
+                    className={`app-nav-tab${activeSection === 'platform' ? ' active' : ''}`}
+                    onClick={() => setActiveSection('platform')}
+                  >
+                    Platform
+                  </button>
+                )}
+                <BrandToggle brandId={brandId} onChange={setBrandId} />
+                {canViewPlatform && (
+                  <div data-interface-design-placeholder>
+                    <button type="button" className="app-nav-tab" disabled>Import Interface Design</button>
+                    <span className="control-sublabel">Skin package validation is not enabled in this release.</span>
+                  </div>
+                )}
+              </nav>
+            )}
+          </>
+        )}
+        stepRail={configuratorActive && studioMode === 'sales' ? (
+          <GuidedStepRail
+            steps={STUDIO_STEPS}
+            activeStep={activeStudioStep}
+            completedSteps={STUDIO_STEPS.slice(0, Math.max(0, activeStudioStepIndex)).map((step) => step.key)}
+            onStepChange={setActiveStudioStep}
+          />
+        ) : null}
+        viewer={configuratorActive ? (
+          <ViewerWorkspace viewerMode={viewerMode} onViewerModeChange={setViewerMode}>
+            {viewerContent}
+          </ViewerWorkspace>
+        ) : legacySectionContent}
+        inspector={configuratorActive ? (
+          <ContextInspector
+            title={studioMode === 'sales' ? activeStudioStepLabel : 'Design controls'}
+            mobileOpen={mobileInspectorOpen}
+            onMobileOpenChange={setMobileInspectorOpen}
+          >
+            <div
+              data-project-panels
+              hidden={studioMode === 'sales' && activeStudioStep !== 'project'}
+            >
+              {projectContent}
             </div>
-          )}
-        </aside>
-      </main>
+            {studioMode === 'sales' ? (
+              <SalesStepContent
+                activeStep={activeStudioStep}
+                projectContent={null}
+                roofContent={roofContent}
+                sidingContent={sidingContent}
+                accentsContent={accentsContent}
+                servicesContent={servicesContent}
+                reviewContent={reviewContent}
+              />
+            ) : fullControlsContent}
+          </ContextInspector>
+        ) : null}
+        estimateDock={configuratorActive && studioMode === 'sales' ? (
+          <EstimateDock
+            estimate={estimate}
+            activeStep={activeStudioStepLabel}
+            atFirstStep={activeStudioStepIndex <= 0}
+            atLastStep={activeStudioStepIndex === STUDIO_STEPS.length - 1}
+            onPrevious={() => {
+              setActiveStudioStep(previousStudioStep(activeStudioStep).key);
+              setMobileInspectorOpen(true);
+            }}
+            onNext={() => {
+              setActiveStudioStep(nextStudioStep(activeStudioStep).key);
+              setMobileInspectorOpen(true);
+            }}
+          >
+            <strong>
+              Total Estimate: {estimate.total.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}
+            </strong>
+          </EstimateDock>
+        ) : null}
+        platformContent={canViewPlatform && <PlatformConsole capabilities={capabilities} />}
+      />
     </div>
   );
 }

@@ -57,14 +57,18 @@ function AddServiceRow({ fixedOptions, catalog, existingCustomIds, onAddFixed, o
 
 export function ServiceRow({
   label, checked, onToggle, qty, unit, onQtyChange, note, colorId, onColorChange, readOnly,
-  locked, onToggleLock, showLockToggle, extra,
+  locked, onToggleLock, showLockToggle, extra, showToggle = true,
 }) {
   return (
     <div className="service-row">
-      <label className="service-row-main">
-        <input type="checkbox" checked={checked} disabled={readOnly && locked} onChange={(e) => onToggle(e.target.checked)} />
-        <span>{label}</span>
-      </label>
+      {showToggle ? (
+        <label className="service-row-main">
+          <input type="checkbox" checked={checked} disabled={readOnly && locked} onChange={(e) => onToggle(e.target.checked)} />
+          <span>{label}</span>
+        </label>
+      ) : (
+        <span className="service-row-main"><span>{label}</span></span>
+      )}
       {showLockToggle && (
         <label
           className="service-lock-toggle"
@@ -101,47 +105,54 @@ export default function ServicesPanel({
   gutterOptionId, onGutterOptionChange, downspoutOptionId, onDownspoutOptionChange,
   accessoryColors, onAccessoryColorsChange, readOnlyQuantities, isCustomerView,
   customServiceLines = [], onCustomServiceLinesChange, customServiceCatalog = [],
+  section = 'all',
 }) {
   const toggle = (key) => (val) => onServicesChange({ ...services, [key]: val });
   const setQty = (key) => (val) => onMeasurementsChange({ ...measurements, [key]: val });
   const setColor = (key) => (val) => onAccessoryColorsChange({ ...accessoryColors, [key]: val });
   const toggleLock = (key) => (val) => onLockedServicesChange({ ...lockedServices, [key]: val });
   const showLockToggle = !isCustomerView;
+  const showServiceControls = section !== 'accents';
+  const showAccentControls = section !== 'services';
 
   const soffitFasciaDeal = services.soffit && services.fascia;
   const gutterDownspoutDeal = services.gutters && services.downspouts;
 
   return (
     <div className="control-block">
-      <div className="control-label">Optional Services</div>
-      <div className="control-sublabel">
-        Roof and Wall have their own enable checkbox next to their Material section above. Below,
-        a service that's off doesn't clutter the list — uncheck one and it's gone; bring it (or a
-        custom service) back any time from "Add a service" at the bottom.
-      </div>
+      <div className="control-label">{section === 'accents' ? 'Accessory Finishes' : 'Optional Services'}</div>
+      {showServiceControls && (
+        <div className="control-sublabel">
+          Roof and Wall have their own enable checkbox next to their Material section above. Below,
+          a service that's off doesn't clutter the list — uncheck one and it's gone; bring it (or a
+          custom service) back any time from "Add a service" at the bottom.
+        </div>
+      )}
 
       {services.soffit && (
         <ServiceRow
           label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}
-          qty={measurements.soffitSqft} unit="sqft" onQtyChange={setQty('soffitSqft')}
-          colorId={accessoryColors.soffit} onColorChange={setColor('soffit')} readOnly={readOnlyQuantities}
-          locked={lockedServices?.soffit} onToggleLock={toggleLock('soffit')} showLockToggle={showLockToggle}
+          qty={showServiceControls ? measurements.soffitSqft : undefined} unit="sqft" onQtyChange={setQty('soffitSqft')}
+          colorId={showAccentControls ? accessoryColors.soffit : undefined} onColorChange={setColor('soffit')} readOnly={readOnlyQuantities}
+          locked={lockedServices?.soffit} onToggleLock={toggleLock('soffit')} showLockToggle={showServiceControls && showLockToggle}
+          showToggle={showServiceControls}
         />
       )}
       {services.fascia && (
         <ServiceRow
           label={ACCESSORY_PRICING.fascia.label} checked={services.fascia} onToggle={toggle('fascia')}
-          qty={measurements.fasciaLf} unit="LF" onQtyChange={setQty('fasciaLf')}
-          colorId={accessoryColors.fascia} onColorChange={setColor('fascia')}
-          note={soffitFasciaDeal ? '50% OFF (soffit + fascia deal)' : null} readOnly={readOnlyQuantities}
-          locked={lockedServices?.fascia} onToggleLock={toggleLock('fascia')} showLockToggle={showLockToggle}
+          qty={showServiceControls ? measurements.fasciaLf : undefined} unit="LF" onQtyChange={setQty('fasciaLf')}
+          colorId={showAccentControls ? accessoryColors.fascia : undefined} onColorChange={setColor('fascia')}
+          note={showServiceControls && soffitFasciaDeal ? '50% OFF (soffit + fascia deal)' : null} readOnly={readOnlyQuantities}
+          locked={lockedServices?.fascia} onToggleLock={toggleLock('fascia')} showLockToggle={showServiceControls && showLockToggle}
+          showToggle={showServiceControls}
         />
       )}
 
       {services.gutters && (
         <ServiceRow
           label="Gutters" checked={services.gutters} onToggle={toggle('gutters')}
-          extra={(
+          extra={showAccentControls ? (
             <select
               className="control-select" aria-label="Eavestrough profile"
               value={gutterOptionId} disabled={readOnlyQuantities}
@@ -151,17 +162,18 @@ export default function ServicesPanel({
                 <option key={g.id} value={g.id}>{g.label} — ${g.pricePerLf.toFixed(2)}/LF</option>
               ))}
             </select>
-          )}
-          qty={measurements.gutterLf} unit="LF" onQtyChange={setQty('gutterLf')}
-          colorId={accessoryColors.gutters} onColorChange={setColor('gutters')} readOnly={readOnlyQuantities}
-          locked={lockedServices?.gutters} onToggleLock={toggleLock('gutters')} showLockToggle={showLockToggle}
+          ) : null}
+          qty={showServiceControls ? measurements.gutterLf : undefined} unit="LF" onQtyChange={setQty('gutterLf')}
+          colorId={showAccentControls ? accessoryColors.gutters : undefined} onColorChange={setColor('gutters')} readOnly={readOnlyQuantities}
+          locked={lockedServices?.gutters} onToggleLock={toggleLock('gutters')} showLockToggle={showServiceControls && showLockToggle}
+          showToggle={showServiceControls}
         />
       )}
 
       {services.downspouts && (
         <ServiceRow
           label="Downspouts" checked={services.downspouts} onToggle={toggle('downspouts')}
-          extra={(
+          extra={showAccentControls ? (
             <select
               className="control-select" aria-label="Downspout type"
               value={downspoutOptionId} disabled={readOnlyQuantities}
@@ -171,29 +183,30 @@ export default function ServicesPanel({
                 <option key={d.id} value={d.id}>{d.label} — ${d.pricePerLf.toFixed(2)}/LF</option>
               ))}
             </select>
-          )}
-          qty={measurements.downspoutLf} unit="LF" onQtyChange={setQty('downspoutLf')}
-          colorId={accessoryColors.downspouts} onColorChange={setColor('downspouts')}
-          note={gutterDownspoutDeal ? 'FREE (gutters + downspouts deal)' : null} readOnly={readOnlyQuantities}
-          locked={lockedServices?.downspouts} onToggleLock={toggleLock('downspouts')} showLockToggle={showLockToggle}
+          ) : null}
+          qty={showServiceControls ? measurements.downspoutLf : undefined} unit="LF" onQtyChange={setQty('downspoutLf')}
+          colorId={showAccentControls ? accessoryColors.downspouts : undefined} onColorChange={setColor('downspouts')}
+          note={showServiceControls && gutterDownspoutDeal ? 'FREE (gutters + downspouts deal)' : null} readOnly={readOnlyQuantities}
+          locked={lockedServices?.downspouts} onToggleLock={toggleLock('downspouts')} showLockToggle={showServiceControls && showLockToggle}
+          showToggle={showServiceControls}
         />
       )}
 
-      {services.snowRetention && (
+      {showServiceControls && services.snowRetention && (
         <ServiceRow
           label={ACCESSORY_PRICING.snowRetention.label} checked={services.snowRetention} onToggle={toggle('snowRetention')}
           qty={measurements.snowRetentionLf} unit="LF" onQtyChange={setQty('snowRetentionLf')} readOnly={readOnlyQuantities}
           locked={lockedServices?.snowRetention} onToggleLock={toggleLock('snowRetention')} showLockToggle={showLockToggle}
         />
       )}
-      {services.capFlashing && (
+      {showServiceControls && services.capFlashing && (
         <ServiceRow
           label={ACCESSORY_PRICING.capFlashing.label} checked={services.capFlashing} onToggle={toggle('capFlashing')}
           qty={measurements.capFlashingLf} unit="LF" onQtyChange={setQty('capFlashingLf')} readOnly={readOnlyQuantities}
           locked={lockedServices?.capFlashing} onToggleLock={toggleLock('capFlashing')} showLockToggle={showLockToggle}
         />
       )}
-      {services.garageDoorCapping && (
+      {showServiceControls && services.garageDoorCapping && (
         <ServiceRow
           label={ACCESSORY_PRICING.garageDoorCapping.label} checked={services.garageDoorCapping} onToggle={toggle('garageDoorCapping')}
           qty={measurements.garageDoorCappingLf} unit="LF" onQtyChange={setQty('garageDoorCappingLf')} readOnly={readOnlyQuantities}
@@ -201,7 +214,7 @@ export default function ServicesPanel({
         />
       )}
 
-      {customServiceLines.length > 0 && (
+      {showServiceControls && customServiceLines.length > 0 && (
         <>
           <div className="field-label" style={{ marginTop: '0.75rem' }}>Custom Services</div>
           {customServiceLines.map((cs) => (
@@ -229,7 +242,7 @@ export default function ServicesPanel({
         </>
       )}
 
-      {!isCustomerView && !readOnlyQuantities && (
+      {showServiceControls && !isCustomerView && !readOnlyQuantities && (
         <AddServiceRow
           fixedOptions={FIXED_SERVICE_DEFS.filter((f) => !services[f.key])}
           catalog={customServiceCatalog}

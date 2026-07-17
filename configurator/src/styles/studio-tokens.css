@@ -1,0 +1,125 @@
+:root,
+[data-studio-skin='ironwrap'] {
+  /* Color */
+  --studio-action: #e21b23;
+  --studio-action-hover: #ba161d;
+  --studio-action-active: #971217;
+  --studio-action-text: #ffffff;
+  --studio-surface-canvas: #111417;
+  --studio-surface-panel: #f7f5f1;
+  --studio-surface-panel-muted: #ebe7df;
+  --studio-surface-control: #ffffff;
+  --studio-text: #111417;
+  --studio-text-muted: #596168;
+  --studio-text-on-canvas: #f7f5f1;
+  --studio-border: #c9c4bb;
+  --studio-border-strong: #77736d;
+  --studio-focus: #005fcc;
+  --studio-focus-ring: color-mix(in srgb, var(--studio-focus) 28%, transparent);
+
+  /* Typography */
+  --studio-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --studio-font-weight-control: 700;
+  --studio-letter-spacing-control: 0.01em;
+
+  /* Geometry and spacing */
+  --studio-control-min: 44px;
+  --studio-control-padding-inline: 1rem;
+  --studio-control-gap: 0.5rem;
+  --studio-panel-padding: 1rem;
+  --studio-radius-control: 0.5rem;
+  --studio-radius-panel: 0.75rem;
+  --studio-border-width: 1px;
+
+  /* Elevation and motion */
+  --studio-shadow-panel: 0 10px 24px rgb(17 20 23 / 14%);
+  --studio-motion-fast: 160ms;
+  --studio-motion-easing: ease-out;
+}
+
+.studio-button {
+  align-items: center;
+  background: var(--studio-surface-control);
+  border: var(--studio-border-width) solid var(--studio-border);
+  border-radius: var(--studio-radius-control);
+  color: var(--studio-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--studio-font-family);
+  font-weight: var(--studio-font-weight-control);
+  justify-content: center;
+  letter-spacing: var(--studio-letter-spacing-control);
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+  padding: 0 var(--studio-control-padding-inline);
+  transition: background-color var(--studio-motion-fast) var(--studio-motion-easing),
+    border-color var(--studio-motion-fast) var(--studio-motion-easing),
+    color var(--studio-motion-fast) var(--studio-motion-easing),
+    box-shadow var(--studio-motion-fast) var(--studio-motion-easing);
+}
+
+.studio-button:hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+  border-color: var(--studio-border-strong);
+}
+
+.studio-button:focus-visible {
+  outline: var(--studio-border-width) solid var(--studio-focus);
+  outline-offset: var(--studio-control-gap);
+  box-shadow: 0 0 0 var(--studio-control-gap) var(--studio-focus-ring);
+}
+
+.studio-button:disabled {
+  color: var(--studio-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.studio-button-primary {
+  background: var(--studio-action);
+  border-color: var(--studio-action);
+  color: var(--studio-action-text);
+}
+
+.studio-button-primary:hover:not(:disabled) {
+  background: var(--studio-action-hover);
+  border-color: var(--studio-action-hover);
+}
+
+.studio-button-primary:active:not(:disabled) {
+  background: var(--studio-action-active);
+  border-color: var(--studio-action-active);
+}
+
+.studio-button-secondary {
+  background: var(--studio-surface-control);
+  color: var(--studio-text);
+}
+
+.studio-button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--studio-text);
+}
+
+.studio-button-ghost:hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+  border-color: transparent;
+}
+
+.studio-panel {
+  background: var(--studio-surface-panel);
+  border: var(--studio-border-width) solid var(--studio-border);
+  border-radius: var(--studio-radius-panel);
+  box-shadow: var(--studio-shadow-panel);
+  color: var(--studio-text);
+  padding: var(--studio-panel-padding);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-studio-skin='ironwrap'] {
+    --studio-motion-fast: 0ms;
+    --studio-motion-easing: linear;
+  }
+}

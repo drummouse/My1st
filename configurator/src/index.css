@@ -1,3 +1,6 @@
+@import './styles/studio-tokens.css';
+@import './styles/studio-shell.css';
+
 * , *::before, *::after { box-sizing: border-box; }
 
 /* Browsers don't inherit color/font into form controls by default (button's
@@ -107,6 +110,8 @@ body {
   border-radius: 999px;
   font-size: 0.8rem;
   cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
 }
 .brand-toggle-btn.active { color: #fff; }
 
@@ -700,12 +705,18 @@ body {
 
 .app-nav {
   display: flex;
+  flex-wrap: nowrap;
   gap: 0.3rem;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
   padding: 0.5rem 1.25rem;
   background: #eef0f3;
   border-bottom: 1px solid #dde1e6;
 }
 .app-nav-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
   padding: 0.4rem 0.9rem;
   border-radius: 7px;
   border: 1px solid transparent;
@@ -715,6 +726,17 @@ body {
   cursor: pointer;
 }
 .app-nav-tab.active { background: #fff; border-color: #d1d5db; color: #1f2937; font-weight: 600; }
+
+.app-nav > .brand-toggle {
+  flex: 0 0 auto;
+}
+
+[data-interface-design-placeholder] {
+  flex: 0 0 auto;
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
 
 .settings-panel {
   max-width: 640px;
