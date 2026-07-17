@@ -106,3 +106,121 @@ create table if not exists settings (
 alter table settings add column if not exists id uuid default gen_random_uuid();
 alter table settings add column if not exists owner_id uuid references users(id);
 create unique index if not exists settings_owner_id_key on settings (owner_id);
+
+-- Unified Library Core. These tables are additive; legacy materials and
+-- colors remain the configurator runtime source during this release.
+create table if not exists library_records (
+  id uuid primary key,
+  record_type text not null check (record_type in ('product','profile','color','category','manufacturer','supplier','collection','catalog')),
+  scope text not null check (scope in ('global','tenant')),
+  tenant_id uuid references users(id),
+  name text not null,
+  code text,
+  description text,
+  lifecycle_status text not null default 'active' check (lifecycle_status in ('active','archived')),
+  review_status text not null default 'draft' check (review_status in ('draft','pending_review','approved','rejected')),
+  quality_level text not null default 'test' check (quality_level in ('test','low','standard','verified')),
+  version integer not null default 1 check (version > 0),
+  source_type text not null default 'manual' check (source_type in ('manual','legacy_migration','import','manufacturer','supplier','capture')),
+  external_reference text,
+  source_url text,
+  attribution text,
+  thumbnail_url text,
+  texture_url text,
+  geometry_url text,
+  knowledge_space_id text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_by uuid references users(id),
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check ((scope = 'global' and tenant_id is null) or (scope = 'tenant' and tenant_id is not null))
+);
+create unique index if not exists library_record_code_scope_unique on library_records (record_type, scope, coalesce(tenant_id::text, ''), lower(code)) where code is not null;
+create index if not exists library_records_search_idx on library_records (record_type, scope, lifecycle_status, review_status, quality_level, lower(name));
+
+create table if not exists library_product_details (
+  record_id uuid primary key references library_records(id),
+  unit text,
+  price numeric(14,4),
+  application_metadata jsonb not null default '{}'::jsonb,
+  legacy_material_id uuid
+);
+create table if not exists library_profile_details (
+  record_id uuid primary key references library_records(id),
+  profile_family text,
+  geometry_metadata jsonb not null default '{}'::jsonb,
+  legacy_profile_label text
+);
+create table if not exists library_color_details (
+  record_id uuid primary key references library_records(id),
+  color_code text,
+  hex text,
+  series text,
+  legacy_color_id uuid
+);
+create table if not exists library_relationships (
+  id uuid primary key,
+  source_record_id uuid not null references library_records(id),
+  target_record_id uuid not null references library_records(id),
+  relationship_type text not null,
+  lifecycle_status text not null default 'active' check (lifecycle_status in ('active','archived')),
+  version integer not null default 1 check (version > 0),
+  attribution text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_by uuid references users(id),
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (source_record_id, target_record_id, relationship_type)
+);
+create table if not exists library_documents (
+  id uuid primary key,
+  title text not null,
+  document_type text not null,
+  url text not null,
+  publisher text,
+  jurisdiction text,
+  effective_date date,
+  expiry_date date,
+  language text,
+  checksum text,
+  review_status text not null default 'draft' check (review_status in ('draft','pending_review','approved','rejected')),
+  is_official boolean not null default false,
+  metadata jsonb not null default '{}'::jsonb,
+  created_by uuid references users(id),
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create table if not exists library_document_records (
+  document_id uuid not null references library_documents(id),
+  record_id uuid not null references library_records(id),
+  primary key (document_id, record_id)
+);
+create table if not exists library_import_batches (
+  id uuid primary key,
+  actor_id uuid not null references users(id),
+  scope text not null check (scope in ('global','tenant')),
+  tenant_id uuid references users(id),
+  schema_version integer not null,
+  source_format text not null check (source_format in ('json','csv')),
+  status text not null check (status in ('dry_run','committed','failed')),
+  support_reference text not null,
+  summary jsonb not null default '{}'::jsonb,
+  decisions jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  committed_at timestamptz
+);
+create table if not exists library_migrations (
+  id uuid primary key,
+  migration_key text not null,
+  tenant_id uuid not null references users(id),
+  version integer not null,
+  status text not null check (status in ('running','completed','failed')),
+  summary jsonb not null default '{}'::jsonb,
+  error_code text,
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  unique (migration_key)
+);

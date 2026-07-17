@@ -765,7 +765,7 @@ export default function App({ currentUser = null }) {
         </nav>
       )}
 
-      {activeSection === 'platform' && canViewPlatform && <PlatformConsole />}
+      {activeSection === 'platform' && canViewPlatform && <PlatformConsole capabilities={currentUser?.capabilities || []} />}
 
       {activeSection === 'settings' && !isCustomerView && (
         <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />

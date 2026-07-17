@@ -49,10 +49,28 @@ body {
 .platform-feed { list-style: none; padding: 0; margin: 0; max-height: 320px; overflow: auto; }
 .platform-feed li { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid #eaecf0; font-size: 0.8rem; }
 .platform-feed span { color: #667085; }
+.library-console { border-top: 4px solid #e8541a; }
+.library-header, .library-future, .library-filters, .library-record-form, .library-exchange, .library-tabs { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; }
+.library-header { justify-content: space-between; margin-bottom: 0.8rem; }
+.library-header p { margin: 0.25rem 0 0; color: #667085; font-size: 0.82rem; }
+.library-tabs { border-bottom: 1px solid #e5e7eb; margin-bottom: 0.75rem; }
+.library-tabs button { border: 0; background: transparent; padding: 0.55rem 0.7rem; cursor: pointer; }
+.library-tabs button.active { color: #c2410c; border-bottom: 2px solid #e8541a; font-weight: 700; }
+.library-future { margin-bottom: 0.75rem; }
+.library-future button { border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b; border-radius: 6px; padding: 0.4rem 0.6rem; }
+.library-filters, .library-record-form { margin-bottom: 0.75rem; }
+.library-filters input, .library-filters select, .library-record-form input, .library-record-form select, .library-migration select { padding: 0.48rem; border: 1px solid #cbd2da; border-radius: 6px; }
+.library-exchange { align-items: stretch; display: grid; grid-template-columns: 1fr 2fr; }
+.library-exchange > div { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; }
+.library-exchange h3, .library-migration h3 { margin-top: 0; }
+.library-exchange textarea { width: 100%; min-height: 150px; font-family: monospace; display: block; margin-bottom: 0.5rem; }
+.library-dry-run label { display: flex; justify-content: space-between; margin: 0.35rem 0; }
+.library-migration pre { max-height: 240px; overflow: auto; background: #f8fafc; padding: 0.6rem; }
 
 @media (max-width: 900px) {
   .platform-stats, .platform-grid { grid-template-columns: 1fr 1fr; }
   .platform-form { grid-template-columns: 1fr 1fr; }
+  .library-exchange { grid-template-columns: 1fr; }
 }
 
 .app {

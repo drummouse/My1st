@@ -2,6 +2,10 @@
 
 Contractor-owned, real-time 3D roofing & siding configurator. React 18 + Three.js.
 
+## Library Core
+
+SuperAdmin now has a capability-checked Platform Library for versioned products, profiles, colors, organizations, taxonomy, compatibility, technical-document links, JSON/CSV exchange, and idempotent migration of tenant Materials and Colors. Existing configurator selectors remain on their proven legacy tables during this milestone. See `docs/LIBRARY_OPERATIONS.md` and `docs/CAPTURE_LIBRARY_HANDOFF.md`.
+
 ## What's here
 
 - **RoofRuler/AppliCAD XML parser** (`src/lib/roofRulerParser.js`) — parses real

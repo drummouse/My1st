@@ -56,7 +56,7 @@ for (const path of ['/api/projects', '/api/settings', '/api/materials', '/api/co
   });
 }
 
-for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/superadmin/audit']) {
+for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/superadmin/audit', '/api/superadmin/library']) {
   await check(`SuperAdmin auth guard ${path}`, path, (response) => {
     if (response.status !== 401) return `expected 401, received ${response.status}`;
     return true;
