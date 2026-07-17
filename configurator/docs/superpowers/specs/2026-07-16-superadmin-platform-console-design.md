@@ -24,6 +24,11 @@ The current application uses one `users` row as both login identity and tenant b
 - Every privileged operation is audited.
 - Email/SMS delivery failure never prevents an account restriction.
 - Notification delivery uses a durable, provider-neutral outbox.
+- SuperAdmin may create users, soft-delete/restore users, reset passwords, and initiate opaque encrypted tenant transfers.
+- SuperAdmin manages the global product/profile/colour Library and its taxonomy and relationships.
+- Global catalog plus tenant-private catalogs and tenant overrides are supported.
+- Capture/Scanner submissions are tenant-private and usable while pending review.
+- Authorization uses named capabilities so future roles can be added without rewriting endpoints.
 
 ## Authorization and Bootstrap
 
@@ -80,6 +85,104 @@ It must not return:
 - Private design content
 
 Dedicated DTO/projection functions construct SuperAdmin responses from explicit allowlists. Routes must never return raw database rows.
+
+
+## Capability-Based Authorization
+
+Application routes check named capabilities through `requireCapability(req, res, capability)` rather than scattering direct role comparisons. The built-in `superadmin` role receives every initial platform capability. The model leaves room for later roles such as catalog manager, catalog reviewer, catalog publisher, security administrator, or support administrator.
+
+Initial capabilities include:
+
+- `users.create`
+- `users.freeze`
+- `users.block`
+- `users.delete`
+- `users.restore`
+- `users.password.reset`
+- `tenants.transfer.export`
+- `tenants.transfer.import`
+- `catalog.read`
+- `catalog.write`
+- `catalog.import`
+- `catalog.export`
+- `catalog.review`
+- `catalog.publish`
+- `skins.manage`
+- `platform.audit.read`
+- `platform.diagnostics.read`
+
+No actor may grant itself capabilities. Role/capability changes require a separately authorized, audited action. Role names remain convenient bundles; capabilities are the enforcement contract.
+
+## User Administration
+
+SuperAdmin can create accounts, freeze/block/reactivate them, soft-delete and restore them, and reset passwords.
+
+Soft deletion:
+
+- Immediately disables authenticated and public access.
+- Records deletion actor, reason, and retention deadline.
+- Preserves data during a configurable retention period.
+- Permits restoration before purge.
+- Requires a separately authorized permanent purge workflow after retention.
+
+Password reset:
+
+- Generates or accepts a temporary password.
+- Stores only its password hash.
+- Revokes all existing sessions.
+- Sets `must_change_password = true`.
+- Forces password replacement at the next successful login.
+- Creates an audit event and notification outbox entries.
+- Provides no self-service forgot-password or account-recovery route.
+
+## Opaque Tenant Transfer
+
+SuperAdmin can initiate complete tenant export/import without browsing private contents in the console.
+
+A transfer package includes account/company profile, settings, branding, skin assignment, private catalog and overrides, projects, designs, measurements, attachments, and report metadata. Packages are encrypted, integrity-protected, schema-versioned, and assigned an expiry. Plain customer/project contents are never rendered in SuperAdmin responses or audit records.
+
+Every transfer requires a reason, audit event, support reference, and explicit target confirmation. Import performs validation and a dry run before commit.
+
+## Global and Tenant Library
+
+The Library supports:
+
+- Products
+- Profiles
+- Colours
+- Product, profile, and colour categories
+- Manufacturers
+- Suppliers
+- Collections
+- Catalogs
+- Compatibility rules
+- Swatches, textures, profile geometry, and supporting assets
+
+Products, profiles, and colours each have many-to-many relationships with manufacturers, suppliers, collections, catalogs, and categories. Relationships are independently versioned and manageable.
+
+Every record includes a stable ID, global or tenant-private scope, name/code/description, lifecycle status, version, actor/timestamps, import source, external reference, extensible metadata, and asset references.
+
+Global records are SuperAdmin-controlled. Tenant-private records remain isolated. A tenant may deactivate any inherited global product, profile, colour, manufacturer, supplier, collection, catalog, or category in its own Library without changing or deleting the global record. Tenant overrides are stored separately from the shared source.
+
+SuperAdmin can add, modify, soft-delete, restore, import, and export global catalog records. Initial transfer formats are lossless versioned JSON and CSV for simple bulk editing. Asset ZIP packages are a later catalog slice.
+
+Imports require schema validation, dry-run preview, conflict reporting, and explicit confirmation. Destructive conflict resolution is never implicit.
+
+## Capture/Scanner Contribution Workflow
+
+IronWrap Capture/Scanner creates tenant-private Library records with `pending_review` status. The submitting tenant may use them immediately in its private Library, clearly marked Pending Review.
+
+An authorized SuperAdmin or company representative with the appropriate capability may:
+
+- Approve for global publication
+- Reject with a reason
+- Request revisions
+- Merge into an existing global record
+
+Approval and publication are separate capabilities. Publication preserves contributor attribution, source lineage, review history, and version history.
+
+The data model records contribution attribution and approved contributions for a future configurable incentive program. No points, monetary credits, badges, or other reward values are activated in this sprint.
+
 
 ## Account States
 
@@ -170,6 +273,17 @@ There is no client impersonation or tenant-context switch.
 
 Initial routes:
 
+Account administration:
+
+- `POST /api/superadmin/users`
+- `POST /api/superadmin/users/:id/password-reset`
+- `POST /api/superadmin/users/:id/delete`
+- `POST /api/superadmin/users/:id/restore`
+- `POST /api/superadmin/tenants/:id/export`
+- `POST /api/superadmin/tenants/import`
+
+Platform and restriction routes:
+
 - `GET /api/superadmin/summary`
 - `GET /api/superadmin/tenants`
 - `GET /api/superadmin/tenants/:id`
@@ -237,14 +351,25 @@ Regression verification covers login, signup, generic XML import, 3D model gener
 5. Audit log and notification outbox.
 6. Privacy-safe SuperAdmin APIs.
 7. SuperAdmin console.
-8. Regression verification and Vercel Preview.
-9. Skin package import/validation as the next isolated slice.
-10. Semantic design system and red-direction UI as the following subproject.
+8. User creation, soft deletion/restoration, and temporary-password reset.
+9. Capability-based authorization foundation for future roles.
+10. Global/tenant Library schema and relationship model.
+11. JSON/CSV catalog import/export with dry-run validation.
+12. Opaque encrypted tenant transfer jobs.
+13. Capture/Scanner review and publication workflow foundation.
+14. Regression verification and Vercel Preview.
+15. Skin package import/validation as the next isolated slice.
+16. Semantic design system and red-direction UI as the following subproject.
 
 ## Definition of Done
 
 - No API path permits tenant impersonation or unrestricted cross-tenant content access.
-- SuperAdmin bootstrap and dedicated APIs work server-side.
+- SuperAdmin bootstrap, capability enforcement, and dedicated APIs work server-side.
+- SuperAdmin can create, soft-delete/restore, and reset users without self-service recovery.
+- Complete tenant transfer is encrypted and opaque to the console.
+- Global and tenant-private Library records support many-to-many manufacturer, supplier, collection, catalog, and category relationships.
+- Tenants can deactivate inherited Library records without mutating the global source.
+- Capture/Scanner submissions remain tenant-private while pending and retain attribution through review/publication.
 - Freeze/block immediately disables authenticated and public access.
 - Owner notifications are durably queued for email and SMS and shown in-app.
 - Audit records are complete and privacy-safe.
