@@ -50,7 +50,16 @@ function defaultProjectName(house) {
   return [house.jobNumber, house.customerName, date].filter(Boolean).join(' - ');
 }
 
-export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, currentProjectId, onProjectIdChange }) {
+export default function ProjectsPanel({
+  house,
+  getCurrentDesign,
+  onOpenProject,
+  currentProjectId,
+  onProjectIdChange,
+  onDesignPersisted,
+  persistenceReady = false,
+  persistenceMessage = '',
+}) {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -88,23 +97,29 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
   // has one) instead of always creating a new one — only a genuinely new
   // project (no currentProjectId, e.g. right after "New Project") creates a
   // new database row. Always downloads the pointer file too.
-  const handleDownload = () =>
-    withStatus('Saving...', 'Project saved — file downloaded.', async () => {
+  const handleDownload = () => {
+    if (!persistenceReady) return;
+    return withStatus('Saving...', 'Project saved — file downloaded.', async () => {
       const design = getCurrentDesign();
       const saved = await saveOrUpdateProject(design, currentProjectId);
       onProjectIdChange(saved.id);
+      onDesignPersisted?.(design);
       downloadProjectFile(saved.id, design, defaultProjectName(house));
       await refresh();
     });
+  };
 
-  const handleOpen = (id) =>
-    withStatus('Opening...', 'Project loaded.', async () => {
+  const handleOpen = (id) => {
+    if (!persistenceReady) return;
+    return withStatus('Opening...', 'Project loaded.', async () => {
       const res = await fetch(`/api/projects/${id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const row = await res.json();
-      onOpenProject(row.design);
+      const restoredDesign = onOpenProject(row.design);
       onProjectIdChange(id);
+      onDesignPersisted?.(restoredDesign);
     });
+  };
 
   const handleDelete = (id) => {
     if (!window.confirm('Delete this project? This cannot be undone.')) return;
@@ -141,10 +156,11 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
       </div>
 
       <div className="export-buttons" style={{ marginTop: '0.6rem' }}>
-        <button type="button" className="btn-primary" onClick={handleDownload} disabled={busy} style={{ width: '100%' }}>
+        <button type="button" className="btn-primary" onClick={handleDownload} disabled={busy || !persistenceReady} style={{ width: '100%' }}>
           Download
         </button>
       </div>
+      {!persistenceReady && <div className="control-sublabel" role="status">{persistenceMessage}</div>}
 
       <label className="field-label" htmlFor="project-name" style={{ marginTop: '0.5rem' }}>Project Name</label>
       <input
@@ -177,7 +193,7 @@ export default function ProjectsPanel({ house, getCurrentDesign, onOpenProject, 
                 type="button"
                 className={`project-open-btn${p.id === currentProjectId ? ' project-open-btn-active' : ''}`}
                 onClick={() => handleOpen(p.id)}
-                disabled={busy}
+                disabled={busy || !persistenceReady}
               >
                 {p.job_number || '(no job #)'} — {p.customer_name || 'Unnamed'}
               </button>

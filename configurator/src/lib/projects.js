@@ -4,6 +4,9 @@
 // App.jsx's HTML export (which needs a project id to embed so the exported
 // file's "Approve This Design" button has something to POST to).
 export async function saveOrUpdateProject(design, currentProjectId) {
+  if (!design?.pricingSettings) {
+    throw new Error('Pricing settings must finish loading before a design can be saved.');
+  }
   const res = await fetch(currentProjectId ? `/api/projects/${currentProjectId}` : '/api/projects', {
     method: currentProjectId ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -9,7 +9,7 @@ export default function BrandToggle({ brandId, onChange }) {
           role="tab"
           aria-selected={brandId === b.id}
           className={`brand-toggle-btn${brandId === b.id ? ' active' : ''}`}
-          style={brandId === b.id ? { background: b.accent, borderColor: b.accent } : undefined}
+          style={brandId === b.id ? { '--brand-option-accent': b.accent } : undefined}
           onClick={() => onChange(b.id)}
         >
           {b.name}

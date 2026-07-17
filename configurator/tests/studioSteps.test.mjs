@@ -7,6 +7,11 @@ test('Sales Mode exposes the approved ordered workflow', () => {
   assert.equal(getStudioStep('accents').label, 'Trims & Accents');
 });
 
+test('Sales Mode freezes every workflow entry as well as the containing list', () => {
+  assert.equal(Object.isFrozen(STUDIO_STEPS), true);
+  for (const step of STUDIO_STEPS) assert.equal(Object.isFrozen(step), true);
+});
+
 test('step progression clamps at the workflow boundaries', () => {
   assert.equal(previousStudioStep('project').key, 'project');
   assert.equal(nextStudioStep('roof').key, 'siding');

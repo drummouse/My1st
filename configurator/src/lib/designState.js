@@ -33,14 +33,72 @@ export function captureDesignState(state) {
     // owner's catalog at save time, not just a catalog id) — so a shared
     // link still shows/prices them correctly even if the owner later edits
     // or deletes that catalog entry.
-    customServiceLines: state.customServiceLines || [],
+    customServiceLines: state.customServiceLines ?? [],
     // Freezes the GST/package-deal rates that applied when this design was
     // saved. Company Settings are per-owner and admin-editable — without
     // this, a customer reopening an already-shared/quoted design later would
     // see the price recalculated at whatever rates the owner has *since*
     // changed, instead of the numbers they were actually quoted.
-    pricingSettings: state.pricingSettings || null,
+    pricingSettings: state.pricingSettings ?? null,
   };
+}
+
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const hasLegacyValue = (snapshot, key) => hasOwn(snapshot, key) && snapshot[key] !== null && snapshot[key] !== undefined;
+
+// Expands a sparse version-2 snapshot to the exact shape captureDesignState
+// will emit after it is applied. Legacy snapshots deliberately inherit fields
+// they did not persist from the caller's current defaults; using that same
+// completed object for both apply and dirty-state fingerprinting prevents a
+// restore from looking like a user edit.
+export function normalizeDesignState(snapshot, fallbackState) {
+  if (!snapshot || snapshot.version !== 2) return null;
+
+  const merged = { ...fallbackState };
+  for (const key of [
+    'brandId',
+    'layerOffsets',
+    'roofProductId',
+    'roofProfile',
+    'roofColorId',
+    'wallProductId',
+    'wallProfile',
+    'wallColorId',
+    'services',
+    'lockedServices',
+    'gutterOptionId',
+    'downspoutOptionId',
+    'measurements',
+    'accessoryColors',
+    'facetOverrides',
+    'customServiceLines',
+    'pricingSettings',
+  ]) {
+    if (hasLegacyValue(snapshot, key)) merged[key] = snapshot[key];
+  }
+  if (hasLegacyValue(snapshot, 'house') && typeof snapshot.house === 'object') {
+    merged.house = { ...fallbackState.house };
+    for (const key of ['jobNumber', 'customerName', 'address', 'layers']) {
+      if (hasLegacyValue(snapshot.house, key)) merged.house[key] = snapshot.house[key];
+    }
+  }
+  if (hasLegacyValue(snapshot, 'manualDiscount') && typeof snapshot.manualDiscount === 'number') {
+    merged.manualDiscount = snapshot.manualDiscount;
+  }
+  if (hasLegacyValue(snapshot, 'uniformFinish') && typeof snapshot.uniformFinish === 'boolean') {
+    merged.uniformFinish = snapshot.uniformFinish;
+  }
+
+  return captureDesignState(merged);
+}
+
+// Captures one account/new-project fallback and keeps it independent from
+// every project subsequently applied to App state. Re-parsing the serialized
+// baseline also ensures callers never receive object/array references that a
+// project edit could mutate and leak into the next legacy normalization.
+export function createStableDesignNormalizer(fallbackState) {
+  const stableFallback = JSON.stringify(captureDesignState(fallbackState));
+  return (snapshot) => normalizeDesignState(snapshot, JSON.parse(stableFallback));
 }
 
 async function gzipDecompress(bytes) {
@@ -77,24 +135,36 @@ export async function decodeDesignFromUrl(encoded) {
 // links/HTML exports stop loading; this is an accepted MVP-stage break.
 export function applyDesignState(snapshot, setters) {
   if (!snapshot || snapshot.version !== 2) return;
-  if (snapshot.brandId) setters.setBrandId(snapshot.brandId);
-  if (snapshot.house) setters.setHouse((h) => ({ ...h, ...snapshot.house }));
-  if (snapshot.layerOffsets) setters.setLayerOffsets(snapshot.layerOffsets);
-  if (snapshot.roofProductId) setters.setRoofProductId(snapshot.roofProductId);
-  if (snapshot.roofProfile) setters.setRoofProfile(snapshot.roofProfile);
-  if (snapshot.roofColorId) setters.setRoofColorId(snapshot.roofColorId);
-  if (snapshot.wallProductId) setters.setWallProductId(snapshot.wallProductId);
-  if (snapshot.wallProfile) setters.setWallProfile(snapshot.wallProfile);
-  if (snapshot.wallColorId) setters.setWallColorId(snapshot.wallColorId);
-  if (snapshot.services) setters.setServices(snapshot.services);
-  if (snapshot.lockedServices) setters.setLockedServices(snapshot.lockedServices);
-  if (snapshot.gutterOptionId) setters.setGutterOptionId(snapshot.gutterOptionId);
-  if (snapshot.downspoutOptionId) setters.setDownspoutOptionId(snapshot.downspoutOptionId);
-  if (snapshot.measurements) setters.setMeasurements(snapshot.measurements);
-  if (typeof snapshot.manualDiscount === 'number') setters.setManualDiscount(snapshot.manualDiscount);
-  if (snapshot.accessoryColors) setters.setAccessoryColors(snapshot.accessoryColors);
-  if (typeof snapshot.uniformFinish === 'boolean') setters.setUniformFinish(snapshot.uniformFinish);
-  if (snapshot.facetOverrides) setters.setFacetOverrides(snapshot.facetOverrides);
-  if (snapshot.customServiceLines) setters.setCustomServiceLines(snapshot.customServiceLines);
-  if (snapshot.pricingSettings) setters.setPricingSettings(snapshot.pricingSettings);
+  const fields = [
+    ['brandId', 'setBrandId'],
+    ['layerOffsets', 'setLayerOffsets'],
+    ['roofProductId', 'setRoofProductId'],
+    ['roofProfile', 'setRoofProfile'],
+    ['roofColorId', 'setRoofColorId'],
+    ['wallProductId', 'setWallProductId'],
+    ['wallProfile', 'setWallProfile'],
+    ['wallColorId', 'setWallColorId'],
+    ['services', 'setServices'],
+    ['lockedServices', 'setLockedServices'],
+    ['gutterOptionId', 'setGutterOptionId'],
+    ['downspoutOptionId', 'setDownspoutOptionId'],
+    ['measurements', 'setMeasurements'],
+    ['accessoryColors', 'setAccessoryColors'],
+    ['facetOverrides', 'setFacetOverrides'],
+    ['customServiceLines', 'setCustomServiceLines'],
+    ['pricingSettings', 'setPricingSettings'],
+  ];
+
+  if (hasOwn(snapshot, 'house') && snapshot.house && typeof snapshot.house === 'object') {
+    setters.setHouse((house) => ({ ...house, ...snapshot.house }));
+  }
+  for (const [key, setter] of fields) {
+    if (hasOwn(snapshot, key)) setters[setter](snapshot[key]);
+  }
+  if (hasOwn(snapshot, 'manualDiscount') && typeof snapshot.manualDiscount === 'number') {
+    setters.setManualDiscount(snapshot.manualDiscount);
+  }
+  if (hasOwn(snapshot, 'uniformFinish') && typeof snapshot.uniformFinish === 'boolean') {
+    setters.setUniformFinish(snapshot.uniformFinish);
+  }
 }

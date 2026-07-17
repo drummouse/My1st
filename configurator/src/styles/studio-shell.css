@@ -8,11 +8,31 @@
   min-height: 0;
 }
 
-.studio-shell :is(button, [href], input, select) {
+.studio-shell :is(button, [href], select, textarea, [role='button']) {
   min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
 }
 
-.studio-shell :is(button, [href], input, select, textarea):focus-visible {
+.studio-shell input:not(.visually-hidden) {
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+.studio-shell label.studio-file-control {
+  align-items: center;
+  display: inline-flex;
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+/* Keep the legacy icon-button override explicit: their old fixed 26–27px
+   dimensions must never shrink the Studio target below the shared minimum. */
+.studio-shell .layer-remove-btn {
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+.studio-shell :is(button, [href], input, select, textarea, [role='button']):focus-visible {
   outline: 3px solid var(--studio-focus);
   outline-offset: 2px;
 }
@@ -72,6 +92,27 @@
 
 .studio-top-bar-actions p {
   margin: 0;
+}
+
+.studio-top-bar-project {
+  display: grid;
+  justify-items: start;
+  line-height: 1.2;
+  max-width: min(18rem, 42vw);
+  overflow: hidden;
+}
+
+.studio-top-bar-project > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-top-bar-project-status {
+  color: var(--studio-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .studio-shell-layout {

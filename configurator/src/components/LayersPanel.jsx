@@ -87,7 +87,7 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
 
       {!readOnly && (
         <>
-          <label className="btn-secondary import-file-btn" htmlFor="import-layer-xml">Import Layer (XML)</label>
+          <label className="btn-secondary import-file-btn studio-file-control" htmlFor="import-layer-xml">Import Layer (XML)</label>
           <input id="import-layer-xml" type="file" accept=".xml" onChange={handleFile} className="visually-hidden" />
           <div className="control-sublabel">
             Soffit/fascia/gutter/downspout totals below aren't in these XML exports and stay editable

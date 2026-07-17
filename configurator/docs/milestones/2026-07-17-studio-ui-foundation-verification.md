@@ -9,7 +9,7 @@ Studio UI foundation: the Sales Mode presentation, its protected configurator be
 | Date | 2026-07-17 |
 | Tester | Local automated verification (Codex) |
 | Branch | `chatgpt/ui-foundation-design` |
-| Verified source commit | `9aa5fda74a9ec87301dac1f058b6ba4ef858cad7` (`fix: harden Studio accessibility and recovery`) |
+| Verified source commit | `015898d5f9cdefd30230414b9f3f514de559f04c` (`fix: separate fresh projects from legacy restore`) |
 | Preview URL | Pending draft PR publication and Vercel Preview creation |
 
 The verified source commit is the implementation revision being released. The separate local documentation/test commit is recorded in the Task 10 execution report after Git assigns it.
@@ -18,8 +18,8 @@ The verified source commit is the implementation revision being released. The se
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Documentation contract | Pass | `node --test tests/studioShell.test.mjs`: 19/19 tests after this record was added |
-| Complete test suite | Pass | `npm test`: 94/94 tests passed, 0 failures (2026-07-17) |
+| Focused final-review contracts | Pass | `node --test tests/startupPersistence.test.mjs tests/newProjectDesignState.test.mjs tests/studioDesignState.test.mjs tests/studioSteps.test.mjs tests/studioTokens.test.mjs tests/studioShell.test.mjs tests/studioRecovery.test.mjs`: 44/44 tests passed, 0 failures |
+| Complete test suite | Pass | `npm test`: 115/115 tests passed, 0 failures (2026-07-17) |
 | Production and snapshot builds | Pass with existing advisory | `npm run build`: main PWA build, artifact build, and snapshot-template generation completed; the existing Rollup chunks-over-500-kB advisory was emitted |
 | Whitespace validation | Pass | `git diff --check`: no whitespace errors |
 

@@ -44,6 +44,68 @@ test('Studio top bar exposes expert mode as a pressed toggle', async () => {
   assert.match(source, /aria-pressed=\{expertActive\}/);
 });
 
+test('Studio top bar exposes the active project and a direct path to stable project tools', async () => {
+  const topBar = await readComponent('StudioTopBar');
+  const app = await readApp();
+
+  assert.match(topBar, /projectLabel/);
+  assert.match(topBar, /projectStatus/);
+  assert.match(topBar, /aria-label=\{`Project: \$\{projectLabel\}\. \$\{projectStatus\}\. Open project tools`\}/);
+  assert.match(topBar, /onClick=\{onOpenProject\}/);
+  assert.match(topBar, /\{projectLabel\}/);
+  assert.match(topBar, /\{projectStatus\}/);
+
+  assert.match(app, /const handleOpenProjectTools = \(\) => \{[\s\S]*?setActiveSection\('configurator'\);[\s\S]*?setExpertRequested\(false\);[\s\S]*?setActiveStudioStep\('project'\);[\s\S]*?setMobileInspectorOpen\(true\);[\s\S]*?\};/);
+  assert.match(app, /projectLabel=\{house\.jobNumber \|\| 'Untitled project'\}/);
+  assert.match(app, /projectStatus=\{projectSaveStatus\}/);
+  assert.doesNotMatch(app, /projectStatus=\{currentProjectId \? 'Saved' : 'Not saved'\}/);
+  assert.match(app, /onOpenProject=\{handleOpenProjectTools\}/);
+});
+
+test('App derives dirty state from database persistence and gates owner writes until pricing settles', async () => {
+  const app = await readApp();
+  const projectsPanel = await readComponent('ProjectsPanel');
+
+  assert.match(app, /import \{ captureDesignState, applyDesignState, createStableDesignNormalizer, decodeDesignFromUrl \} from '\.\/lib\/designState\.js';/);
+  assert.match(app, /import \{ createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectSaveStatus \} from '\.\/lib\/studioDesignState\.js';/);
+  assert.match(app, /const \[persistedDesignFingerprint, setPersistedDesignFingerprint\] = useState\(null\);/);
+  assert.match(app, /const \[companySettingsSettled, setCompanySettingsSettled\] = useState\(false\);/);
+  assert.match(app, /const \[defaultCatalogsSettled, setDefaultCatalogsSettled\] = useState\(false\);/);
+  assert.match(app, /const stableDesignNormalizerRef = useRef\(null\);/);
+  assert.match(app, /buildAccountDefaultDesignSnapshot\(\{[\s\S]*?companySettings,[\s\S]*?customServiceCatalog,[\s\S]*?effectivePricingSettings,[\s\S]*?\}\)/);
+  assert.match(app, /if \(stableDesignNormalizerRef\.current \|\| isCustomerView \|\| !companySettingsSettled \|\| !defaultCatalogsSettled\) return;/);
+  assert.match(app, /stableDesignNormalizerRef\.current = createStableDesignNormalizer\(accountDefaults\);[\s\S]*?setDesignDefaultsReady\(true\);/);
+  assert.match(app, /const initialEditRestoreRef = useRef\(null\);/);
+  assert.match(app, /initialEditRestoreRef\.current = createInitialEditRestore\(window\.location\.search\);/);
+  assert.match(app, /const currentDesignFingerprint = useMemo\([\s\S]*?designFingerprint\(currentDesignSnapshot\)/);
+  assert.match(app, /const persistence = getDesignPersistenceState\(\{[\s\S]*?isCustomerView,[\s\S]*?companySettingsSettled,[\s\S]*?effectivePricingSettings,[\s\S]*?\}\);/);
+  assert.match(app, /const markDesignPersisted = \(design\) => \{[\s\S]*?setPricingSettings\(design\.pricingSettings\);[\s\S]*?setPersistedDesignFingerprint\(designFingerprint\(design\)\);[\s\S]*?\};/);
+  assert.doesNotMatch(app, /settlePersistedDesignPricing|pendingPersistedPricingRef|persistedDesignRef/);
+  assert.doesNotMatch(app, /normalizeDesignState\(snapshot, currentDesignSnapshot\)/);
+  assert.match(app, /const applyCurrentDesignState = \(design\) => \{[\s\S]*?applyDesignState\(design,[\s\S]*?return design;[\s\S]*?\};/);
+  assert.match(app, /const normalizedDesign = stableDesignNormalizerRef\.current\?\.\(snapshot\);[\s\S]*?applyCurrentDesignState\(normalizedDesign\);[\s\S]*?return normalizedDesign;/);
+  assert.match(app, /const newProjectDesign = buildNewProjectDesignSnapshot\(\{[\s\S]*?companySettings,[\s\S]*?customServiceCatalog,[\s\S]*?\}\);[\s\S]*?applyCurrentDesignState\(newProjectDesign\);/);
+  assert.match(app, /applyCurrentDesignState\(newProjectDesign\);[\s\S]*?setPhotoOverlay\(null\);[\s\S]*?setAttachments\(\[\]\);/);
+  assert.doesNotMatch(app, /applyDesignSnapshot\(\{ version: 2 \}, false\)/);
+  assert.match(app, /getProjectSaveStatus\(\{[\s\S]*?currentProjectId,[\s\S]*?currentDesignFingerprint,[\s\S]*?persistedDesignFingerprint,[\s\S]*?persistenceReady: persistence\.ready,[\s\S]*?\}\)/);
+  assert.match(app, /const projectId = initialEditRestoreRef\.current\.claim\(designDefaultsReady\);[\s\S]*?const restoredDesign = applyDesignSnapshot\(row\.design, false\);[\s\S]*?markDesignPersisted\(restoredDesign\);/);
+  assert.doesNotMatch(app, /getEditProjectId\(window\.location\.search\)/);
+  assert.match(app, /const restoredDesign = applyDesignSnapshot\(row\.design, false\);[\s\S]*?markDesignPersisted\(restoredDesign\);/);
+  assert.match(app, /!isCustomerView && \(/);
+  assert.match(app, /if \(!persistence\.ready\) return;/);
+  assert.match(app, /onClick=\{handleExportHtml\} disabled=\{!persistence\.ready\}/);
+  assert.match(app, /persistenceReady=\{projectPersistenceReady\}/);
+  assert.match(app, /persistenceMessage=\{projectPersistenceMessage\}/);
+  assert.match(app, /onDesignPersisted=\{markDesignPersisted\}/);
+  assert.match(projectsPanel, /persistenceReady/);
+  assert.match(projectsPanel, /persistenceMessage/);
+  assert.match(projectsPanel, /if \(!persistenceReady\) return;/);
+  assert.match(projectsPanel, /disabled=\{busy \|\| !persistenceReady\}/);
+  assert.match(projectsPanel, /onDesignPersisted\?\.\(design\)/);
+  assert.match(projectsPanel, /const restoredDesign = onOpenProject\(row\.design\);/);
+  assert.match(projectsPanel, /onDesignPersisted\?\.\(restoredDesign\)/);
+});
+
 test('guided step rail identifies and labels the active step without relying on color', async () => {
   const source = await readComponent('GuidedStepRail');
 
@@ -70,7 +132,8 @@ test('context inspector keeps step content available while exposing bounded reco
   assert.match(source, /role="alert"/);
   assert.match(source, /\{error\}/);
   assert.match(source, /\{onRetry && \(/);
-  assert.match(source, />\s*Try again\s*</);
+  assert.match(source, /recoveryLabel = 'Try again'/);
+  assert.match(source, /\{recoveryLabel\}/);
   assert.match(source, /disabled=\{busy\}/);
   assert.match(source, /\{children\}/);
   assert.doesNotMatch(source, /error\.(?:stack|body|response)/);
@@ -173,8 +236,10 @@ test('Studio shell stylesheet defines the desktop grid and mobile inspector-shee
 test('Studio shell provides semantic focus, touch-target, and reduced-motion safeguards', async () => {
   const css = await readFile(new URL('../src/styles/studio-shell.css', import.meta.url), 'utf8');
 
-  assert.match(css, /\.studio-shell\s*:is\(button, \[href\], input, select, textarea\):focus-visible\s*\{[^}]*outline:\s*3px solid var\(--studio-focus\)/s);
-  assert.match(css, /\.studio-shell\s*:is\(button, \[href\], input, select\)\s*\{[^}]*min-height:\s*var\(--studio-control-min\)/s);
+  assert.match(css, /\.studio-shell\s*:is\(button, \[href\], input, select, textarea, \[role='button'\]\):focus-visible\s*\{[^}]*outline:\s*3px solid var\(--studio-focus\)/s);
+  assert.match(css, /\.studio-shell\s*:is\(button, \[href\], select, textarea, \[role='button'\]\)\s*\{[^}]*min-height:\s*var\(--studio-control-min\)[^}]*min-width:\s*var\(--studio-control-min\)/s);
+  assert.match(css, /\.studio-shell input:not\(\.visually-hidden\)\s*\{[^}]*min-height:\s*var\(--studio-control-min\)[^}]*min-width:\s*var\(--studio-control-min\)/s);
+  assert.match(css, /\.studio-shell \.layer-remove-btn\s*\{[^}]*min-height:\s*var\(--studio-control-min\)[^}]*min-width:\s*var\(--studio-control-min\)/s);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[^}]*\.studio-shell \*\s*\{[^}]*transition-duration:\s*0\.01ms/s);
 });
 
@@ -237,7 +302,7 @@ test('App gives Accents and Services distinct control semantics', async () => {
   assert.match(panel, /\{showServiceControls && !isCustomerView && !readOnlyQuantities && \(/);
 });
 
-test('Projects and attachments stay in one stable inspector location across step and Expert switches', async () => {
+test('Projects and attachments stay in one stable inspector location across Project, Review, and Expert', async () => {
   const source = await readApp();
 
   assert.equal((source.match(/<ProjectsPanel/g) || []).length, 1);
@@ -251,6 +316,62 @@ test('Projects and attachments stay in one stable inspector location across step
     inspector.indexOf('data-project-panels') < inspector.indexOf("{studioMode === 'sales' ? ("),
     'stateful project panels must be mounted outside the mode-specific content branch',
   );
+  assert.match(source, /hidden=\{studioMode === 'sales' && !\['project', 'review'\]\.includes\(activeStudioStep\)\}/);
+  assert.match(source, /onOpenProject=\{handleOpenProjectTools\}/);
+});
+
+test('clickable Studio file labels keep semantic 44px targets while their inputs stay hidden', async () => {
+  const layers = await readComponent('LayersPanel');
+  const attachments = await readComponent('AttachmentsPanel');
+  const css = await readFile(new URL('../src/styles/studio-shell.css', import.meta.url), 'utf8');
+  const fileControlRule = css.match(/\.studio-shell label\.studio-file-control\s*\{([^}]*)\}/)?.[1];
+
+  assert.match(layers, /className="btn-secondary import-file-btn studio-file-control"[^>]*>Import Layer \(XML\)<\/label>/);
+  assert.match(layers, /<input id="import-layer-xml" type="file" accept="\.xml"[^>]*className="visually-hidden"/);
+  assert.equal((attachments.match(/<label className="btn-secondary studio-file-control"/g) || []).length, 2);
+  assert.match(attachments, /\+ Attach File[\s\S]*?<input type="file" className="visually-hidden"/);
+  assert.match(attachments, /\+ Attach Photo[\s\S]*?<input type="file" accept="image\/\*" className="visually-hidden"/);
+  assert.match(fileControlRule || '', /min-height:\s*var\(--studio-control-min\)/);
+  assert.match(fileControlRule || '', /min-width:\s*var\(--studio-control-min\)/);
+});
+
+test('App bounds malformed XML recovery and surfaces safe load notices', async () => {
+  const source = await readApp();
+
+  assert.match(source, /import \{ parseStudioLayers \} from '\.\/lib\/studioRecovery\.js';/);
+  assert.match(source, /const \{ parsedLayers, parseFailures \} = useMemo\(/);
+  assert.match(source, /parseStudioLayers\(house\.layers, parseAppliCadXML\)/);
+  assert.doesNotMatch(source, /house\.layers\.map\(\(l\) => \(\{[^}]*parseAppliCadXML\(l\.xml\)/s);
+  assert.match(source, /const xmlRecoveryMessage = parseFailures\.length/);
+  assert.match(source, /error=\{xmlRecoveryMessage\}/);
+  assert.match(source, /recoveryLabel="Review project imports"/);
+  assert.match(source, /onRetry=\{parseFailures\.length \? handleOpenProjectTools : undefined\}/);
+  assert.match(source, /notice=\{shellNotice\}/);
+  for (const notice of [
+    'shared design',
+    'shared project',
+    'saved project',
+    'account settings',
+  ]) assert.match(source, new RegExp(`showLoadNotice\\([^\\n]+${notice}`, 'i'));
+  assert.doesNotMatch(source, /setShellNotice\([^)]*(?:err|error)\.(?:message|stack|body|response)/);
+});
+
+test('Viewer3D gives every elevation shortcut a distinct directional accessible name', async () => {
+  const source = await readComponent('Viewer3D');
+
+  for (const [direction, position] of [
+    ['Back', 'top'],
+    ['Front', 'bottom'],
+    ['Left', 'left'],
+    ['Right', 'right'],
+  ]) {
+    const button = source.match(new RegExp(`<button[^\\n]+viewer3d-elevation-btn-${position}[^\\n]+</button>`))?.[0];
+    assert.ok(button, `${position} elevation shortcut should exist`);
+    assert.match(button, new RegExp(`aria-label="${direction} elevation view"`));
+    assert.match(button, new RegExp(`snapToElevation\\('${direction.toLowerCase()}'\\)`));
+    assert.match(button, />Elevation View<\/button>/);
+  }
+  assert.equal((source.match(/>Elevation View<\/button>/g) || []).length, 4);
 });
 
 test('authenticated mobile navigation scrolls without shrinking touch targets', async () => {

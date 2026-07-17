@@ -113,7 +113,11 @@ body {
   min-height: 44px;
   min-width: 44px;
 }
-.brand-toggle-btn.active { color: #fff; }
+.brand-toggle-btn.active {
+  background: var(--brand-option-accent, var(--brand-accent));
+  border-color: var(--brand-option-accent, var(--brand-accent));
+  color: #fff;
+}
 
 .app-body {
   flex: 1;

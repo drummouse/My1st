@@ -7,6 +7,7 @@ export default function ContextInspector({
   onMobileOpenChange,
   error,
   onRetry,
+  recoveryLabel = 'Try again',
   busy = false,
   children,
 }) {
@@ -34,7 +35,7 @@ export default function ContextInspector({
             <p>{error}</p>
             {onRetry && (
               <StudioButton disabled={busy} onClick={onRetry} variant="secondary">
-                Try again
+                {recoveryLabel}
               </StudioButton>
             )}
           </div>

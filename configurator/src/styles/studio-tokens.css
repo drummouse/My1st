@@ -37,6 +37,32 @@
   --studio-motion-easing: ease-out;
 }
 
+/* Bridge the pre-foundation controls only inside the default Studio skin.
+   A future skin can supply its own semantic tokens without inheriting this
+   compatibility mapping, and legacy screens outside Studio retain branding. */
+[data-studio-skin='ironwrap'] {
+  --brand-accent: var(--studio-action);
+  --brand-accent-dark: var(--studio-action-hover);
+}
+
+[data-studio-skin='ironwrap'] .brand-toggle-btn.active {
+  background: var(--studio-action);
+  border-color: var(--studio-action);
+}
+
+[data-studio-skin='ironwrap'] .library-console {
+  border-top-color: var(--studio-action);
+}
+
+[data-studio-skin='ironwrap'] .library-tabs button.active {
+  border-bottom-color: var(--studio-action);
+  color: var(--studio-action-active);
+}
+
+[data-studio-skin='ironwrap'] .project-open-btn-active {
+  background: color-mix(in srgb, var(--studio-action) 8%, var(--studio-surface-control));
+}
+
 .studio-button {
   align-items: center;
   background: var(--studio-surface-control);

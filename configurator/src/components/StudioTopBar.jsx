@@ -4,6 +4,9 @@ export default function StudioTopBar({
   title,
   subtitle,
   logoUrl,
+  projectLabel,
+  projectStatus,
+  onOpenProject,
   saveState,
   canUseExpert,
   expertActive,
@@ -26,6 +29,15 @@ export default function StudioTopBar({
       </div>
 
       <div className="studio-top-bar-actions">
+        <StudioButton
+          aria-label={`Project: ${projectLabel}. ${projectStatus}. Open project tools`}
+          className="studio-top-bar-project"
+          onClick={onOpenProject}
+          variant="secondary"
+        >
+          <span>Project: {projectLabel}</span>
+          <span className="studio-top-bar-project-status">{projectStatus}</span>
+        </StudioButton>
         {saveState && <p aria-live="polite">{saveState}</p>}
         {canUseExpert && (
           <StudioButton
