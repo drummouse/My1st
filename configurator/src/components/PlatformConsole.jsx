@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { superadminApi } from '../lib/superadminClient.js';
+import LibraryConsole from './LibraryConsole.jsx';
 
 const EMPTY_USER = { email: '', companyName: '', phone: '', temporaryPassword: '', reason: '' };
 
-export default function PlatformConsole() {
+export default function PlatformConsole({ capabilities = [] }) {
   const [summary, setSummary] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [audit, setAudit] = useState([]);
@@ -63,6 +64,8 @@ export default function PlatformConsole() {
         <button className="btn-secondary" type="button" onClick={refresh} disabled={busy}>Refresh</button>
       </div>
       {error && <div className="platform-error">{error}</div>}
+
+      {capabilities.includes('catalog.read') && <LibraryConsole capabilities={capabilities} tenants={tenants} />}
 
       <section className="platform-stats" aria-label="Platform summary">
         <div><strong>{summary?.accounts?.active || 0}</strong><span>Active accounts</span></div>

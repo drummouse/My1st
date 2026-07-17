@@ -6,6 +6,8 @@ import { assertAccountTransition, normalizeEmail } from '../_lib/superadminPolic
 import { createSupportReference } from '../_lib/accountAdministration.js';
 import { buildRestrictionNotifications } from '../_lib/notifications.js';
 import { toAuditEvent, toNotification, toProjectDiagnostic, toTenantSummary } from '../_lib/superadminDto.js';
+import { handleLibraryAction } from '../_lib/libraryRoutes.js';
+import { LibraryValidationError } from '../_lib/libraryPolicy.js';
 
 const capabilityByAction = {
   summary: 'platform.diagnostics.read',
@@ -15,6 +17,15 @@ const capabilityByAction = {
   'password-reset': 'users.password.reset',
   audit: 'platform.audit.read',
   notifications: 'platform.audit.read',
+  'library.records': 'catalog.read',
+  'library.record': 'catalog.write',
+  'library.relationships': 'catalog.write',
+  'library.documents': 'catalog.write',
+  'library.export': 'catalog.export',
+  'library.import.dry-run': 'catalog.import',
+  'library.import.commit': 'catalog.import',
+  'library.migration.status': 'catalog.read',
+  'library.migration.run': 'catalog.import',
 };
 
 const requestIdFor = (req) => String(req.headers?.['x-vercel-id'] || req.headers?.['x-request-id'] || randomUUID());
@@ -186,6 +197,7 @@ export default async function handler(req, res) {
     await ensureSchema();
     const actor = await requireCapability(req, res, capability);
     if (!actor) return;
+    if (action.startsWith('library.')) return handleLibraryAction({ req, res, actor, action, requestId: requestIdFor(req) });
     if (action === 'summary') return req.method === 'GET' ? handleSummary(res) : method(res, 'GET');
     if (action === 'tenants') return req.method === 'GET' ? handleTenants(req, res) : method(res, 'GET');
     if (action === 'users') return handleCreateUser(req, res, actor);
@@ -194,6 +206,10 @@ export default async function handler(req, res) {
     if (action === 'audit') return req.method === 'GET' ? handleAudit(req, res) : method(res, 'GET');
     return handleNotifications(req, res, actor);
   } catch (error) {
+    if (error instanceof LibraryValidationError) {
+      const status = error.code === 'LIBRARY_RECORD_NOT_FOUND' ? 404 : error.code === 'LIBRARY_VERSION_CONFLICT' ? 409 : 400;
+      return res.status(status).json({ error: { code: error.code, message: error.message, details: error.details || {} }, requestId: requestIdFor(req) });
+    }
     const expected = /reason|required|transition|own account/i.test(error.message || '');
     if (!expected) console.error('SuperAdmin request failed:', error);
     res.status(expected ? 400 : 500).json({ error: expected ? error.message : 'SuperAdmin operation failed' });
