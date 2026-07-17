@@ -1,7 +1,7 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 import { handleFolderList, handleFolderItem } from '../_lib/folders.js';
-import { canActOnOwner } from '../_lib/roles.js';
+import { requirePublicTenant } from '../_lib/publicTenant.js';
 
 // Merged list/create/update/delete into one function (id supplied as ?id= by
 // vercel.json's rewrites) — see api/auth/[action].js for why. Also carries this
@@ -33,6 +33,7 @@ export default async function handler(req, res) {
         // (already-public) owner_id to see the same custom materials the
         // owner added, no login required.
         const { ownerId } = req.query;
+        if (ownerId && !(await requirePublicTenant(ownerId, res))) return;
         const targetOwnerId = ownerId || (await requireUserId(req, res));
         if (!targetOwnerId) return;
         const rows = await sql`select * from materials where owner_id = ${targetOwnerId} order by created_at asc`;
@@ -85,7 +86,7 @@ export default async function handler(req, res) {
     if (!userId) return;
 
     const [existing] = await sql`select owner_id from materials where id = ${id}`;
-    if (!existing || (existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id)))) {
+    if (!existing || existing.owner_id !== userId) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

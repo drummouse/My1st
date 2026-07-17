@@ -45,11 +45,63 @@ export function ensureSchema() {
       await sql`alter table users add column if not exists postal_code text`;
       await sql`alter table users add column if not exists website text`;
       await sql`alter table users add column if not exists social_url text`;
-      // 'owner' (default, every normal signup) or 'developer' (full
-      // cross-tenant access for support/debugging) — see api/_lib/roles.js
-      // and DEVELOPER_ACCESS.md. Not grantable through any API route;
-      // promoting an account requires direct database access by design.
+      // Roles are deliberately additive here; authorization is capability-
+      // based in superadminPolicy.js and never inferred from client state.
       await sql`alter table users add column if not exists role text not null default 'owner'`;
+      await sql`update users set role = 'owner' where role = 'developer'`;
+      await sql`alter table users add column if not exists status text not null default 'active'`;
+      await sql`alter table users add column if not exists status_reason text`;
+      await sql`alter table users add column if not exists status_changed_at timestamptz`;
+      await sql`alter table users add column if not exists status_changed_by uuid references users(id)`;
+      await sql`alter table users add column if not exists last_login_at timestamptz`;
+      await sql`alter table users add column if not exists session_version integer not null default 1`;
+      await sql`alter table users add column if not exists must_change_password boolean not null default false`;
+      await sql`alter table users add column if not exists deleted_at timestamptz`;
+      await sql`alter table users add column if not exists purge_after timestamptz`;
+      await sql`
+        do $$ begin
+          alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
+        exception when duplicate_object then null;
+        end $$
+      `;
+      await sql`
+        do $$ begin
+          alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));
+        exception when duplicate_object then null;
+        end $$
+      `;
+
+      await sql`
+        create table if not exists superadmin_audit_events (
+          id uuid primary key default gen_random_uuid(),
+          actor_id uuid not null references users(id),
+          action text not null,
+          target_type text not null,
+          target_id uuid,
+          reason text,
+          metadata jsonb not null default '{}'::jsonb,
+          request_id text,
+          support_reference text,
+          result text not null default 'succeeded',
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`
+        create table if not exists notification_outbox (
+          id uuid primary key default gen_random_uuid(),
+          user_id uuid not null references users(id),
+          channel text not null,
+          template text not null,
+          payload jsonb not null,
+          status text not null default 'pending',
+          attempt_count integer not null default 0,
+          next_attempt_at timestamptz not null default now(),
+          last_error text,
+          sent_at timestamptz,
+          support_reference text not null,
+          created_at timestamptz not null default now()
+        )
+      `;
 
       await sql`
         create table if not exists projects (

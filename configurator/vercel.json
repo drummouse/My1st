@@ -2,6 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "devCommand": "npm run dev -- --port $PORT",
   "rewrites": [
+    { "source": "/api/superadmin/tenants/:id/:sub", "destination": "/api/superadmin?action=tenants&id=:id&sub=:sub" },
+    { "source": "/api/superadmin/:action", "destination": "/api/superadmin?action=:action" },
     { "source": "/api/projects/:id/approve", "destination": "/api/projects?id=:id&sub=approve" },
     { "source": "/api/projects/:id", "destination": "/api/projects?id=:id" },
     { "source": "/api/materials/:id", "destination": "/api/materials?id=:id" },

@@ -14,6 +14,57 @@ create table if not exists users (
   created_at timestamptz not null default now()
 );
 
+alter table users add column if not exists role text not null default 'owner';
+update users set role = 'owner' where role = 'developer';
+alter table users add column if not exists status text not null default 'active';
+alter table users add column if not exists status_reason text;
+alter table users add column if not exists status_changed_at timestamptz;
+alter table users add column if not exists status_changed_by uuid references users(id);
+alter table users add column if not exists last_login_at timestamptz;
+alter table users add column if not exists session_version integer not null default 1;
+alter table users add column if not exists must_change_password boolean not null default false;
+alter table users add column if not exists deleted_at timestamptz;
+alter table users add column if not exists purge_after timestamptz;
+
+do $$ begin
+  alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
+exception when duplicate_object then null;
+end $$;
+
+do $$ begin
+  alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists superadmin_audit_events (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid not null references users(id),
+  action text not null,
+  target_type text not null,
+  target_id uuid,
+  reason text,
+  metadata jsonb not null default '{}'::jsonb,
+  request_id text,
+  support_reference text,
+  result text not null default 'succeeded',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists notification_outbox (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  channel text not null,
+  template text not null,
+  payload jsonb not null,
+  status text not null default 'pending',
+  attempt_count integer not null default 0,
+  next_attempt_at timestamptz not null default now(),
+  last_error text,
+  sent_at timestamptz,
+  support_reference text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists projects (
   id uuid primary key default gen_random_uuid(),
   job_number text,

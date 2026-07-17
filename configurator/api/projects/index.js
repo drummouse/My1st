@@ -1,6 +1,25 @@
 import { sql, ensureSchema } from '../_lib/db.js';
-import { getUserId, requireUserId } from '../_lib/auth.js';
-import { resolveOwnerId, canActOnOwner } from '../_lib/roles.js';
+import { requireUserId } from '../_lib/auth.js';
+import { publicTenantAccess } from '../_lib/publicAccess.js';
+
+async function requirePublicProjectAccess(id, res) {
+  const [project] = await sql`
+    select p.id, u.status as owner_status
+    from projects p
+    left join users u on u.id = p.owner_id
+    where p.id = ${id}
+  `;
+  if (!project) {
+    res.status(404).json({ error: 'Not found' });
+    return false;
+  }
+  const access = publicTenantAccess(project.owner_status);
+  if (!access.allowed) {
+    res.status(access.status).json(access.body);
+    return false;
+  }
+  return true;
+}
 
 // Merged list/create/read/update/delete/approve into one function to stay
 // under Vercel's Hobby-plan serverless function cap — see api/auth/[action].js
@@ -23,15 +42,10 @@ export default async function handler(req, res) {
       if (!userId) return;
 
       if (req.method === 'GET') {
-        // A developer can pass ?asOwner=<id> to list a different tenant's
-        // projects for support/debugging — see api/_lib/roles.js. A plain
-        // request (no asOwner, or a non-developer caller) always lists just
-        // the caller's own.
-        const ownerId = await resolveOwnerId(req, userId);
         const rows = await sql`
           select id, job_number, customer_name, address, created_at, updated_at
           from projects
-          where owner_id = ${ownerId}
+          where owner_id = ${userId}
           order by updated_at desc
         `;
         res.status(200).json(rows);
@@ -73,6 +87,7 @@ export default async function handler(req, res) {
         res.status(405).json({ error: 'Method not allowed' });
         return;
       }
+      if (!(await requirePublicProjectAccess(id, res))) return;
       const { approvedByName } = req.body || {};
       let [row] = await sql`
         update projects
@@ -137,6 +152,7 @@ export default async function handler(req, res) {
     // project by its ?p=<id> link with no account of their own); PUT/DELETE
     // require ownership.
     if (req.method === 'GET') {
+      if (!(await requirePublicProjectAccess(id, res))) return;
       const [row] = await sql`select * from projects where id = ${id}`;
       if (!row) {
         res.status(404).json({ error: 'Not found' });
@@ -147,11 +163,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT' || req.method === 'DELETE') {
-      const userId = await getUserId(req);
-      if (!userId) {
-        res.status(401).json({ error: 'Not authenticated' });
-        return;
-      }
+      const userId = await requireUserId(req, res);
+      if (!userId) return;
       const [existing] = await sql`select owner_id from projects where id = ${id}`;
       if (!existing) {
         res.status(404).json({ error: 'Not found' });
@@ -159,9 +172,8 @@ export default async function handler(req, res) {
       }
       // Projects saved before accounts existed have no owner yet — the first
       // authenticated user to edit one claims it, rather than leaving it
-      // permanently unownable. A developer can act on any owner's project
-      // for support/debugging — see api/_lib/roles.js.
-      if (existing.owner_id && existing.owner_id !== userId && !(await canActOnOwner(userId, existing.owner_id))) {
+      // permanently unownable.
+      if (existing.owner_id && existing.owner_id !== userId) {
         res.status(403).json({ error: 'This project belongs to a different account' });
         return;
       }

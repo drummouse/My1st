@@ -10,8 +10,8 @@ function secretKey() {
   return new TextEncoder().encode(process.env.AUTH_SECRET);
 }
 
-export async function createSessionCookie(userId) {
-  const token = await new SignJWT({ sub: userId })
+export async function createSessionCookie(userId, sessionVersion = 1) {
+  const token = await new SignJWT({ sub: userId, sv: Number(sessionVersion) })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DAYS}d`)
@@ -34,22 +34,24 @@ function readCookie(req, name) {
 // Returns the authenticated user's id, or null if the request has no valid
 // session — callers decide whether that's a 401 or just "no owner" (e.g. the
 // public single-project GET route stays reachable either way).
-export async function getUserId(req) {
+export async function getSessionClaims(req) {
   const token = readCookie(req, COOKIE_NAME);
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey());
-    return payload.sub || null;
+    return payload.sub ? payload : null;
   } catch {
     return null;
   }
 }
 
+export async function getUserId(req) {
+  const payload = await getSessionClaims(req);
+  return payload?.sub || null;
+}
+
 export async function requireUserId(req, res) {
-  const userId = await getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Not authenticated' });
-    return null;
-  }
-  return userId;
+  const { requireActiveUser } = await import('./access.js');
+  const user = await requireActiveUser(req, res);
+  return user?.id || null;
 }

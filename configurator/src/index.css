@@ -23,6 +23,38 @@ body {
   color: #1c1f24;
 }
 
+.platform-console { flex: 1; overflow: auto; padding: 1.25rem; background: #f3f5f7; }
+.platform-heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; margin-bottom: 1rem; }
+.platform-heading h1, .platform-card h2 { margin: 0; }
+.platform-heading p { margin: 0.3rem 0 0; color: #667085; }
+.platform-error { padding: 0.75rem; margin-bottom: 1rem; color: #991b1b; background: #fee2e2; border-radius: 8px; }
+.platform-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.platform-stats div, .platform-card { background: #fff; border: 1px solid #e1e5ea; border-radius: 10px; padding: 1rem; }
+.platform-stats strong { display: block; font-size: 1.5rem; color: #111827; }
+.platform-stats span, .platform-table small { display: block; color: #667085; font-size: 0.78rem; }
+.platform-card { margin-bottom: 1rem; }
+.platform-card h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+.platform-form { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)) auto; gap: 0.5rem; }
+.platform-form input { min-width: 0; padding: 0.55rem 0.65rem; border: 1px solid #ccd2da; border-radius: 6px; }
+.platform-table-wrap { overflow-x: auto; }
+.platform-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.platform-table th, .platform-table td { padding: 0.65rem; text-align: left; border-bottom: 1px solid #eaecf0; vertical-align: top; }
+.platform-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.platform-actions button, .platform-feed button { border: 1px solid #cbd2dc; background: #fff; border-radius: 5px; padding: 0.3rem 0.5rem; cursor: pointer; }
+.status-badge { display: inline-block; padding: 0.2rem 0.45rem; border-radius: 999px; background: #e5e7eb; text-transform: capitalize; }
+.status-active { background: #dcfce7; color: #166534; }
+.status-frozen { background: #fef3c7; color: #92400e; }
+.status-blocked, .status-deleted { background: #fee2e2; color: #991b1b; }
+.platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.platform-feed { list-style: none; padding: 0; margin: 0; max-height: 320px; overflow: auto; }
+.platform-feed li { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid #eaecf0; font-size: 0.8rem; }
+.platform-feed span { color: #667085; }
+
+@media (max-width: 900px) {
+  .platform-stats, .platform-grid { grid-template-columns: 1fr 1fr; }
+  .platform-form { grid-template-columns: 1fr 1fr; }
+}
+
 .app {
   display: flex;
   flex-direction: column;
