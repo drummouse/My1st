@@ -23,3 +23,10 @@ test('runtime and reference schemas include SuperAdmin account contracts', () =>
 test('runtime schema removes the legacy developer role', () => {
   assert.match(runtimeSchema, /update users set role = 'owner' where role = 'developer'/);
 });
+
+test('runtime and reference schemas add the reseller role and scoping column', () => {
+  for (const source of [runtimeSchema, referenceSchema]) {
+    assert.match(source, /reseller_id uuid references users\(id\)/);
+    assert.match(source, /check \(role in \('owner', 'reseller', 'superadmin'\)\)/);
+  }
+});

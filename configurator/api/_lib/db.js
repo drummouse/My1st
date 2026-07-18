@@ -58,12 +58,22 @@ export function ensureSchema() {
       await sql`alter table users add column if not exists must_change_password boolean not null default false`;
       await sql`alter table users add column if not exists deleted_at timestamptz`;
       await sql`alter table users add column if not exists purge_after timestamptz`;
-      await sql`
-        do $$ begin
-          alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
-        exception when duplicate_object then null;
-        end $$
-      `;
+      // Reseller tier: a reseller creates/manages its own owner accounts
+      // (scoped by this column — see api/superadmin/index.js's reseller
+      // checks) without visibility into any tenant's private project data.
+      // Null for accounts a superadmin created directly (or the reseller
+      // accounts themselves). Self-referencing like status_changed_by above.
+      await sql`alter table users add column if not exists reseller_id uuid references users(id)`;
+      await sql`create index if not exists users_reseller_id_idx on users (reseller_id)`;
+      // Billing/licensing isn't built yet — this is deliberately just a
+      // free-form stub column so a future plan/tier system has somewhere to
+      // land without another migration fire drill. Nothing reads it yet.
+      await sql`alter table users add column if not exists plan text`;
+      // A CHECK constraint can't be altered in place, so the existing one
+      // (if any) is dropped and re-added with the current allowed set every
+      // time — idempotent, and the only way to widen it as roles are added.
+      await sql`alter table users drop constraint if exists users_role_check`;
+      await sql`alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'))`;
       await sql`
         do $$ begin
           alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));

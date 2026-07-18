@@ -16,6 +16,7 @@ export function toTenantSummary(row) {
     companyName: row.business_name || row.company_name || null,
     phone: row.phone || null,
     role: row.role || 'owner',
+    resellerId: row.reseller_id || null,
     status: row.status || 'active',
     statusReason: row.status_reason || null,
     statusChangedAt: row.status_changed_at || null,

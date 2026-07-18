@@ -26,6 +26,22 @@ test('legacy developer and owner receive no platform capabilities', () => {
   assert.equal(hasCapability('superadmin', 'users.freeze'), true);
 });
 
+test('reseller gets full user lifecycle + catalog + skins, but no platform-wide capabilities', () => {
+  for (const capability of [
+    'users.create', 'users.freeze', 'users.block', 'users.delete', 'users.restore',
+    'users.password.reset', 'catalog.read', 'catalog.write', 'skins.manage',
+  ]) {
+    assert.equal(hasCapability('reseller', capability), true, capability);
+  }
+  for (const capability of [
+    'tenants.transfer.export', 'tenants.transfer.import', 'catalog.import',
+    'catalog.export', 'catalog.review', 'catalog.publish',
+    'platform.audit.read', 'platform.diagnostics.read',
+  ]) {
+    assert.equal(hasCapability('reseller', capability), false, capability);
+  }
+});
+
 test('transitions require a reason and reject self-restriction', () => {
   assert.throws(
     () => assertAccountTransition(

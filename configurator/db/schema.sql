@@ -25,11 +25,12 @@ alter table users add column if not exists session_version integer not null defa
 alter table users add column if not exists must_change_password boolean not null default false;
 alter table users add column if not exists deleted_at timestamptz;
 alter table users add column if not exists purge_after timestamptz;
+alter table users add column if not exists reseller_id uuid references users(id);
+create index if not exists users_reseller_id_idx on users (reseller_id);
+alter table users add column if not exists plan text;
 
-do $$ begin
-  alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
-exception when duplicate_object then null;
-end $$;
+alter table users drop constraint if exists users_role_check;
+alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'));
 
 do $$ begin
   alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));

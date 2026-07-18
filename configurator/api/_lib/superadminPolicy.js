@@ -1,5 +1,23 @@
+// Reseller sits between superadmin and owner: full lifecycle control over
+// the owner accounts it creates (including delete) and its own library/skin
+// assignments, but never the platform-wide views (audit, diagnostics,
+// tenant transfer) or another reseller's/superadmin's data. Row-level
+// scoping (a reseller only ever touching accounts where reseller_id equals
+// its own id) is enforced in api/superadmin/index.js — this map only
+// controls which actions a role can attempt at all, not which rows.
 const ROLE_CAPABILITIES = {
   owner: [],
+  reseller: [
+    'users.create',
+    'users.freeze',
+    'users.block',
+    'users.delete',
+    'users.restore',
+    'users.password.reset',
+    'catalog.read',
+    'catalog.write',
+    'skins.manage',
+  ],
   superadmin: [
     'users.create',
     'users.freeze',
