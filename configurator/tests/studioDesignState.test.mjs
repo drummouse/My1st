@@ -11,6 +11,7 @@ import {
   designFingerprint,
   getProjectOperationState,
   getProjectSaveStatus,
+  requireAppliedDesign,
 } from '../src/lib/studioDesignState.js';
 
 const savedDesign = {
@@ -27,6 +28,11 @@ const savedDesign = {
   measurements: { soffitSqft: 120 },
   facetOverrides: { 'roof:1': { colorId: 'wg-03' } },
 };
+
+test('shared design application rejects null results and preserves applied design identity', () => {
+  assert.equal(requireAppliedDesign(savedDesign, 'Unavailable'), savedDesign);
+  assert.throws(() => requireAppliedDesign(null, 'Unavailable'), /Unavailable/);
+});
 
 test('project opening is independent from write readiness', () => {
   assert.deepEqual(getProjectOperationState({ accountSettled: true, defaultsReady: false, persistenceReady: false }), {

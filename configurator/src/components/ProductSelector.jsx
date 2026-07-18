@@ -1,12 +1,18 @@
-export default function ProductSelector({ label, products, profiles, selectedId, selectedProfile, onProductChange, onProfileChange }) {
+import { displayMeasurement, unitPriceToDisplay } from '../lib/units.js';
+
+export default function ProductSelector({
+  label, products, profiles, selectedId, selectedProfile, onProductChange, onProfileChange,
+  unitSystem = 'imperial',
+}) {
   const availableProfiles = profiles?.[selectedId] || [];
+  const priceUnit = displayMeasurement(0, 'sqft', unitSystem).unit;
   return (
     <div className="control-block">
       <div className="control-label">{label}</div>
       <select className="control-select" value={selectedId} onChange={(e) => onProductChange(e.target.value)}>
         {products.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.label} — ${p.pricePerSqft.toFixed(2)}/sqft
+            {p.label} — ${unitPriceToDisplay(p.pricePerSqft, 'sqft', unitSystem).toFixed(2)}/{priceUnit}
           </option>
         ))}
       </select>

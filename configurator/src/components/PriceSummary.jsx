@@ -1,24 +1,31 @@
+import { displayMeasurement } from '../lib/units.js';
+
 const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 // Trims to at most 2 decimals but drops trailing zeros (5% not 5.00%, 14.975% stays precise).
 const formatPct = (rate) => (rate * 100).toFixed(2).replace(/\.?0+$/, '');
 
-export default function PriceSummary({ estimate, manualDiscount, onManualDiscountChange, readOnlyDiscount }) {
+export default function PriceSummary({ estimate, manualDiscount, onManualDiscountChange, readOnlyDiscount, unitSystem = 'imperial' }) {
   return (
     <div className="control-block price-summary">
       <div className="control-label">Estimate Summary</div>
       <table className="price-table">
         <tbody>
-          {estimate.lineItems.map((li) => (
-            <tr key={li.key}>
-              <td>
-                {li.label}
-                {li.description && <div className="service-note">{li.description}</div>}
-                {li.linkUrl && <div><a href={li.linkUrl} target="_blank" rel="noreferrer">Link</a></div>}
-              </td>
-              <td className="price-table-qty">{li.qty.toLocaleString()} {li.unit}</td>
-              <td className="price-table-total">{money(li.total)}</td>
-            </tr>
-          ))}
+          {estimate.lineItems.map((li) => {
+            const displayQuantity = displayMeasurement(li.qty, li.unit, unitSystem);
+            return (
+              <tr key={li.key}>
+                <td>
+                  {li.label}
+                  {li.description && <div className="service-note">{li.description}</div>}
+                  {li.linkUrl && <div><a href={li.linkUrl} target="_blank" rel="noreferrer">Link</a></div>}
+                </td>
+                <td className="price-table-qty">
+                  {displayQuantity.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} {displayQuantity.unit}
+                </td>
+                <td className="price-table-total">{money(li.total)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <div className="price-row">

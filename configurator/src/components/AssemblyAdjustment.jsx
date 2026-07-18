@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { feetFromDisplay, feetToDisplay, linearUnit } from '../lib/units.js';
 
 const AXES = [
   { key: 'dz', label: 'Vertical', min: -60, max: 60 },
@@ -20,7 +21,7 @@ const STEP = 0.5;
 // and viewport class don't change mid-session in practice.
 const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse) and (max-width: 900px)').matches;
 
-export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId, onActiveLayerChange, onChange, onReset }) {
+export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId, onActiveLayerChange, onChange, onReset, unitSystem = 'imperial' }) {
   // Collapsed by default on touch (nothing should sit over the model until
   // asked for); desktop has room to just leave the mini-sliders visible.
   const [collapsed, setCollapsed] = useState(isCoarsePointer);
@@ -32,6 +33,10 @@ export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId
   const setAxis = (key) => (val) => onChange(activeLayer.id, { ...offset, [key]: val });
   const nudge = (key, min, max) => (delta) =>
     setAxis(key)(Math.min(max, Math.max(min, (offset[key] || 0) + delta)));
+  const displayOffset = (value) => feetToDisplay(value || 0, unitSystem);
+  const canonicalOffset = (value) => feetFromDisplay(value, unitSystem);
+  const displayStep = feetToDisplay(STEP, unitSystem);
+  const displayUnit = linearUnit(unitSystem);
 
   return (
     <div className="assembly-dock">
@@ -66,7 +71,7 @@ export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId
                 <label>{label}</label>
                 <div className="adjust-stepper">
                   <button type="button" onClick={() => nudge(key, min, max)(-STEP)} aria-label={`Decrease ${label}`}>−</button>
-                  <span className="adjust-stepper-value">{(offset[key] || 0).toFixed(1)} ft</span>
+                  <span className="adjust-stepper-value">{displayOffset(offset[key]).toFixed(unitSystem === 'metric' ? 2 : 1)} {displayUnit}</span>
                   <button type="button" onClick={() => nudge(key, min, max)(STEP)} aria-label={`Increase ${label}`}>+</button>
                 </div>
               </div>
@@ -76,20 +81,23 @@ export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId
                 <input
                   id={`adjust-${key}`}
                   type="range"
-                  min={min}
-                  max={max}
-                  step={STEP}
-                  value={offset[key] || 0}
-                  onChange={(e) => setAxis(key)(Number(e.target.value))}
+                  min={feetToDisplay(min, unitSystem)}
+                  max={feetToDisplay(max, unitSystem)}
+                  step={displayStep}
+                  value={displayOffset(offset[key])}
+                  onChange={(e) => setAxis(key)(canonicalOffset(Number(e.target.value)))}
                 />
                 <input
                   type="number"
                   className="adjust-number"
-                  value={offset[key] || 0}
-                  step={STEP}
-                  onChange={(e) => setAxis(key)(Number(e.target.value) || 0)}
+                  min={feetToDisplay(min, unitSystem)}
+                  max={feetToDisplay(max, unitSystem)}
+                  value={displayOffset(offset[key])}
+                  step={displayStep}
+                  aria-label={`${label} offset in ${displayUnit}`}
+                  onChange={(e) => setAxis(key)(canonicalOffset(Number(e.target.value) || 0))}
                 />
-                <span className="service-unit">ft</span>
+                <span className="service-unit">{displayUnit}</span>
               </div>
             )
           )}

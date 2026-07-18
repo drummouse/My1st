@@ -1,5 +1,6 @@
 import { colorById } from '../data/colors.js';
 import { allRoofProducts, allWallProducts } from '../data/pricing.js';
+import { displayMeasurement } from './units.js';
 
 export const money = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
 // Trims to at most 2 decimals but drops trailing zeros (5% not 5.00%, 14.975% stays precise).
@@ -41,7 +42,7 @@ export function buildFacetTable(facesForPricing, overrides, products, globalProd
 export function buildEstimateText({
   brand, house, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile, estimate,
   accessoryColors, uniformFinish, facetOverrides,
-  roofFacesForPricing, wallFacesForPricing, attachments,
+  roofFacesForPricing, wallFacesForPricing, attachments, unitSystem = 'imperial',
 }) {
   const roofColor = colorById(roofColorId);
   const wallColor = colorById(wallColorId);
@@ -82,8 +83,9 @@ export function buildEstimateText({
     lines.push('-'.repeat(50));
     rows.forEach((row) => {
       const mark = row.customized ? '*' : ' ';
+      const area = displayMeasurement(row.sizeSf, 'sqft', unitSystem);
       lines.push(
-        `${mark} ${String(row.label).padEnd(6)} ${row.productLabel.padEnd(30)} ${row.color.code.padEnd(12)} ${row.color.name.padEnd(18)} ${row.sizeSf.toLocaleString(undefined, { maximumFractionDigits: 1 })} sqft`
+        `${mark} ${String(row.label).padEnd(6)} ${row.productLabel.padEnd(30)} ${row.color.code.padEnd(12)} ${row.color.name.padEnd(18)} ${area.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${area.unit}`
       );
     });
   };
@@ -94,7 +96,8 @@ export function buildEstimateText({
   lines.push('PRICE BREAKDOWN');
   lines.push('-'.repeat(50));
   estimate.lineItems.forEach((li) => {
-    lines.push(`${li.label.padEnd(46)} ${li.qty.toLocaleString()} ${li.unit}  ${money(li.total)}`);
+    const quantity = displayMeasurement(li.qty, li.unit, unitSystem);
+    lines.push(`${li.label.padEnd(46)} ${quantity.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${quantity.unit}  ${money(li.total)}`);
     if (li.description) lines.push(`    ${li.description}`);
     if (li.linkUrl) lines.push(`    Link: ${li.linkUrl}`);
   });

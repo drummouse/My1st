@@ -216,7 +216,7 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           reportFooterNote: form.reportFooterNote,
           logoUrl: form.logoUrl,
           unitSystem: form.unitSystem,
-          showExpertMode: form.showExpertMode,
+          ...(form.expertModeEntitled ? { showExpertMode: form.showExpertMode } : {}),
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

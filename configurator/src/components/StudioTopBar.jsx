@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { focusProjectMenuBoundary, moveProjectMenuFocus } from '../lib/projectMenuNavigation.js';
 import StudioButton from './ui/StudioButton.jsx';
 
 export default function StudioTopBar({
@@ -17,6 +18,7 @@ export default function StudioTopBar({
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const projectMenuRef = useRef(null);
   const projectMenuButtonRef = useRef(null);
+  const pendingProjectMenuFocusRef = useRef(null);
   const projectMenuId = useId();
   const projectMenuButtonId = useId();
   const {
@@ -33,6 +35,11 @@ export default function StudioTopBar({
 
   useEffect(() => {
     if (!projectMenuOpen) return undefined;
+
+    if (pendingProjectMenuFocusRef.current) {
+      focusProjectMenuBoundary(projectMenuRef.current, pendingProjectMenuFocusRef.current);
+      pendingProjectMenuFocusRef.current = null;
+    }
 
     const handlePointerDown = (event) => {
       if (!projectMenuRef.current?.contains(event.target)) setProjectMenuOpen(false);
@@ -53,8 +60,27 @@ export default function StudioTopBar({
     };
   }, [projectMenuOpen]);
 
+  const handleProjectMenuKeyDown = (event) => {
+    if (moveProjectMenuFocus(event.currentTarget, event.key, document.activeElement)) {
+      event.preventDefault();
+    }
+  };
+
+  const handleProjectMenuButtonKeyDown = (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const edge = event.key === 'ArrowUp' ? 'last' : 'first';
+    if (projectMenuOpen) {
+      focusProjectMenuBoundary(projectMenuRef.current, edge);
+      return;
+    }
+    pendingProjectMenuFocusRef.current = edge;
+    setProjectMenuOpen(true);
+  };
+
   const runProjectAction = (action) => {
     setProjectMenuOpen(false);
+    projectMenuButtonRef.current?.focus();
     return action();
   };
 
@@ -77,10 +103,12 @@ export default function StudioTopBar({
           <button
             aria-controls={projectMenuId}
             aria-expanded={projectMenuOpen}
+            aria-haspopup="menu"
             aria-label={`Project: ${projectLabel}. ${projectStatus}. Project actions`}
             className="studio-button studio-button-secondary studio-top-bar-project"
             id={projectMenuButtonId}
             onClick={() => setProjectMenuOpen((open) => !open)}
+            onKeyDown={handleProjectMenuButtonKeyDown}
             ref={projectMenuButtonRef}
             type="button"
           >
@@ -92,11 +120,13 @@ export default function StudioTopBar({
               aria-labelledby={projectMenuButtonId}
               className="studio-top-bar-project-menu-popover"
               id={projectMenuId}
+              onKeyDown={handleProjectMenuKeyDown}
+              role="menu"
             >
-              <button type="button" onClick={() => runProjectAction(onNew)} disabled={projectActionBusy}>New Project</button>
-              <button type="button" onClick={() => runProjectAction(onOpen)} disabled={projectActionBusy || !canOpen}>Open Project</button>
-              <button className="studio-project-menu-primary" type="button" onClick={() => runProjectAction(onSave)} disabled={projectActionBusy || !canSave}>Save / Download</button>
-              <button type="button" onClick={() => runProjectAction(onShare)} disabled={projectActionBusy || !canShare}>Share Design</button>
+              <button role="menuitem" type="button" onClick={() => runProjectAction(onNew)} disabled={projectActionBusy}>New Project</button>
+              <button role="menuitem" type="button" onClick={() => runProjectAction(onOpen)} disabled={projectActionBusy || !canOpen}>Open Project</button>
+              <button role="menuitem" className="studio-project-menu-primary" type="button" onClick={() => runProjectAction(onSave)} disabled={projectActionBusy || !canSave}>Save / Download</button>
+              <button role="menuitem" type="button" onClick={() => runProjectAction(onShare)} disabled={projectActionBusy || !canShare}>Share Design</button>
             </div>
           )}
         </div>

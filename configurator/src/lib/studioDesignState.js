@@ -37,6 +37,11 @@ export function createInitialEditRestore(initialSearch) {
   };
 }
 
+export function requireAppliedDesign(design, message = 'Design is unavailable.') {
+  if (!design) throw new Error(message);
+  return design;
+}
+
 // Project rows may be fetched as soon as authentication settles, before the
 // account-specific fallback normalizer is available. Keep those reads pending
 // and resolve them through the stable application callback once defaults are

@@ -140,6 +140,7 @@ exception when duplicate_object then null;
 end $$;
 alter table settings add column if not exists owner_id uuid references users(id);
 create unique index if not exists settings_owner_id_key on settings (owner_id);
+alter table settings add column if not exists unit_system text not null default 'imperial' check (unit_system in ('imperial', 'metric'));
 alter table settings add column if not exists expert_mode_enabled boolean not null default false;
 alter table settings add column if not exists show_expert_mode boolean not null default false;
 

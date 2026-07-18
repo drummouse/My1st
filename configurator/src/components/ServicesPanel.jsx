@@ -5,6 +5,15 @@ import OptionalServiceRow from './OptionalServiceRow.jsx';
 import TrimAccentRow from './TrimAccentRow.jsx';
 import { adaptCustomServiceLine, optionalServiceToCustomServiceLine } from '../lib/designState.js';
 import { createAdditionalTrimAccent } from '../lib/trimAccents.js';
+import {
+  areaUnit,
+  feetFromDisplay,
+  feetToDisplay,
+  linearUnit,
+  squareFeetFromDisplay,
+  squareFeetToDisplay,
+  unitPriceToDisplay,
+} from '../lib/units.js';
 
 // The 7 accessory services below hide entirely once turned off (see
 // ServicesPanel's render — a New Project default that's unchecked in
@@ -135,6 +144,12 @@ export default function ServicesPanel({
     onMeasurementsChange({ ...measurements, [key]: val });
     updateTrimKind(trimKindForMeasurement[key], { quantity: val });
   };
+  const displayLinearQuantity = (value) => feetToDisplay(value, unitSystem);
+  const displayAreaQuantity = (value) => squareFeetToDisplay(value, unitSystem);
+  const setLinearQty = (key) => (value) => setQty(key)(feetFromDisplay(value, unitSystem));
+  const setAreaQty = (key) => (value) => setQty(key)(squareFeetFromDisplay(value, unitSystem));
+  const linearDisplayUnit = linearUnit(unitSystem) === 'ft' ? 'LF' : linearUnit(unitSystem);
+  const areaDisplayUnit = areaUnit(unitSystem);
   const setColor = (key) => (val) => {
     onAccessoryColorsChange({ ...accessoryColors, [key]: val });
     updateTrimKind(trimKindForColor[key], { colorId: val });
@@ -202,7 +217,7 @@ export default function ServicesPanel({
       {showServiceControls && services.soffit && (
         <ServiceRow
           label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}
-          qty={showServiceControls ? measurements.soffitSqft : undefined} unit="sqft" onQtyChange={setQty('soffitSqft')}
+          qty={showServiceControls ? displayAreaQuantity(measurements.soffitSqft) : undefined} unit={areaDisplayUnit} onQtyChange={setAreaQty('soffitSqft')}
           colorId={showAccentControls ? accessoryColors.soffit : undefined} onColorChange={setColor('soffit')} readOnly={readOnlyQuantities}
           locked={lockedServices?.soffit} onToggleLock={toggleLock('soffit')} showLockToggle={showServiceControls && showLockToggle}
           showToggle={showServiceControls}
@@ -211,7 +226,7 @@ export default function ServicesPanel({
       {showServiceControls && services.fascia && (
         <ServiceRow
           label={ACCESSORY_PRICING.fascia.label} checked={services.fascia} onToggle={toggle('fascia')}
-          qty={showServiceControls ? measurements.fasciaLf : undefined} unit="LF" onQtyChange={setQty('fasciaLf')}
+          qty={showServiceControls ? displayLinearQuantity(measurements.fasciaLf) : undefined} unit={linearDisplayUnit} onQtyChange={setLinearQty('fasciaLf')}
           colorId={showAccentControls ? accessoryColors.fascia : undefined} onColorChange={setColor('fascia')}
           note={showServiceControls && soffitFasciaDeal ? '50% OFF (soffit + fascia deal)' : null} readOnly={readOnlyQuantities}
           locked={lockedServices?.fascia} onToggleLock={toggleLock('fascia')} showLockToggle={showServiceControls && showLockToggle}
@@ -229,11 +244,13 @@ export default function ServicesPanel({
               onChange={(e) => onGutterOptionChange(e.target.value)}
             >
               {GUTTER_OPTIONS.map((g) => (
-                <option key={g.id} value={g.id}>{g.label} — ${g.pricePerLf.toFixed(2)}/LF</option>
+                <option key={g.id} value={g.id}>
+                  {g.label} — ${unitPriceToDisplay(g.pricePerLf, 'LF', unitSystem).toFixed(2)}/{linearDisplayUnit}
+                </option>
               ))}
             </select>
           ) : null}
-          qty={showServiceControls ? measurements.gutterLf : undefined} unit="LF" onQtyChange={setQty('gutterLf')}
+          qty={showServiceControls ? displayLinearQuantity(measurements.gutterLf) : undefined} unit={linearDisplayUnit} onQtyChange={setLinearQty('gutterLf')}
           colorId={showAccentControls ? accessoryColors.gutters : undefined} onColorChange={setColor('gutters')} readOnly={readOnlyQuantities}
           locked={lockedServices?.gutters} onToggleLock={toggleLock('gutters')} showLockToggle={showServiceControls && showLockToggle}
           showToggle={showServiceControls}
@@ -250,11 +267,13 @@ export default function ServicesPanel({
               onChange={(e) => onDownspoutOptionChange(e.target.value)}
             >
               {DOWNSPOUT_OPTIONS.map((d) => (
-                <option key={d.id} value={d.id}>{d.label} — ${d.pricePerLf.toFixed(2)}/LF</option>
+                <option key={d.id} value={d.id}>
+                  {d.label} — ${unitPriceToDisplay(d.pricePerLf, 'LF', unitSystem).toFixed(2)}/{linearDisplayUnit}
+                </option>
               ))}
             </select>
           ) : null}
-          qty={showServiceControls ? measurements.downspoutLf : undefined} unit="LF" onQtyChange={setQty('downspoutLf')}
+          qty={showServiceControls ? displayLinearQuantity(measurements.downspoutLf) : undefined} unit={linearDisplayUnit} onQtyChange={setLinearQty('downspoutLf')}
           colorId={showAccentControls ? accessoryColors.downspouts : undefined} onColorChange={setColor('downspouts')}
           note={showServiceControls && gutterDownspoutDeal ? 'FREE (gutters + downspouts deal)' : null} readOnly={readOnlyQuantities}
           locked={lockedServices?.downspouts} onToggleLock={toggleLock('downspouts')} showLockToggle={showServiceControls && showLockToggle}
@@ -265,21 +284,21 @@ export default function ServicesPanel({
       {showServiceControls && services.snowRetention && (
         <ServiceRow
           label={ACCESSORY_PRICING.snowRetention.label} checked={services.snowRetention} onToggle={toggle('snowRetention')}
-          qty={measurements.snowRetentionLf} unit="LF" onQtyChange={setQty('snowRetentionLf')} readOnly={readOnlyQuantities}
+          qty={displayLinearQuantity(measurements.snowRetentionLf)} unit={linearDisplayUnit} onQtyChange={setLinearQty('snowRetentionLf')} readOnly={readOnlyQuantities}
           locked={lockedServices?.snowRetention} onToggleLock={toggleLock('snowRetention')} showLockToggle={showLockToggle}
         />
       )}
       {showServiceControls && services.capFlashing && (
         <ServiceRow
           label={ACCESSORY_PRICING.capFlashing.label} checked={services.capFlashing} onToggle={toggle('capFlashing')}
-          qty={measurements.capFlashingLf} unit="LF" onQtyChange={setQty('capFlashingLf')} readOnly={readOnlyQuantities}
+          qty={displayLinearQuantity(measurements.capFlashingLf)} unit={linearDisplayUnit} onQtyChange={setLinearQty('capFlashingLf')} readOnly={readOnlyQuantities}
           locked={lockedServices?.capFlashing} onToggleLock={toggleLock('capFlashing')} showLockToggle={showLockToggle}
         />
       )}
       {showServiceControls && services.garageDoorCapping && (
         <ServiceRow
           label={ACCESSORY_PRICING.garageDoorCapping.label} checked={services.garageDoorCapping} onToggle={toggle('garageDoorCapping')}
-          qty={measurements.garageDoorCappingLf} unit="LF" onQtyChange={setQty('garageDoorCappingLf')} readOnly={readOnlyQuantities}
+          qty={displayLinearQuantity(measurements.garageDoorCappingLf)} unit={linearDisplayUnit} onQtyChange={setLinearQty('garageDoorCappingLf')} readOnly={readOnlyQuantities}
           locked={lockedServices?.garageDoorCapping} onToggleLock={toggleLock('garageDoorCapping')} showLockToggle={showLockToggle}
         />
       )}

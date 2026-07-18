@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   areaUnit,
+  displayMeasurement,
+  feetFromDisplay,
   feetToDisplay,
   linearUnit,
   resolveUnitSystem,
+  squareFeetFromDisplay,
   squareFeetToDisplay,
+  unitPriceToDisplay,
 } from '../src/lib/units.js';
 import { serializeTenantSettings } from '../api/_lib/tenantFeatures.js';
 
@@ -44,6 +48,31 @@ test('unit labels and exact base-unit conversions follow the resolved system', (
   assert.equal(feetToDisplay(1, 'metric'), 0.3048);
   assert.equal(squareFeetToDisplay(1, 'imperial'), 1);
   assert.equal(squareFeetToDisplay(1, 'metric'), 0.09290304);
+  assert.equal(feetFromDisplay(0.3048, 'metric'), 1);
+  assert.equal(squareFeetFromDisplay(0.09290304, 'metric'), 1);
+  assert.equal(feetFromDisplay(12, 'imperial'), 12);
+  assert.equal(squareFeetFromDisplay(12, 'imperial'), 12);
+});
+
+test('estimate quantities and unit prices convert for presentation without changing canonical inputs', () => {
+  const lineItem = { qty: 100, unit: 'sqft', total: 1250 };
+
+  assert.deepEqual(displayMeasurement(lineItem.qty, lineItem.unit, 'metric'), {
+    value: 9.290304,
+    unit: 'm²',
+  });
+  assert.deepEqual(displayMeasurement(100, 'LF', 'metric'), {
+    value: 30.48,
+    unit: 'm',
+  });
+  assert.deepEqual(displayMeasurement(3, 'each', 'metric'), {
+    value: 3,
+    unit: 'each',
+  });
+  assert.equal(unitPriceToDisplay(1, 'sqft', 'metric'), 1 / 0.09290304);
+  assert.equal(unitPriceToDisplay(1, 'LF', 'metric'), 1 / 0.3048);
+  assert.equal(unitPriceToDisplay(12, 'each', 'metric'), 12);
+  assert.deepEqual(lineItem, { qty: 100, unit: 'sqft', total: 1250 });
 });
 
 test('unknown unit metadata is rejected instead of silently guessed', () => {
@@ -59,6 +88,8 @@ test('unknown unit metadata is rejected instead of silently guessed', () => {
   assert.throws(() => areaUnit('yards'), /invalid unit system/i);
   assert.throws(() => feetToDisplay(1, 'yards'), /invalid unit system/i);
   assert.throws(() => squareFeetToDisplay(1, 'yards'), /invalid unit system/i);
+  assert.throws(() => feetFromDisplay(1, 'yards'), /invalid unit system/i);
+  assert.throws(() => squareFeetFromDisplay(1, 'yards'), /invalid unit system/i);
 });
 
 test('tenant Settings DTO explicitly exposes the safe company unit enum', () => {
@@ -120,8 +151,9 @@ test('tenant Settings PUT persists valid company units in the scoped upsert', as
 });
 
 test('schema, UI, and saved-design contracts keep units company-scoped', async () => {
-  const [db, settings, designState, newProjectDesignState] = await Promise.all([
+  const [db, schema, settings, designState, newProjectDesignState] = await Promise.all([
     readFile(new URL('../api/_lib/db.js', import.meta.url), 'utf8'),
+    readFile(new URL('../db/schema.sql', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/SettingsPanel.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/designState.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/newProjectDesignState.js', import.meta.url), 'utf8'),
@@ -131,9 +163,31 @@ test('schema, UI, and saved-design contracts keep units company-scoped', async (
     db,
     /alter table settings add column if not exists unit_system text not null default 'imperial' check \(unit_system in \('imperial', 'metric'\)\)/i,
   );
+  assert.match(
+    schema,
+    /alter table settings add column if not exists unit_system text not null default 'imperial' check \(unit_system in \('imperial', 'metric'\)\)/i,
+  );
   assert.match(settings, /unitSystem:\s*row\.unit_system/);
   assert.match(settings, /unitSystem:\s*form\.unitSystem/);
   assert.match(settings, /id="settings-unit-system"[\s\S]*?<option value="imperial">Imperial[\s\S]*?<option value="metric">Metric/);
   assert.doesNotMatch(designState, /unitSystem|unit_system/);
   assert.doesNotMatch(newProjectDesignState, /unitSystem|unit_system/);
+});
+
+test('fixed services and model positioning convert only at the display boundary', async () => {
+  const [services, adjustment, app] = await Promise.all([
+    readFile(new URL('../src/components/ServicesPanel.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/AssemblyAdjustment.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  for (const helper of ['feetToDisplay', 'feetFromDisplay', 'squareFeetToDisplay', 'squareFeetFromDisplay']) {
+    assert.match(services, new RegExp(helper));
+  }
+  assert.match(services, /unitSystem/);
+  assert.doesNotMatch(services, /unit="LF"|unit="sqft"/);
+  assert.match(adjustment, /feetToDisplay/);
+  assert.match(adjustment, /feetFromDisplay/);
+  assert.match(adjustment, /linearUnit\(unitSystem\)/);
+  assert.match(app, /<AssemblyAdjustment[\s\S]*?unitSystem=\{effectiveUnitSystem\}/);
 });

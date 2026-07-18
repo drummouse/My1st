@@ -33,7 +33,7 @@ import { captureDesignState, applyDesignState, createStableDesignNormalizer, dec
 import { normalizeCustomServiceLines } from './lib/designState.js';
 import { createDesignRuntime, resolveSharedDesignPayload } from './lib/designRuntime.js';
 import { buildAccountDefaultDesignSnapshot, buildNewProjectDesignSnapshot } from './lib/newProjectDesignState.js';
-import { createDeferredDesignApplication, createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectOperationState, getProjectSaveStatus } from './lib/studioDesignState.js';
+import { createDeferredDesignApplication, createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectOperationState, getProjectSaveStatus, requireAppliedDesign } from './lib/studioDesignState.js';
 import { defaultProjectName, downloadProjectFile, saveOrUpdateProject } from './lib/projects.js';
 import { replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
@@ -329,6 +329,7 @@ export default function App({ currentUser = null }) {
 
   const applyCurrentDesignState = (design) => {
     if (!design) return null;
+    setSelectedFacet(null);
     applyDesignState(design, {
       setBrandId,
       setHouse,
@@ -370,6 +371,7 @@ export default function App({ currentUser = null }) {
     if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
       try {
         const restoredDesign = applyDesignSnapshot(window.__IRONWRAP_DESIGN__, true);
+        if (!restoredDesign) throw new Error('Shared design is unavailable.');
         // Present since the HTML export flow (handleExportHtml) saves the
         // design as a project and embeds its id, precisely so this exported
         // file's "Approve This Design" button (which needs a project id to
@@ -394,7 +396,10 @@ export default function App({ currentUser = null }) {
       .then((snapshot) => {
         const sharedPayload = resolveSharedDesignPayload(snapshot);
         setDesignRuntime(sharedPayload.runtime);
-        return applyDesignSnapshot(sharedPayload.design, true);
+        return requireAppliedDesign(
+          applyDesignSnapshot(sharedPayload.design, true),
+          'Shared design link is unavailable.'
+        );
       })
       .catch((error) => showLoadNotice('Failed to load shared design link:', 'We couldn’t open the shared design. The current design is still available.', error));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -410,6 +415,7 @@ export default function App({ currentUser = null }) {
       .then((row) => {
         setDesignRuntime(createDesignRuntime(row.runtime?.unitSystem));
         const restoredDesign = applyDesignSnapshot(row.design, true);
+        if (!restoredDesign) throw new Error('Shared project design is unavailable.');
         setCurrentProjectId(projectId);
         markDesignPersisted(restoredDesign);
         setApprovedAt(row.approved_at || null);
@@ -440,6 +446,7 @@ export default function App({ currentUser = null }) {
     fetchJson(`/api/projects/${projectId}`)
       .then((row) => {
         const restoredDesign = applyDesignSnapshot(row.design, false);
+        if (!restoredDesign) throw new Error('Saved project design is unavailable.');
         setCurrentProjectId(projectId);
         markDesignPersisted(restoredDesign);
         setApprovedAt(row.approved_at || null);
@@ -499,16 +506,6 @@ export default function App({ currentUser = null }) {
       setActiveLayerId(house.layers[0]?.id);
     }
   }, [house.layers, activeLayerId]);
-
-  // Facet ids are only unique within a single RoofRuler export, but keys are
-  // namespaced by layer id, so an override/selection can only ever apply to
-  // a face from the layer it was set on. Still, when layer content changes
-  // (import/remove/reorder) any stored overrides could reference stale
-  // faces — reset to be safe.
-  useEffect(() => {
-    setFacetOverrides({});
-    setSelectedFacet(null);
-  }, [parsedLayers]);
 
   const roofFacesForPricing = useMemo(() => {
     const out = [];
@@ -756,6 +753,7 @@ export default function App({ currentUser = null }) {
       roofFacesForPricing,
       wallFacesForPricing,
       attachments,
+      unitSystem: effectiveUnitSystem,
     });
     downloadTextFile(`${house.jobNumber}-estimate.txt`, text);
   };
@@ -898,6 +896,7 @@ export default function App({ currentUser = null }) {
       lineTakeoffs,
       attachmentFiles: attachments.filter((a) => a.kind === 'file'),
       attachmentPhotos: attachmentPhotos.filter(Boolean),
+      unitSystem: effectiveUnitSystem,
     });
   };
 
@@ -953,6 +952,7 @@ export default function App({ currentUser = null }) {
           currentProjectId={currentProjectId}
           onProjectIdChange={setOwnerProjectId}
           onDesignPersisted={markDesignPersisted}
+          onOperationBusyChange={setProjectActionBusy}
           canOpen={projectOperations.canOpen}
           canSave={projectOperations.canSave}
           persistenceMessage={projectOperations.message}
@@ -1001,6 +1001,7 @@ export default function App({ currentUser = null }) {
         selectedProfile={roofProfile}
         onProductChange={handleRoofProductChange}
         onProfileChange={setRoofProfile}
+        unitSystem={effectiveUnitSystem}
       />
       <div className="control-block color-row">
         <span className="control-label">Roof Color</span>
@@ -1031,6 +1032,7 @@ export default function App({ currentUser = null }) {
         selectedProfile={wallProfile}
         onProductChange={handleWallProductChange}
         onProfileChange={setWallProfile}
+        unitSystem={effectiveUnitSystem}
       />
       <div className="control-block color-row">
         <span className="control-label">Siding Color</span>
@@ -1086,6 +1088,7 @@ export default function App({ currentUser = null }) {
       manualDiscount={manualDiscount}
       onManualDiscountChange={setManualDiscount}
       readOnlyDiscount={isCustomerView}
+      unitSystem={effectiveUnitSystem}
     />
   );
 
@@ -1159,6 +1162,7 @@ export default function App({ currentUser = null }) {
             onColorChange={(id) => setFacetOverride({ colorId: id })}
             onClear={clearFacetOverride}
             onClose={() => setSelectedFacet(null)}
+            unitSystem={effectiveUnitSystem}
           />
         )}
         <AssemblyAdjustment
@@ -1168,6 +1172,7 @@ export default function App({ currentUser = null }) {
           onActiveLayerChange={setActiveLayerId}
           onChange={handleLayerOffsetChange}
           onReset={handleResetLayerOffset}
+          unitSystem={effectiveUnitSystem}
         />
       </div>
     </div>

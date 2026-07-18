@@ -14,6 +14,7 @@ export default function ProjectsPanel({
   persistenceMessage = '',
   refreshKey = 0,
   operationBusy = false,
+  onOperationBusyChange,
 }) {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('');
@@ -36,6 +37,7 @@ export default function ProjectsPanel({
 
   const withStatus = async (busyMsg, okMsg, fn) => {
     setBusy(true);
+    onOperationBusyChange?.(true);
     setStatus(busyMsg);
     try {
       await fn();
@@ -43,9 +45,11 @@ export default function ProjectsPanel({
     } catch (err) {
       console.error('Projects API error:', err);
       setStatus('Could not reach the Projects database — it may not be reachable from this environment yet.');
+    } finally {
+      setBusy(false);
+      onOperationBusyChange?.(false);
+      setTimeout(() => setStatus(''), 5000);
     }
-    setBusy(false);
-    setTimeout(() => setStatus(''), 5000);
   };
 
   // A single save action: updates the already-saved record (if this design

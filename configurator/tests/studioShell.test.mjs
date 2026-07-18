@@ -53,7 +53,7 @@ test('Settings exposes only the entitled tenant preference through its save flow
   assert.match(settings, /showExpertMode:\s*row\.show_expert_mode === true/);
   assert.match(settings, /\{form\.expertModeEntitled && \([\s\S]*?Show Expert Mode/);
   assert.match(settings, /checked=\{!!form\.showExpertMode\}/);
-  assert.match(settings, /showExpertMode:\s*form\.showExpertMode/);
+  assert.match(settings, /\.\.\.\(form\.expertModeEntitled\s*\?\s*\{ showExpertMode: form\.showExpertMode \}\s*:\s*\{\}\)/);
   assert.doesNotMatch(settings, /EXPERT_MODE_VAR/);
 
   assert.match(route, /showExpertMode/);
@@ -93,7 +93,13 @@ test('Studio top bar exposes the active project through an accessible actions di
   assert.match(topBar, /aria-expanded=\{projectMenuOpen\}/);
   assert.match(topBar, /aria-controls=\{projectMenuId\}/);
   assert.match(topBar, /aria-labelledby=\{projectMenuButtonId\}/);
-  assert.doesNotMatch(topBar, /aria-haspopup="menu"|role="menu(?:item)?"/);
+  assert.match(topBar, /aria-haspopup="menu"/);
+  assert.match(topBar, /role="menu"/);
+  assert.equal((topBar.match(/<button role="menuitem"/g) || []).length, 4);
+  assert.match(topBar, /onKeyDown=\{handleProjectMenuButtonKeyDown\}/);
+  assert.match(topBar, /onKeyDown=\{handleProjectMenuKeyDown\}/);
+  assert.match(topBar, /focusProjectMenuBoundary/);
+  assert.match(topBar, /moveProjectMenuFocus/);
   assert.match(topBar, /event\.key === 'Escape'/);
   assert.match(topBar, /document\.addEventListener\('pointerdown', handlePointerDown\)/);
   assert.match(topBar, /projectMenuRef\.current\?\.contains\(event\.target\)/);
@@ -140,6 +146,7 @@ test('every inspector identity action is disabled while the shared save is in fl
 
   assert.match(app, /<LayersPanel[\s\S]*?projectOperationBusy=\{projectActionBusy\}/);
   assert.match(app, /<ProjectsPanel[\s\S]*?operationBusy=\{projectActionBusy\}/);
+  assert.match(app, /<ProjectsPanel[\s\S]*?onOperationBusyChange=\{setProjectActionBusy\}/);
   assert.match(layersPanel, /onClick=\{onNewProject\}[\s\S]*?disabled=\{projectOperationBusy\}/);
   assert.match(projectsPanel, /if \(operationBusy \|\| !canOpen\) return;/);
   assert.match(projectsPanel, /if \(operationBusy\) return;\s*if \(!window\.confirm\('Delete this project\?/);
@@ -147,6 +154,30 @@ test('every inspector identity action is disabled while the shared save is in fl
   assert.match(projectsPanel, /disabled=\{busy \|\| operationBusy\}/);
   assert.match(projectsPanel, /onClick=\{handleDownload\} disabled=\{busy \|\| operationBusy \|\| !canSave\}/);
   assert.doesNotMatch(projectsPanel, /withStatus\('Saving\.\.\.'/);
+});
+
+test('saved facet overrides survive project application and only removed-layer overrides are cleared', async () => {
+  const app = await readApp();
+
+  assert.doesNotMatch(app, /useEffect\(\(\) => \{\s*setFacetOverrides\(\{\}\);\s*setSelectedFacet\(null\);\s*\}, \[parsedLayers\]\);/);
+  assert.match(app, /const handleRemoveLayer = \(id\) => \{[\s\S]*?if \(!key\.startsWith\(`\$\{id\}:`\)\) next\[key\] = val;/);
+  assert.match(app, /const restoredDesign = applyDesignSnapshot\(row\.design, false\);\s*if \(!restoredDesign\) throw new Error\('Saved project design is unavailable\.'\);\s*setCurrentProjectId\(projectId\);/);
+});
+
+test('every startup share format rejects an unapplied design before assigning project identity', async () => {
+  const app = await readApp();
+
+  assert.match(app, /const restoredDesign = applyDesignSnapshot\(window\.__IRONWRAP_DESIGN__, true\);\s*if \(!restoredDesign\) throw new Error\('Shared design is unavailable\.'\);/);
+  assert.match(app, /const restoredDesign = applyDesignSnapshot\(row\.design, true\);\s*if \(!restoredDesign\) throw new Error\('Shared project design is unavailable\.'\);\s*setCurrentProjectId\(projectId\);/);
+  assert.match(app, /return requireAppliedDesign\(\s*applyDesignSnapshot\(sharedPayload\.design, true\),\s*'Shared design link is unavailable\.'\s*\);/);
+});
+
+test('ProjectsPanel lifts Open and Delete into the shared project operation lock', async () => {
+  const panel = await readComponent('ProjectsPanel');
+
+  assert.match(panel, /onOperationBusyChange/);
+  assert.match(panel, /setBusy\(true\);\s*onOperationBusyChange\?\.\(true\);/);
+  assert.match(panel, /finally \{\s*setBusy\(false\);\s*onOperationBusyChange\?\.\(false\);/);
 });
 
 test('Share Design holds the shared project operation lock through identity assignment', async () => {
@@ -181,7 +212,7 @@ test('App derives dirty state from database persistence and gates owner writes u
   const projectsPanel = await readComponent('ProjectsPanel');
 
   assert.match(app, /import \{ captureDesignState, applyDesignState, createStableDesignNormalizer, decodeDesignFromUrl \} from '\.\/lib\/designState\.js';/);
-  assert.match(app, /import \{ createDeferredDesignApplication, createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectOperationState, getProjectSaveStatus \} from '\.\/lib\/studioDesignState\.js';/);
+  assert.match(app, /import \{[^}]*createDeferredDesignApplication[^}]*createInitialEditRestore[^}]*designFingerprint[^}]*getDesignPersistenceState[^}]*getProjectOperationState[^}]*getProjectSaveStatus[^}]*requireAppliedDesign[^}]*\} from '\.\/lib\/studioDesignState\.js';/);
   assert.match(app, /const \[persistedDesignFingerprint, setPersistedDesignFingerprint\] = useState\(null\);/);
   assert.match(app, /const \[companySettingsSettled, setCompanySettingsSettled\] = useState\(false\);/);
   assert.match(app, /const \[defaultCatalogsSettled, setDefaultCatalogsSettled\] = useState\(false\);/);
@@ -474,7 +505,7 @@ test('App gives Accents and Services distinct control semantics', async () => {
   assert.doesNotMatch(panel, /\{showServiceControls && services\.(?:gutters|downspouts) && \(/);
   assert.match(panel, /colorId=\{showAccentControls \? accessoryColors\.gutters : undefined\}/);
   assert.match(panel, /colorId !== undefined && <ColorPickerButton/);
-  assert.match(panel, /qty=\{showServiceControls \? measurements\.gutterLf : undefined\}/);
+  assert.match(panel, /qty=\{showServiceControls \? displayLinearQuantity\(measurements\.gutterLf\) : undefined\}/);
   assert.match(panel, /showToggle=\{showServiceControls\}/);
   assert.match(panel, /\{showServiceControls && \(/);
   assert.match(panel, /\{showServiceControls && customServiceLines\.length > 0 && \(/);
@@ -585,6 +616,10 @@ test('desktop Model Positioning and Front use opposite bounded bottom-edge regio
   assert.match(adjustment, /aria-expanded=\{!collapsed\}/);
   assert.match(adjustment, /aria-controls=\{bodyId\}/);
   assert.match(adjustment, /id=\{bodyId\}/);
+  assert.match(adjustment, /unitSystem/);
+  assert.match(adjustment, /feetToDisplay/);
+  assert.match(adjustment, /feetFromDisplay/);
+  assert.doesNotMatch(adjustment, />ft<|toFixed\(1\)} ft/);
   assert.match(css, /\.viewer3d-canvas-wrap\s*\{[^}]*--viewer3d-left-control-lane:\s*[^;]+;/s);
   assert.ok(desktopCss, 'desktop positioning contract should use the Studio breakpoint');
   assert.match(dockRule || '', /left:\s*var\(--viewer3d-left-control-lane\)/);
