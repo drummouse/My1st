@@ -52,13 +52,13 @@ body {
 .platform-feed { list-style: none; padding: 0; margin: 0; max-height: 320px; overflow: auto; }
 .platform-feed li { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid #eaecf0; font-size: 0.8rem; }
 .platform-feed span { color: #667085; }
-.library-console { border-top: 4px solid #e8541a; }
+.library-console { border-top: 4px solid var(--brand-accent); }
 .library-header, .library-future, .library-filters, .library-record-form, .library-exchange, .library-tabs { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; }
 .library-header { justify-content: space-between; margin-bottom: 0.8rem; }
 .library-header p { margin: 0.25rem 0 0; color: #667085; font-size: 0.82rem; }
 .library-tabs { border-bottom: 1px solid #e5e7eb; margin-bottom: 0.75rem; }
 .library-tabs button { border: 0; background: transparent; padding: 0.55rem 0.7rem; cursor: pointer; }
-.library-tabs button.active { color: #c2410c; border-bottom: 2px solid #e8541a; font-weight: 700; }
+.library-tabs button.active { color: var(--brand-accent-dark); border-bottom: 2px solid var(--brand-accent); font-weight: 700; }
 .library-future { margin-bottom: 0.75rem; }
 .library-future button { border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b; border-radius: 6px; padding: 0.4rem 0.6rem; }
 .library-filters, .library-record-form { margin-bottom: 0.75rem; }
@@ -158,6 +158,8 @@ body {
 .viewer-pane .control-block { margin: 0.75rem; }
 
 .viewer3d-canvas-wrap {
+  --viewer3d-left-control-lane: 4.5rem;
+
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
@@ -291,10 +293,9 @@ body {
   pointer-events: none;
 }
 
-/* Shortcut buttons docked at the center of each side of the 3D view — skinny
-   along their short axis, 60% of that side's length along their long axis —
-   that snap the live camera to look straight at that side (see
-   Viewer3D.jsx's snapToElevation). */
+/* Compact shortcut buttons docked at the center of each side of the 3D view
+   snap the live camera to that named side (see Viewer3D.jsx's
+   snapToElevation). */
 .viewer3d-elevation-btn {
   position: absolute;
   background: rgba(20, 24, 30, 0.55);
@@ -304,27 +305,27 @@ body {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.35em;
-  text-indent: 0.35em; /* re-centers the text against the trailing letter-spacing gap */
+  letter-spacing: 0.08em;
   cursor: pointer;
-  padding: 0;
+  min-width: 3.5rem;
+  min-height: 44px;
+  padding: 0.35rem 0.55rem;
   transition: background 0.15s ease;
 }
 .viewer3d-elevation-btn:hover { background: rgba(20, 24, 30, 0.8); }
 .viewer3d-elevation-btn-top, .viewer3d-elevation-btn-bottom {
   left: 50%;
   transform: translateX(-50%);
-  width: 40%;
-  height: 52px;
+  width: auto;
+  height: 44px;
 }
 .viewer3d-elevation-btn-top { top: 0.6rem; }
 .viewer3d-elevation-btn-bottom { bottom: 0.6rem; }
 .viewer3d-elevation-btn-left, .viewer3d-elevation-btn-right {
   top: 50%;
   transform: translateY(-50%);
-  width: 52px;
-  height: 40%;
-  writing-mode: vertical-rl;
+  width: auto;
+  height: 44px;
 }
 .viewer3d-elevation-btn-left { left: 0.6rem; }
 .viewer3d-elevation-btn-right { right: 0.6rem; }
@@ -343,7 +344,9 @@ body {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.08em;
+  min-height: 44px;
+  min-width: 3.5rem;
   padding: 0.4rem 0.6rem;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -412,6 +415,10 @@ body {
 }
 .color-picker-btn-swatch-mixed {
   background: repeating-conic-gradient(#9ca3af 0% 25%, #e5e7eb 0% 50%) 0 0 / 10px 10px;
+}
+.color-picker-btn-swatch-unselected {
+  background: transparent;
+  border-style: dashed;
 }
 .color-picker-btn-label { flex: 1 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -559,6 +566,60 @@ body {
 .service-row-select { justify-content: space-between; }
 .service-row-select select { flex: 1 1 auto; }
 
+.trim-accent-row {
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid #e2e5ea;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.trim-accent-row-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 28px;
+  margin-bottom: 0.55rem;
+  font-size: 0.82rem;
+}
+.trim-accent-row-heading .trim-accent-name { flex: 1 1 auto; }
+.trim-accent-row-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.trim-accent-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  color: #6b7280;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.trim-accent-field > input,
+.trim-accent-field > select,
+.trim-accent-quantity-control > input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.trim-accent-field input:disabled,
+.trim-accent-field select:disabled { opacity: 0.55; cursor: not-allowed; }
+.trim-accent-color .color-picker-btn-wrap,
+.trim-accent-color .color-picker-btn { width: 100%; min-width: 0; }
+.trim-accent-quantity-control { display: flex; align-items: center; gap: 0.35rem; }
+
+@media (max-width: 860px) {
+  .trim-accent-row-fields { grid-template-columns: 1fr; }
+}
+
 .price-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .price-table td { padding: 0.25rem 0; border-bottom: 1px solid #f0f1f3; }
 .price-table-qty { color: #6b7280; text-align: right; padding-right: 0.5rem !important; }
@@ -693,7 +754,7 @@ body {
 }
 .project-open-btn:hover:not(:disabled) { background: #f7f8fa; }
 .project-open-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.project-open-btn-active { border-color: var(--brand-accent); background: #fff4ee; }
+.project-open-btn-active { border-color: var(--brand-accent); background: color-mix(in srgb, var(--brand-accent) 9%, #fff); }
 
 .uniform-toggle {
   display: flex;
@@ -730,10 +791,6 @@ body {
   cursor: pointer;
 }
 .app-nav-tab.active { background: #fff; border-color: #d1d5db; color: #1f2937; font-weight: 600; }
-
-.app-nav > .brand-toggle {
-  flex: 0 0 auto;
-}
 
 [data-interface-design-placeholder] {
   flex: 0 0 auto;
@@ -790,7 +847,7 @@ body {
 .discounts-panel-layout > .export-buttons {
   grid-column: 1 / -1;
 }
-.discounts-new-rule { border-color: var(--brand-accent, #E8541A); }
+.discounts-new-rule { border-color: var(--brand-accent); }
 .discounts-saved-rules { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
 .discount-rule-card-muted { opacity: 0.6; }
 .discount-rule-card-footer {
@@ -822,10 +879,9 @@ body {
   .discounts-panel-layout { grid-template-columns: 1fr; }
 }
 
-/* Materials & Colors: two visually distinct libraries side by side (blue vs.
-   purple header, so they never again read as "two of the same window"),
-   each with its folder tree docked at the outer edge of the screen and its
-   list/add-form more central. */
+/* Materials & Colors: two visually distinct libraries side by side, each
+   with its folder tree docked at the outer edge of the screen and its
+   list/add-form more central. The authenticated skin supplies the palette. */
 .materials-colors-panel { max-width: 1400px; }
 .materials-colors-layout {
   display: grid;
@@ -842,16 +898,16 @@ body {
   flex-direction: column;
   min-width: 0;
 }
-.materials-section { border-top: 4px solid #2563eb; }
-.colors-section { border-top: 4px solid #a855f7; }
+.materials-section { border-top: 4px solid var(--studio-action); }
+.colors-section { border-top: 4px solid var(--studio-border-strong); }
 .materials-colors-section-header {
   padding: 0.6rem 0.9rem;
   font-weight: 700;
   font-size: 0.9rem;
   color: #fff;
 }
-.materials-section .materials-colors-section-header { background: #2563eb; }
-.colors-section .materials-colors-section-header { background: #a855f7; }
+.materials-section .materials-colors-section-header { background: var(--studio-surface-frame); }
+.colors-section .materials-colors-section-header { background: var(--studio-surface-frame-raised); }
 .materials-colors-section-body {
   display: flex;
   gap: 0.9rem;
@@ -879,8 +935,13 @@ body {
   cursor: pointer;
   color: #374151;
 }
-.folder-tree-item.active { background: #eef2ff; border-color: #c7d2fe; color: #1e3a8a; font-weight: 700; }
-.folder-tree-right .folder-tree-item.active { background: #faf5ff; border-color: #e9d5ff; color: #6b21a8; }
+.folder-tree-item.active,
+.folder-tree-right .folder-tree-item.active {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
+  font-weight: 700;
+}
 .folder-tree-count { font-size: 0.68rem; color: #9ca3af; }
 .folder-tree-row { display: flex; align-items: center; gap: 0.25rem; }
 .folder-tree-row .folder-tree-item { flex: 1 1 auto; }
@@ -913,7 +974,7 @@ body {
 /* .custom-services-existing reuses .materials-colors-section's card chrome
    (border/radius/background) — same "library card" shell, just a different
    header color. */
-.custom-services-existing-header { background: #0d9488; }
+.custom-services-existing-header { background: var(--studio-surface-frame); }
 .custom-services-existing-body { padding: 0.75rem 0.9rem; }
 
 @media (max-width: 860px) {
@@ -964,4 +1025,413 @@ body {
   .app-body.viewer-minimized .viewer-pane { height: auto; align-self: stretch; }
   .app-body.viewer-minimized .controls-pane { height: auto; flex: 1 1 auto; }
   .app-body.viewer-maximized .viewer-pane { height: 100%; }
+}
+
+/* IronWrap Red Studio -----------------------------------------------------
+   Authenticated screens still contain established component class names.
+   This scoped bridge gives those controls the same semantic palette as the
+   shell without changing customer-facing brand previews or their behavior. */
+[data-studio-skin='ironwrap'] .app-nav {
+  background: var(--studio-surface-frame);
+  border-bottom: var(--studio-border-width) solid var(--studio-border-on-frame);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--studio-surface-frame) 24%, transparent);
+  gap: 0.35rem;
+  padding: 0.35rem 1rem 0.45rem;
+}
+
+[data-studio-skin='ironwrap'] .app-nav-tab {
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--studio-radius-control);
+  color: var(--studio-text-on-frame-muted);
+  font-weight: 650;
+}
+
+[data-studio-skin='ironwrap'] .app-nav-tab:hover:not(:disabled) {
+  background: var(--studio-surface-frame-raised);
+  border-color: var(--studio-border-on-frame);
+  color: var(--studio-text-on-frame);
+}
+
+[data-studio-skin='ironwrap'] .app-nav-tab.active {
+  background: var(--studio-action);
+  border-color: var(--studio-action);
+  color: var(--studio-action-text);
+  font-weight: 750;
+}
+
+[data-studio-skin='ironwrap'] [data-interface-design-placeholder] {
+  border-color: var(--studio-border-on-frame);
+}
+
+[data-studio-skin='ironwrap'] [data-interface-design-placeholder] .control-sublabel {
+  color: var(--studio-text-on-frame-muted);
+}
+
+[data-studio-skin='ironwrap'] :is(.platform-console, .controls-pane) {
+  background: var(--studio-surface-canvas);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.control-block, .settings-panel, .platform-card) {
+  background: var(--studio-surface-panel);
+  border-color: var(--studio-border);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--studio-surface-frame) 7%, transparent);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .platform-stats div,
+  .materials-colors-section,
+  .library-exchange > div,
+  .discount-rule-card,
+  .custom-services-existing,
+  .color-card,
+  .facet-inspector,
+  .assembly-dock
+) {
+  background: var(--studio-surface-panel);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.control-select, .service-qty, .adjust-number) {
+  background: var(--studio-surface-control);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .platform-form input,
+  .library-filters input,
+  .library-filters select,
+  .library-record-form input,
+  .library-record-form select,
+  .library-migration select,
+  .library-exchange textarea,
+  .price-discount-input input,
+  .trim-accent-field > input,
+  .trim-accent-field > select,
+  .trim-accent-quantity-control > input
+) {
+  background: var(--studio-surface-control);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(input[type='checkbox'], input[type='radio'], input[type='range']) {
+  accent-color: var(--studio-action);
+}
+
+[data-studio-skin='ironwrap'] :is(.control-label, .color-card-name, .adjust-stepper-value) {
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .control-sublabel,
+  .field-label,
+  .facet-inspector-meta,
+  .assembly-dock-chevron,
+  .adjust-row label,
+  .adjust-stepper-row label,
+  .color-card-code,
+  .color-drawer-row-code,
+  .folder-tree-count,
+  .price-table-qty,
+  .service-lock-toggle,
+  .service-unit,
+  .platform-heading p,
+  .platform-stats span,
+  .platform-table small,
+  .platform-feed span,
+  .library-header p
+) {
+  color: var(--studio-text-muted);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .platform-table th,
+  .platform-table td,
+  .platform-feed li,
+  .library-tabs,
+  .color-modal-header,
+  .color-drawer-search,
+  .color-accordion,
+  .projects-list,
+  .discount-rule-card-footer,
+  .price-table td
+) {
+  border-color: var(--studio-border);
+}
+
+[data-studio-skin='ironwrap'] :is(.library-migration pre, .color-drawer-handle) {
+  background: var(--studio-surface-panel-muted);
+}
+
+[data-studio-skin='ironwrap'] .control-select[readonly] {
+  background: var(--studio-surface-panel-muted);
+  color: var(--studio-text-muted);
+}
+
+[data-studio-skin='ironwrap'] :is(.btn-primary, .import-file-btn.btn-primary) {
+  background: var(--studio-action);
+  border: var(--studio-border-width) solid var(--studio-action);
+  color: var(--studio-action-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.btn-primary, .import-file-btn.btn-primary):hover:not(:disabled) {
+  background: var(--studio-action-hover);
+  border-color: var(--studio-action-hover);
+}
+
+[data-studio-skin='ironwrap'] :is(.btn-primary, .import-file-btn.btn-primary):disabled,
+[data-studio-skin='ironwrap'] :is(.btn-primary, .import-file-btn.btn-primary):disabled:hover {
+  background: var(--studio-action-disabled-surface);
+  border-color: var(--studio-action-disabled-border);
+  color: var(--studio-action-disabled-text);
+  opacity: 1;
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .btn-secondary,
+  .import-file-btn,
+  .platform-actions button,
+  .platform-feed button,
+  .library-tabs button,
+  .library-future button
+) {
+  background: var(--studio-surface-control);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .btn-secondary,
+  .import-file-btn,
+  .platform-actions button,
+  .platform-feed button,
+  .library-tabs button,
+  .library-future button
+):hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+  border-color: var(--studio-border-strong);
+}
+
+[data-studio-skin='ironwrap'] .studio-project-menu-primary {
+  background: var(--studio-action);
+  color: var(--studio-action-text);
+}
+
+[data-studio-skin='ironwrap'] .studio-project-menu-primary:hover:not(:disabled) {
+  background: var(--studio-action-hover);
+  color: var(--studio-action-text);
+}
+
+[data-studio-skin='ironwrap'] .btn-danger {
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] .btn-danger:hover:not(:disabled) {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action-hover);
+}
+
+[data-studio-skin='ironwrap'] :is(.layer-remove-btn, .project-open-btn) {
+  background: var(--studio-surface-control);
+  border-color: var(--studio-border);
+  color: var(--studio-text-muted);
+}
+
+[data-studio-skin='ironwrap'] .layer-remove-btn:hover:not(:disabled) {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] .project-open-btn:hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.service-row, .trim-accent-row, .layer-row) {
+  background: color-mix(in srgb, var(--studio-surface-panel) 72%, var(--studio-surface-canvas));
+  border-color: var(--studio-border);
+}
+
+[data-studio-skin='ironwrap'] :is(.service-note, .price-row-deal, .price-deals-note) {
+  color: var(--studio-positive);
+}
+
+[data-studio-skin='ironwrap'] .price-row-total {
+  border-top-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] :is(.color-tab.active, .color-drawer-row.selected, .project-open-btn-active) {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] .color-card.selected {
+  border-color: var(--studio-action);
+  box-shadow: 0 0 0 2px var(--studio-action);
+}
+
+[data-studio-skin='ironwrap'] .folder-tree-item {
+  background: var(--studio-surface-panel-muted);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.folder-tree-item.active, .folder-tree-right .folder-tree-item.active) {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] .materials-colors-section {
+  box-shadow: var(--studio-shadow-panel);
+}
+
+[data-studio-skin='ironwrap'] :is(
+  .materials-colors-section-header,
+  .custom-services-existing-header
+) {
+  background: var(--studio-surface-frame);
+  color: var(--studio-text-on-frame);
+}
+
+[data-studio-skin='ironwrap'] .colors-section .materials-colors-section-header {
+  background: var(--studio-surface-frame-raised);
+}
+
+[data-studio-skin='ironwrap'] .viewer-pane {
+  background: var(--studio-surface-frame);
+}
+
+[data-studio-skin='ironwrap'] .viewer-toolbar {
+  background: var(--studio-surface-frame);
+  border-bottom-color: var(--studio-border-on-frame);
+}
+
+[data-studio-skin='ironwrap'] .viewer-toolbar-title {
+  color: var(--studio-text-on-frame-muted);
+}
+
+[data-studio-skin='ironwrap'] .viewer-toolbar-actions .btn-secondary {
+  background: var(--studio-surface-frame-raised);
+  border-color: var(--studio-border-on-frame);
+  color: var(--studio-text-on-frame);
+}
+
+[data-studio-skin='ironwrap'] .viewer-toolbar-actions .btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--studio-surface-frame-raised) 72%, var(--studio-surface-control));
+}
+
+[data-studio-skin='ironwrap'] .viewer3d-wrap {
+  background: linear-gradient(
+    180deg,
+    var(--studio-surface-control) 0%,
+    var(--studio-surface-canvas) 62%,
+    var(--studio-surface-panel-muted) 100%
+  );
+}
+
+[data-studio-skin='ironwrap'] :is(.color-modal, .color-drawer) {
+  background: var(--studio-surface-panel);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.color-modal-header, .color-drawer-search) {
+  border-color: var(--studio-border);
+}
+
+[data-studio-skin='ironwrap'] :is(.color-drawer-search input, .color-picker-btn, .adjust-stepper button) {
+  background: var(--studio-surface-control);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] :is(.viewer3d-elevation-btn, .viewer3d-topview-btn) {
+  background: color-mix(in srgb, var(--studio-surface-frame) 86%, transparent);
+  border-color: var(--studio-border-on-frame);
+  color: var(--studio-text-on-frame);
+}
+
+[data-studio-skin='ironwrap'] :is(.viewer3d-elevation-btn, .viewer3d-topview-btn):hover {
+  background: var(--studio-surface-frame);
+}
+
+[data-studio-skin='ironwrap'] .platform-stats strong {
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] .status-badge {
+  background: var(--studio-surface-panel-muted);
+  color: var(--studio-text);
+}
+
+[data-studio-skin='ironwrap'] .status-active {
+  background: color-mix(in srgb, var(--studio-positive) 13%, var(--studio-surface-control));
+  color: var(--studio-positive);
+}
+
+[data-studio-skin='ironwrap'] .status-frozen {
+  background: color-mix(in srgb, var(--studio-warning) 14%, var(--studio-surface-control));
+  color: var(--studio-warning);
+}
+
+[data-studio-skin='ironwrap'] :is(.status-blocked, .status-deleted, .platform-error) {
+  background: var(--studio-action-subtle);
+  color: var(--studio-critical);
+}
+
+/* Library Core uses plain HTML buttons across refresh, records,
+   relationships, import/export, and migration. Keep that established markup,
+   but give every action one scoped Studio primitive instead of UA chrome. */
+[data-studio-skin='ironwrap'] .library-console button {
+  appearance: none;
+  background: var(--studio-surface-control);
+  border: var(--studio-border-width) solid var(--studio-border);
+  border-radius: var(--studio-radius-control);
+  color: var(--studio-text);
+  cursor: pointer;
+  font-weight: var(--studio-font-weight-control);
+  padding: 0.55rem 0.75rem;
+  transition: background-color var(--studio-motion-fast) var(--studio-motion-easing),
+    border-color var(--studio-motion-fast) var(--studio-motion-easing),
+    color var(--studio-motion-fast) var(--studio-motion-easing);
+}
+
+[data-studio-skin='ironwrap'] .library-console button:hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+  border-color: var(--studio-border-strong);
+}
+
+[data-studio-skin='ironwrap'] .library-console button:disabled {
+  background: var(--studio-surface-panel-muted);
+  color: var(--studio-text-muted);
+  cursor: not-allowed;
+}
+
+/* Interactive-state selectors intentionally follow their generic hover
+   rules and include the state pseudo-class, so hover cannot erase active red. */
+[data-studio-skin='ironwrap'] .app-nav-tab.active:hover:not(:disabled) {
+  background: var(--studio-action-hover);
+  border-color: var(--studio-action-hover);
+  color: var(--studio-action-text);
+}
+
+[data-studio-skin='ironwrap'] .library-tabs button.active,
+[data-studio-skin='ironwrap'] .library-tabs button.active:hover:not(:disabled) {
+  background: var(--studio-action-subtle);
+  border-bottom-color: var(--studio-action);
+  color: var(--studio-critical);
+}
+
+[data-studio-skin='ironwrap'] .project-open-btn-active:hover:not(:disabled) {
+  background: var(--studio-action-subtle);
+  border-color: var(--studio-action);
+  color: var(--studio-critical);
 }

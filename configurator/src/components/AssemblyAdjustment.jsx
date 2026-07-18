@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 const AXES = [
   { key: 'dz', label: 'Vertical', min: -60, max: 60 },
@@ -24,6 +24,7 @@ export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId
   // Collapsed by default on touch (nothing should sit over the model until
   // asked for); desktop has room to just leave the mini-sliders visible.
   const [collapsed, setCollapsed] = useState(isCoarsePointer);
+  const bodyId = useId();
 
   const activeLayer = layers.find((l) => l.id === activeLayerId) || layers[0];
   if (!activeLayer) return null;
@@ -34,13 +35,19 @@ export default function AssemblyAdjustment({ layers, layerOffsets, activeLayerId
 
   return (
     <div className="assembly-dock">
-      <button type="button" className="assembly-dock-toggle" onClick={() => setCollapsed((c) => !c)}>
-        <span>⇕ Position</span>
+      <button
+        type="button"
+        className="assembly-dock-toggle"
+        aria-expanded={!collapsed}
+        aria-controls={bodyId}
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <span>Model Positioning</span>
         <span className="assembly-dock-chevron">{collapsed ? '▸' : '▾'}</span>
       </button>
 
       {!collapsed && (
-        <div className="assembly-dock-body">
+        <div id={bodyId} className="assembly-dock-body">
           {layers.length > 1 && (
             <select
               className="control-select assembly-dock-select"

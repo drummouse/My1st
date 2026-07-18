@@ -11,7 +11,7 @@ function makeLayerId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `layer-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer, onNewProject, readOnly }) {
+export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveLayer, onToggleVisibility, onRenameLayer, onNewProject, projectOperationBusy = false, readOnly }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -30,6 +30,7 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
           type="button"
           className="btn-secondary"
           onClick={onNewProject}
+          disabled={projectOperationBusy}
           style={{ width: '100%', marginBottom: '0.6rem' }}
         >
           + New Project

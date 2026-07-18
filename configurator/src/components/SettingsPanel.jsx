@@ -107,6 +107,9 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultCustomServiceIds: row.default_custom_service_ids || [],
           reportFooterNote: row.report_footer_note || '',
           logoUrl: row.logo_url || '',
+          unitSystem: row.unit_system || 'imperial',
+          expertModeEntitled: row.expertModeEntitled === true,
+          showExpertMode: row.show_expert_mode === true,
         });
       })
       .catch((err) => {
@@ -127,6 +130,9 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultCustomServiceIds: [],
           reportFooterNote: '',
           logoUrl: '',
+          unitSystem: 'imperial',
+          expertModeEntitled: false,
+          showExpertMode: false,
         });
       });
   }, []);
@@ -209,10 +215,18 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultCustomServiceIds: form.defaultCustomServiceIds,
           reportFooterNote: form.reportFooterNote,
           logoUrl: form.logoUrl,
+          unitSystem: form.unitSystem,
+          showExpertMode: form.showExpertMode,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const row = await res.json();
+      setForm((f) => ({
+        ...f,
+        unitSystem: row.unit_system || 'imperial',
+        expertModeEntitled: row.expertModeEntitled === true,
+        showExpertMode: row.show_expert_mode === true,
+      }));
       setStatus('Saved.');
       onSaved?.(row);
     } catch (err) {
@@ -230,6 +244,41 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
         These apply to every new project and every estimate calculation — not just the one
         currently open.
       </div>
+
+      <div className="control-block">
+        <div className="field-label">Measurement units</div>
+        <label htmlFor="settings-unit-system">Company unit system</label>
+        <select
+          id="settings-unit-system"
+          className="control-select"
+          value={form.unitSystem}
+          onChange={(event) => setForm((f) => ({ ...f, unitSystem: event.target.value }))}
+        >
+          <option value="imperial">Imperial (ft / sq ft)</option>
+          <option value="metric">Metric (m / m²)</option>
+        </select>
+        <div className="control-sublabel">
+          Used company-wide. Branch-specific units can be added later without changing saved designs.
+        </div>
+      </div>
+
+      {form.expertModeEntitled && (
+        <div className="control-block">
+          <div className="field-label">Expert Mode</div>
+          <label className="service-row-main" htmlFor="settings-show-expert-mode">
+            <input
+              id="settings-show-expert-mode"
+              type="checkbox"
+              checked={!!form.showExpertMode}
+              onChange={(event) => setForm((f) => ({ ...f, showExpertMode: event.target.checked }))}
+            />
+            <span>Show Expert Mode</span>
+          </label>
+          <div className="control-sublabel">
+            Show the Expert Mode control in the Studio top bar for this account.
+          </div>
+        </div>
+      )}
 
       {profile && (
         <div className="control-block">

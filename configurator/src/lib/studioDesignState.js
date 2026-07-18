@@ -31,6 +31,39 @@ export function createInitialEditRestore(initialSearch) {
       claimed = true;
       return initialProjectId;
     },
+    cancel() {
+      claimed = true;
+    },
+  };
+}
+
+// Project rows may be fetched as soon as authentication settles, before the
+// account-specific fallback normalizer is available. Keep those reads pending
+// and resolve them through the stable application callback once defaults are
+// ready, so callers cannot advance project identity ahead of design state.
+export function createDeferredDesignApplication() {
+  let applyWhenReady = null;
+  let pending = [];
+
+  return {
+    apply(snapshot) {
+      if (applyWhenReady) {
+        return Promise.resolve().then(() => applyWhenReady(snapshot));
+      }
+      return new Promise((resolve, reject) => {
+        pending.push({ snapshot, resolve, reject });
+      });
+    },
+    setReady(applyDesign) {
+      applyWhenReady = applyDesign;
+      const queued = pending;
+      pending = [];
+      queued.forEach(({ snapshot, resolve, reject }) => {
+        Promise.resolve()
+          .then(() => applyDesign(snapshot))
+          .then(resolve, reject);
+      });
+    },
   };
 }
 
@@ -56,6 +89,21 @@ export function getDesignPersistenceState({
     };
   }
   return { ready: true, message: '' };
+}
+
+export function getProjectOperationState({
+  accountSettled = false,
+  defaultsReady = false,
+  persistenceReady = false,
+} = {}) {
+  const canOpen = accountSettled;
+  const canWrite = accountSettled && defaultsReady && persistenceReady;
+  return {
+    canOpen,
+    canSave: canWrite,
+    canShare: canWrite,
+    message: canWrite ? '' : 'Loading account project defaults…',
+  };
 }
 
 export function getProjectSaveStatus({

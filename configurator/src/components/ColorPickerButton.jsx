@@ -182,7 +182,7 @@ function QuickDrawer({ selectedId, mixed, onChange, onClose, colors }) {
 export default function ColorPickerButton({ selectedId, onChange, disabled, mixed, allowedColorIds }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef(null);
-  const selected = colorById(selectedId);
+  const selected = allColors().find((color) => color.id === selectedId) ?? null;
   const colors = allowedColorIds?.length ? allColors().filter((c) => allowedColorIds.includes(c.id)) : allColors();
   const Picker = isCoarsePointer ? QuickDrawer : SampleBoardModal;
 
@@ -194,14 +194,22 @@ export default function ColorPickerButton({ selectedId, onChange, disabled, mixe
         className="color-picker-btn"
         onClick={() => setOpen(true)}
         disabled={disabled}
-        title={mixed ? 'Various colors across facets' : `${selected.name} — ${selected.code} (${selected.series})`}
+        title={mixed
+          ? 'Various colors across facets'
+          : selected
+            ? `${selected.name} — ${selected.code} (${selected.series})`
+            : 'Select Color'}
       >
         {mixed ? (
           <span className="color-picker-btn-swatch color-picker-btn-swatch-mixed" />
-        ) : (
+        ) : selected ? (
           <span className="color-picker-btn-swatch" style={swatchStyle(selected)} />
+        ) : (
+          <span className="color-picker-btn-swatch color-picker-btn-swatch-unselected" />
         )}
-        <span className="color-picker-btn-label">{mixed ? 'Various Colors' : formatColorLabel(selected)}</span>
+        <span className="color-picker-btn-label">
+          {mixed ? 'Various Colors' : selected ? formatColorLabel(selected) : 'Select Color'}
+        </span>
       </button>
 
       {open && (

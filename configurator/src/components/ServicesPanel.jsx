@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING } from '../data/pricing.js';
 import ColorPickerButton from './ColorPickerButton.jsx';
+import OptionalServiceRow from './OptionalServiceRow.jsx';
+import TrimAccentRow from './TrimAccentRow.jsx';
+import { adaptCustomServiceLine, optionalServiceToCustomServiceLine } from '../lib/designState.js';
+import { createAdditionalTrimAccent } from '../lib/trimAccents.js';
 
 // The 7 accessory services below hide entirely once turned off (see
 // ServicesPanel's render — a New Project default that's unchecked in
@@ -94,7 +98,7 @@ export function ServiceRow({
           <span className="service-unit">{unit}</span>
         </>
       )}
-      {colorId && <ColorPickerButton selectedId={colorId} onChange={onColorChange} disabled={readOnly} />}
+      {colorId !== undefined && <ColorPickerButton selectedId={colorId} onChange={onColorChange} disabled={readOnly} />}
       {note && <span className="service-note">{note}</span>}
     </div>
   );
@@ -105,31 +109,97 @@ export default function ServicesPanel({
   gutterOptionId, onGutterOptionChange, downspoutOptionId, onDownspoutOptionChange,
   accessoryColors, onAccessoryColorsChange, readOnlyQuantities, isCustomerView,
   customServiceLines = [], onCustomServiceLinesChange, customServiceCatalog = [],
+  trimAccents = [], onTrimAccentsChange, unitSystem = 'imperial',
   section = 'all',
 }) {
   const toggle = (key) => (val) => onServicesChange({ ...services, [key]: val });
-  const setQty = (key) => (val) => onMeasurementsChange({ ...measurements, [key]: val });
-  const setColor = (key) => (val) => onAccessoryColorsChange({ ...accessoryColors, [key]: val });
-  const toggleLock = (key) => (val) => onLockedServicesChange({ ...lockedServices, [key]: val });
+  const trimKindForMeasurement = {
+    soffitSqft: 'soffit', fasciaLf: 'fascia',
+    garageDoorCappingLf: 'garage_doors', capFlashingLf: 'other_trims',
+  };
+  const trimKindForColor = {
+    soffit: 'soffit', fascia: 'fascia',
+    garageDoorCapping: 'garage_doors', capFlashing: 'other_trims',
+  };
+  const trimKindForLock = {
+    soffit: 'soffit', fascia: 'fascia',
+    garageDoorCapping: 'garage_doors', capFlashing: 'other_trims',
+  };
+  const updateTrimKind = (kind, patch) => {
+    if (!kind || !onTrimAccentsChange) return;
+    onTrimAccentsChange(trimAccents.map((record) => (
+      record.kind === kind && record.customLabel === undefined ? { ...record, ...patch } : record
+    )));
+  };
+  const setQty = (key) => (val) => {
+    onMeasurementsChange({ ...measurements, [key]: val });
+    updateTrimKind(trimKindForMeasurement[key], { quantity: val });
+  };
+  const setColor = (key) => (val) => {
+    onAccessoryColorsChange({ ...accessoryColors, [key]: val });
+    updateTrimKind(trimKindForColor[key], { colorId: val });
+  };
+  const toggleLock = (key) => (val) => {
+    onLockedServicesChange({ ...lockedServices, [key]: val });
+    updateTrimKind(trimKindForLock[key], { locked: val });
+  };
   const showLockToggle = !isCustomerView;
   const showServiceControls = section !== 'accents';
   const showAccentControls = section !== 'services';
 
   const soffitFasciaDeal = services.soffit && services.fascia;
   const gutterDownspoutDeal = services.gutters && services.downspouts;
+  const optionalServiceRecords = customServiceLines.map((line) => adaptCustomServiceLine(line));
+  const updateOptionalService = (nextService) => {
+    onCustomServiceLinesChange(customServiceLines.map((line) => (
+      line.id === nextService.id
+        ? optionalServiceToCustomServiceLine(nextService, line)
+        : line
+    )));
+  };
 
   return (
     <div className="control-block">
-      <div className="control-label">{section === 'accents' ? 'Accessory Finishes' : 'Optional Services'}</div>
+      <div className="control-label">{section === 'services' ? 'Optional Services' : 'Trims & Accents'}</div>
+      {showAccentControls && (
+        <>
+          {trimAccents.map((record) => (
+            <TrimAccentRow
+              key={record.id}
+              record={record}
+              unitSystem={unitSystem}
+              isCustomerView={isCustomerView}
+              onChange={(nextRecord) => onTrimAccentsChange(
+                trimAccents.map((item) => (item.id === record.id ? nextRecord : item)),
+              )}
+              onRemove={record.customLabel === undefined ? undefined : () => onTrimAccentsChange(
+                trimAccents.filter((item) => item.id !== record.id),
+              )}
+            />
+          ))}
+          {!isCustomerView && !readOnlyQuantities && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => onTrimAccentsChange([...trimAccents, createAdditionalTrimAccent()])}
+            >
+              Add Additional
+            </button>
+          )}
+        </>
+      )}
       {showServiceControls && (
-        <div className="control-sublabel">
-          Roof and Wall have their own enable checkbox next to their Material section above. Below,
-          a service that's off doesn't clutter the list — uncheck one and it's gone; bring it (or a
-          custom service) back any time from "Add a service" at the bottom.
-        </div>
+        <>
+          {showAccentControls && <div className="field-label" style={{ marginTop: '1rem' }}>Optional Services</div>}
+          <div className="control-sublabel">
+            Roof and Wall have their own enable checkbox next to their Material section above. Below,
+            a service that's off doesn't clutter the list — uncheck one and it's gone; bring it (or a
+            custom service) back any time from "Add a service" at the bottom.
+          </div>
+        </>
       )}
 
-      {services.soffit && (
+      {showServiceControls && services.soffit && (
         <ServiceRow
           label={ACCESSORY_PRICING.soffit.label} checked={services.soffit} onToggle={toggle('soffit')}
           qty={showServiceControls ? measurements.soffitSqft : undefined} unit="sqft" onQtyChange={setQty('soffitSqft')}
@@ -138,7 +208,7 @@ export default function ServicesPanel({
           showToggle={showServiceControls}
         />
       )}
-      {services.fascia && (
+      {showServiceControls && services.fascia && (
         <ServiceRow
           label={ACCESSORY_PRICING.fascia.label} checked={services.fascia} onToggle={toggle('fascia')}
           qty={showServiceControls ? measurements.fasciaLf : undefined} unit="LF" onQtyChange={setQty('fasciaLf')}
@@ -217,27 +287,18 @@ export default function ServicesPanel({
       {showServiceControls && customServiceLines.length > 0 && (
         <>
           <div className="field-label" style={{ marginTop: '0.75rem' }}>Custom Services</div>
-          {customServiceLines.map((cs) => (
-            <div className="service-row" key={cs.id}>
-              <label className="service-row-main"><span>{cs.name}</span></label>
-              <input
-                type="number" min="0" step="1" className="service-qty"
-                value={cs.qty} disabled={readOnlyQuantities}
-                aria-label={`${cs.name} quantity in ${cs.unit}`}
-                onChange={(e) => onCustomServiceLinesChange(customServiceLines.map((l) => (l.id === cs.id ? { ...l, qty: Number(e.target.value) || 0 } : l)))}
-              />
-              <span className="service-unit">{cs.unit}</span>
-              <span className="service-note">${Number(cs.price).toFixed(2)}/{cs.unit}</span>
-              {cs.linkUrl && <a href={cs.linkUrl} target="_blank" rel="noreferrer" className="service-note">Link</a>}
-              {!readOnlyQuantities && (
-                <button
-                  type="button" className="layer-remove-btn" aria-label={`Remove ${cs.name}`}
-                  onClick={() => onCustomServiceLinesChange(customServiceLines.filter((l) => l.id !== cs.id))}
-                >
-                  ×
-                </button>
+          {optionalServiceRecords.map((service) => (
+            <OptionalServiceRow
+              key={service.id}
+              service={service}
+              linkUrl={customServiceLines.find((line) => line.id === service.id)?.linkUrl}
+              isCustomerView={isCustomerView}
+              readOnlyQuantity={readOnlyQuantities}
+              onChange={updateOptionalService}
+              onRemove={readOnlyQuantities ? undefined : () => onCustomServiceLinesChange(
+                customServiceLines.filter((line) => line.id !== service.id),
               )}
-            </div>
+            />
           ))}
         </>
       )}
@@ -248,10 +309,18 @@ export default function ServicesPanel({
           catalog={customServiceCatalog}
           existingCustomIds={customServiceLines.map((l) => l.id)}
           onAddFixed={(key) => onServicesChange({ ...services, [key]: true })}
-          onAddCustom={(def) => onCustomServiceLinesChange([...customServiceLines, {
-            id: def.id, name: def.name, unit: def.unit, price: Number(def.price), qty: 1,
-            description: def.description, linkUrl: def.link_url,
-          }])}
+          onAddCustom={(def) => onCustomServiceLinesChange([...customServiceLines,
+            optionalServiceToCustomServiceLine(adaptCustomServiceLine({
+              id: def.id,
+              name: def.name,
+              unit: def.unit,
+              price: Number(def.price),
+              qty: 1,
+              description: def.description,
+              selected: true,
+              locked: false,
+            }), { linkUrl: def.link_url }),
+          ])}
         />
       )}
     </div>

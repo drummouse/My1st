@@ -1,5 +1,9 @@
 # Studio UI Foundation Verification Record
 
+> Historical foundation evidence only. The current Studio correction release gate is recorded in
+> [`2026-07-18-studio-correction-verification.md`](./2026-07-18-studio-correction-verification.md).
+> This record does not approve the corrected source for release.
+
 ## Milestone
 
 Studio UI foundation: the Sales Mode presentation, its protected configurator behavior, and its release gate.
@@ -47,6 +51,6 @@ The following checks have **not** been performed in an authenticated Preview. Ea
 
 ## External Steps Remaining
 
-1. Publish the draft PR and wait for both Vercel Preview checks.
-2. Add the Preview URL and direct authenticated evidence to every blocked row above.
+1. Use the July 18 correction record for current source, automated totals, Preview state, and blockers.
+2. Add direct authenticated evidence to every blocked row above.
 3. Obtain explicit release approval before marking the PR ready, merging, or deploying to Production.

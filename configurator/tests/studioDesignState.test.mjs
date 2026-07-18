@@ -6,7 +6,12 @@ import {
   createStableDesignNormalizer,
   normalizeDesignState,
 } from '../src/lib/designState.js';
-import { designFingerprint, getProjectSaveStatus } from '../src/lib/studioDesignState.js';
+import {
+  createDeferredDesignApplication,
+  designFingerprint,
+  getProjectOperationState,
+  getProjectSaveStatus,
+} from '../src/lib/studioDesignState.js';
 
 const savedDesign = {
   version: 2,
@@ -22,6 +27,56 @@ const savedDesign = {
   measurements: { soffitSqft: 120 },
   facetOverrides: { 'roof:1': { colorId: 'wg-03' } },
 };
+
+test('project opening is independent from write readiness', () => {
+  assert.deepEqual(getProjectOperationState({ accountSettled: true, defaultsReady: false, persistenceReady: false }), {
+    canOpen: true,
+    canSave: false,
+    canShare: false,
+    message: 'Loading account project defaults…',
+  });
+});
+
+test('project design selected before defaults are ready applies automatically once ready', async () => {
+  const deferredApplication = createDeferredDesignApplication();
+  const appliedSnapshots = [];
+  let resolved = false;
+
+  const pendingOpen = deferredApplication.apply(savedDesign).then((design) => {
+    resolved = true;
+    return design;
+  });
+  await Promise.resolve();
+  assert.equal(resolved, false);
+  assert.deepEqual(appliedSnapshots, []);
+
+  deferredApplication.setReady((snapshot) => {
+    appliedSnapshots.push(snapshot);
+    return { ...snapshot, normalized: true };
+  });
+
+  const restoredDesign = await pendingOpen;
+  assert.equal(resolved, true);
+  assert.deepEqual(appliedSnapshots, [savedDesign]);
+  assert.equal(restoredDesign.normalized, true);
+});
+
+test('resolved fallbacks allow project writes after optional catalogs fail', () => {
+  const state = getProjectOperationState({ accountSettled: true, defaultsReady: true, persistenceReady: true });
+  assert.equal(state.canOpen, true);
+  assert.equal(state.canSave, true);
+  assert.equal(state.canShare, true);
+});
+
+test('project writes require both stable defaults and resolved pricing', () => {
+  for (const state of [
+    getProjectOperationState({ accountSettled: true, defaultsReady: false, persistenceReady: true }),
+    getProjectOperationState({ accountSettled: true, defaultsReady: true, persistenceReady: false }),
+  ]) {
+    assert.equal(state.canSave, false);
+    assert.equal(state.canShare, false);
+  }
+});
 
 test('design fingerprints are canonical across object key order', () => {
   const reorderedDesign = {

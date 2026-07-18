@@ -1,9 +1,88 @@
+import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './trimAccents.js';
+
+export const DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD = 'per_unit';
+
+function nonNegativeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+function nonEmptyText(value, fallback) {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+}
+
+// `customServiceLines` is an established persistence/pricing interface whose
+// identity and estimator fields are id/qty/price. This adapter gives every
+// legacy or current line the richer presentation contract without requiring a
+// catalog migration or teaching the pricing engine a duplicate schema.
+export function adaptCustomServiceLine(line = {}) {
+  const quantity = line.quantity ?? line.qty;
+  const unitPrice = line.unitPrice ?? line.price;
+  return {
+    id: line.id ?? '',
+    name: nonEmptyText(line.name, 'Custom service'),
+    description: String(line.description ?? ''),
+    pricingMethod: nonEmptyText(line.pricingMethod, DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD),
+    quantity: nonNegativeNumber(quantity),
+    unit: nonEmptyText(line.unit, 'each'),
+    unitPrice: nonNegativeNumber(unitPrice),
+    selected: typeof line.selected === 'boolean' ? line.selected : true,
+    locked: line.locked === true,
+  };
+}
+
+export function adaptCustomServiceLines(lines) {
+  return (Array.isArray(lines) ? lines : []).map((line) => adaptCustomServiceLine(line));
+}
+
+// Convert a presentation edit back to the existing line shape. Spreading the
+// original retains API-originated identity/context fields while qty and price
+// remain the authoritative aliases consumed by pricingEngine.js.
+export function optionalServiceToCustomServiceLine(service, original = {}) {
+  const normalized = adaptCustomServiceLine(service);
+  return {
+    ...original,
+    id: normalized.id,
+    name: normalized.name,
+    unit: normalized.unit,
+    price: normalized.unitPrice,
+    qty: normalized.quantity,
+    unitPrice: normalized.unitPrice,
+    quantity: normalized.quantity,
+    description: normalized.description,
+    linkUrl: original.linkUrl ?? original.link_url,
+    pricingMethod: normalized.pricingMethod,
+    selected: normalized.selected,
+    locked: normalized.locked,
+  };
+}
+
+export function normalizeCustomServiceLines(lines) {
+  return (Array.isArray(lines) ? lines : []).map((line) => (
+    optionalServiceToCustomServiceLine(adaptCustomServiceLine(line), line)
+  ));
+}
+
 // Serializes the parts of App's state that define a customer's design so it
 // can be embedded in a standalone HTML export or stored behind a shareable
 // link, then restored on load. Deliberately excludes ephemeral UI state
 // (viewerMode, selectedFacet) and the photo overlay (a local preview aid,
 // not part of the design itself).
 export function captureDesignState(state) {
+  const trimAccents = normalizeTrimAccents({
+    trimAccents: state.trimAccents,
+    measurements: state.measurements,
+    accessoryColors: state.accessoryColors,
+    lockedServices: state.lockedServices,
+  });
+  const legacyTrimState = state.trimAccents === undefined
+    ? {
+        measurements: state.measurements,
+        accessoryColors: state.accessoryColors,
+        lockedServices: state.lockedServices,
+      }
+    : syncTrimAccentsToLegacy(trimAccents, state);
   return {
     version: 2,
     brandId: state.brandId,
@@ -21,12 +100,16 @@ export function captureDesignState(state) {
     wallProfile: state.wallProfile,
     wallColorId: state.wallColorId,
     services: state.services,
-    lockedServices: state.lockedServices,
+    lockedServices: legacyTrimState.lockedServices,
     gutterOptionId: state.gutterOptionId,
     downspoutOptionId: state.downspoutOptionId,
-    measurements: state.measurements,
+    measurements: legacyTrimState.measurements,
     manualDiscount: state.manualDiscount,
-    accessoryColors: state.accessoryColors,
+    accessoryColors: legacyTrimState.accessoryColors,
+    // Canonical trim quantities remain in the same Imperial base units used
+    // by legacy measurements and pricing. Older designs derive this additive
+    // field from those legacy values when they are reopened.
+    trimAccents,
     uniformFinish: state.uniformFinish,
     facetOverrides: state.facetOverrides,
     // Resolved custom-service selections (name/price/etc. copied from the
@@ -70,12 +153,17 @@ export function normalizeDesignState(snapshot, fallbackState) {
     'downspoutOptionId',
     'measurements',
     'accessoryColors',
+    'trimAccents',
     'facetOverrides',
     'customServiceLines',
     'pricingSettings',
   ]) {
     if (hasLegacyValue(snapshot, key)) merged[key] = snapshot[key];
   }
+  // A pre-Task-6 snapshot has no canonical trim collection. Do not retain
+  // fallback trim records here: captureDesignState must derive them from the
+  // legacy measurements/colors/locks that came from this snapshot.
+  if (!hasLegacyValue(snapshot, 'trimAccents')) merged.trimAccents = undefined;
   if (hasLegacyValue(snapshot, 'house') && typeof snapshot.house === 'object') {
     merged.house = { ...fallbackState.house };
     for (const key of ['jobNumber', 'customerName', 'address', 'layers']) {
@@ -150,6 +238,7 @@ export function applyDesignState(snapshot, setters) {
     ['downspoutOptionId', 'setDownspoutOptionId'],
     ['measurements', 'setMeasurements'],
     ['accessoryColors', 'setAccessoryColors'],
+    ['trimAccents', 'setTrimAccents'],
     ['facetOverrides', 'setFacetOverrides'],
     ['customServiceLines', 'setCustomServiceLines'],
     ['pricingSettings', 'setPricingSettings'],
@@ -159,7 +248,12 @@ export function applyDesignState(snapshot, setters) {
     setters.setHouse((house) => ({ ...house, ...snapshot.house }));
   }
   for (const [key, setter] of fields) {
-    if (hasOwn(snapshot, key)) setters[setter](snapshot[key]);
+    if (!hasOwn(snapshot, key)) continue;
+    // trimAccents is additive: older embedders may still provide the complete
+    // pre-Task-6 setter contract. Keep that one new setter optional without
+    // weakening the required-setter behavior for every established field.
+    if (key === 'trimAccents' && typeof setters[setter] !== 'function') continue;
+    setters[setter](snapshot[key]);
   }
   if (hasOwn(snapshot, 'manualDiscount') && typeof snapshot.manualDiscount === 'number') {
     setters.setManualDiscount(snapshot.manualDiscount);

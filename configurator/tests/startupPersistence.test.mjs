@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  createDeferredDesignApplication,
   createInitialEditRestore,
   designFingerprint,
   getDesignPersistenceState,
@@ -67,6 +68,27 @@ test('edit project added to the URL in-session is not claimed as an initial rest
 
   assert.equal(restore.claim(true), null);
   assert.equal(pageSearch, '?tab=project&edit=opened-in-session');
+});
+
+test('manual queued open cancels the initial edit restore before defaults settle', async () => {
+  const initialRestore = createInitialEditRestore('?edit=original-project');
+  const deferredApplication = createDeferredDesignApplication();
+  const manualDesign = { version: 3, house: { jobNumber: 'MANUAL' } };
+  let currentProjectId = 'current-project';
+
+  initialRestore.cancel();
+  const manualOpen = deferredApplication.apply(manualDesign).then((design) => {
+    currentProjectId = 'manual-project';
+    return design;
+  });
+
+  assert.equal(currentProjectId, 'current-project');
+  assert.equal(initialRestore.claim(true), null);
+
+  deferredApplication.setReady((design) => design);
+  assert.equal(await manualOpen, manualDesign);
+  assert.equal(currentProjectId, 'manual-project');
+  assert.equal(initialRestore.claim(true), null);
 });
 
 test('save and Share Design writes wait for settled pricing, then freeze pricing and track edits', async () => {

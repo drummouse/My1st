@@ -129,15 +129,14 @@ export function ensureSchema() {
       // Company-wide defaults (GST rate, package-deal percentages,
       // new-project defaults) — deliberately separate from the per-project
       // `design` JSONB, since these apply across every project rather than
-      // describing one design. Originally a single global row (`singleton`
-      // primary key); now one row per owner instead. The `singleton` column
-      // is left in place for any table created by that earlier shape rather
-      // than dropped (this codebase never does destructive migrations) —
-      // it's simply unused going forward, and every real query filters by
-      // `owner_id` via its own unique index, not by `singleton`.
+      // describing one design. Originally a single global row keyed by the
+      // `singleton` boolean; the additive migration below promotes `id` to
+      // the primary key and makes singleton inert so multiple owner rows can
+      // coexist without deleting the legacy row or column.
       await sql`
         create table if not exists settings (
-          singleton boolean primary key default true check (singleton),
+          id uuid primary key default gen_random_uuid(),
+          singleton boolean,
           gst_rate numeric not null default 0.05,
           full_wrap_discount_pct numeric not null default 0.07,
           soffit_fascia_discount_pct numeric not null default 0.5,
@@ -152,9 +151,55 @@ export function ensureSchema() {
         )
       `;
       await sql`alter table settings add column if not exists id uuid default gen_random_uuid()`;
+      // Drop only constraints that actually depend on the legacy singleton
+      // column. This avoids assuming generated constraint names and will not
+      // remove a newer id-based primary key on subsequent cold starts.
+      await sql`
+        do $$ declare legacy_constraint record;
+        begin
+          for legacy_constraint in
+            select c.conname
+            from pg_constraint c
+            where c.conrelid = 'settings'::regclass
+              and (
+                (c.contype = 'p' and exists (
+                  select 1
+                  from unnest(c.conkey) as key(attnum)
+                  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = key.attnum
+                  where a.attname = 'singleton'
+                ))
+                or (c.contype = 'c' and pg_get_constraintdef(c.oid) ilike '%singleton%')
+              )
+          loop
+            execute format('alter table settings drop constraint %I', legacy_constraint.conname);
+          end loop;
+        end $$
+      `;
+      await sql`alter table settings alter column singleton drop default`;
+      await sql`alter table settings alter column singleton drop not null`;
+      await sql`update settings set id = gen_random_uuid() where id is null`;
+      await sql`alter table settings alter column id set default gen_random_uuid()`;
+      await sql`alter table settings alter column id set not null`;
+      await sql`
+        do $$ begin
+          if not exists (
+            select 1 from pg_constraint
+            where conrelid = 'settings'::regclass and contype = 'p'
+          ) then
+            alter table settings add primary key (id);
+          end if;
+        exception when duplicate_object then null;
+        end $$
+      `;
       await sql`alter table settings add column if not exists owner_id uuid references users(id)`;
       await sql`create unique index if not exists settings_owner_id_key on settings (owner_id)`;
       await sql`alter table settings add column if not exists logo_url text`;
+      await sql`alter table settings add column if not exists unit_system text not null default 'imperial' check (unit_system in ('imperial', 'metric'))`;
+      // Tenant feature state. The entitlement is SuperAdmin-controlled; the
+      // preference is tenant-controlled only when that entitlement resolves
+      // true. Both default closed for existing and newly-created tenants.
+      await sql`alter table settings add column if not exists expert_mode_enabled boolean not null default false`;
+      await sql`alter table settings add column if not exists show_expert_mode boolean not null default false`;
       // Tax jurisdiction: base rate stays in the existing gst_rate column
       // (originally Alberta-only, now this owner's region's rate, still
       // editable/overridable) plus its country/region code and display

@@ -1,6 +1,7 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 import { publicTenantAccess } from '../_lib/publicAccess.js';
+import { projectResponseWithRuntime } from '../_lib/projectRuntime.js';
 
 async function requirePublicProjectAccess(id, res) {
   const [project] = await sql`
@@ -153,12 +154,17 @@ export default async function handler(req, res) {
     // require ownership.
     if (req.method === 'GET') {
       if (!(await requirePublicProjectAccess(id, res))) return;
-      const [row] = await sql`select * from projects where id = ${id}`;
+      const [row] = await sql`
+        select p.*, s.unit_system as runtime_unit_system
+        from projects p
+        left join settings s on s.owner_id = p.owner_id
+        where p.id = ${id}
+      `;
       if (!row) {
         res.status(404).json({ error: 'Not found' });
         return;
       }
-      res.status(200).json(row);
+      res.status(200).json(projectResponseWithRuntime(row));
       return;
     }
 

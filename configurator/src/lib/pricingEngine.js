@@ -232,7 +232,9 @@ export function calculateEstimate(measurements, selections) {
   // caller resolves these from the owner's catalog before calling here; see
   // App.jsx's buildDesignSnapshot). Not matched against discountRules —
   // package deals only ever referenced the fixed service keys.
-  const customServiceLines = (selections.customServiceLines || []).filter((cs) => Number(cs.qty) > 0);
+  const customServiceLines = (selections.customServiceLines || []).filter((cs) => (
+    cs.selected !== false && Number(cs.qty) > 0
+  ));
   let customServicesTotal = 0;
   customServiceLines.forEach((cs) => {
     const total = Number(cs.qty) * Number(cs.price);

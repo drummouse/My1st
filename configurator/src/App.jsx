@@ -30,15 +30,18 @@ import { calculateEstimate } from './lib/pricingEngine.js';
 import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, createStableDesignNormalizer, decodeDesignFromUrl } from './lib/designState.js';
+import { normalizeCustomServiceLines } from './lib/designState.js';
+import { createDesignRuntime, resolveSharedDesignPayload } from './lib/designRuntime.js';
 import { buildAccountDefaultDesignSnapshot, buildNewProjectDesignSnapshot } from './lib/newProjectDesignState.js';
-import { createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectSaveStatus } from './lib/studioDesignState.js';
-import { saveOrUpdateProject } from './lib/projects.js';
+import { createDeferredDesignApplication, createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectOperationState, getProjectSaveStatus } from './lib/studioDesignState.js';
+import { defaultProjectName, downloadProjectFile, saveOrUpdateProject } from './lib/projects.js';
 import { replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
 import { getInitialCustomerContext } from './lib/customerContext.js';
-import { canEnterExpert, resolveStudioMode } from './lib/studioMode.js';
+import { canShowExpertControl, resolveStudioMode } from './lib/studioMode.js';
 import { parseStudioLayers } from './lib/studioRecovery.js';
 import { STUDIO_STEPS, nextStudioStep, previousStudioStep } from './lib/studioSteps.js';
+import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './lib/trimAccents.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
 import { colorById, setExtraColors } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
@@ -111,6 +114,11 @@ export default function App({ currentUser = null }) {
   const [layerOffsets, setLayerOffsets] = useState({}); // layerId -> { dx, dy, dz }
   const [activeLayerId, setActiveLayerId] = useState(house.layers[0]?.id);
   const [accessoryColors, setAccessoryColors] = useState(DEFAULT_ACCESSORY_COLORS);
+  const [trimAccents, setTrimAccents] = useState(() => normalizeTrimAccents({
+    measurements: house.measurements,
+    accessoryColors: DEFAULT_ACCESSORY_COLORS,
+    lockedServices: DEFAULT_LOCKED_SERVICES,
+  }));
   const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
 
   const [uniformFinish, setUniformFinish] = useState(true);
@@ -118,10 +126,15 @@ export default function App({ currentUser = null }) {
   const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, layerId, sizeSf, pitch, orientation }
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [persistedDesignFingerprint, setPersistedDesignFingerprint] = useState(null);
+  const projectDesignApplicationRef = useRef(null);
+  if (!projectDesignApplicationRef.current) {
+    projectDesignApplicationRef.current = createDeferredDesignApplication();
+  }
   const initialEditRestoreRef = useRef(null);
   if (!initialEditRestoreRef.current) {
     initialEditRestoreRef.current = createInitialEditRestore(window.location.search);
   }
+  const cancelInitialEditRestore = () => initialEditRestoreRef.current.cancel();
   const [approvedAt, setApprovedAt] = useState(null);
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
@@ -129,10 +142,25 @@ export default function App({ currentUser = null }) {
   const [expertRequested, setExpertRequested] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(true);
   const [shellNotice, setShellNotice] = useState('');
+  const [projectActionStatus, setProjectActionStatus] = useState('');
+  const [projectActionBusy, setProjectActionBusy] = useState(false);
+  const [projectListRevision, setProjectListRevision] = useState(0);
+  const projectActionStatusTimeoutRef = useRef(null);
   const capabilities = currentUser?.capabilities || [];
   const canViewPlatform = capabilities.includes('platform.diagnostics.read');
   const [companySettings, setCompanySettings] = useState(null);
   const [companySettingsSettled, setCompanySettingsSettled] = useState(false);
+  const [designRuntime, setDesignRuntime] = useState(() => (
+    typeof window !== 'undefined' && window.__IRONWRAP_RUNTIME__
+      ? createDesignRuntime(window.__IRONWRAP_RUNTIME__.unitSystem)
+      : null
+  ));
+  const effectiveUnitSystem = designRuntime?.unitSystem || companySettings?.unit_system || 'imperial';
+  const showExpertControl = canShowExpertControl({
+    role: currentUser?.role || null,
+    entitled: companySettings?.expertModeEntitled,
+    tenantPreference: companySettings?.show_expert_mode,
+  });
   const [defaultCatalogsSettled, setDefaultCatalogsSettled] = useState(false);
   // Business identity/contact (name, phone, address, website/social) — on
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
@@ -188,6 +216,7 @@ export default function App({ currentUser = null }) {
     role: currentUser?.role || null,
     capabilities,
     expertRequested,
+    tenantEntitlement: companySettings?.expertModeEntitled === true,
   });
 
   // Render only pre-written, non-sensitive notices. Diagnostics remain in
@@ -233,14 +262,14 @@ export default function App({ currentUser = null }) {
     () => captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
       wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
-      measurements, manualDiscount, layerOffsets, accessoryColors,
+      measurements, manualDiscount, layerOffsets, accessoryColors, trimAccents,
       uniformFinish, facetOverrides, customServiceLines,
       pricingSettings: effectivePricingSettings,
     }),
     [
       accessoryColors, brandId, companySettings, customServiceLines, downspoutOptionId,
       facetOverrides, gutterOptionId, house, layerOffsets, lockedServices, manualDiscount,
-      measurements, pricingSettings, roofColorId, roofProductId, roofProfile, services,
+      measurements, pricingSettings, roofColorId, roofProductId, roofProfile, services, trimAccents,
       uniformFinish, wallColorId, wallProductId, wallProfile,
     ]
   );
@@ -257,6 +286,7 @@ export default function App({ currentUser = null }) {
       effectivePricingSettings,
     });
     stableDesignNormalizerRef.current = createStableDesignNormalizer(accountDefaults);
+    projectDesignApplicationRef.current.setReady((snapshot) => applyDesignSnapshot(snapshot, false));
     setDesignDefaultsReady(true);
   }, [companySettings, companySettingsSettled, customServiceCatalog, defaultCatalogsSettled, effectivePricingSettings, isCustomerView]);
 
@@ -275,16 +305,27 @@ export default function App({ currentUser = null }) {
     companySettingsSettled,
     effectivePricingSettings,
   });
-  const projectPersistenceReady = persistence.ready && designDefaultsReady;
-  const projectPersistenceMessage = !designDefaultsReady
-    ? 'Loading account project defaults…'
-    : persistence.message;
+  const projectOperations = getProjectOperationState({
+    accountSettled: Boolean(currentUser),
+    defaultsReady: designDefaultsReady,
+    persistenceReady: persistence.ready,
+  });
   const projectSaveStatus = getProjectSaveStatus({
     currentProjectId,
     currentDesignFingerprint,
     persistedDesignFingerprint,
     persistenceReady: persistence.ready,
   });
+
+  useEffect(() => () => {
+    if (projectActionStatusTimeoutRef.current) clearTimeout(projectActionStatusTimeoutRef.current);
+  }, []);
+
+  const showTimedProjectActionStatus = (status) => {
+    if (projectActionStatusTimeoutRef.current) clearTimeout(projectActionStatusTimeoutRef.current);
+    setProjectActionStatus(status);
+    projectActionStatusTimeoutRef.current = setTimeout(() => setProjectActionStatus(''), 5000);
+  };
 
   const applyCurrentDesignState = (design) => {
     if (!design) return null;
@@ -305,6 +346,7 @@ export default function App({ currentUser = null }) {
       setManualDiscount,
       setLayerOffsets,
       setAccessoryColors,
+      setTrimAccents,
       setUniformFinish,
       setFacetOverrides,
       setPricingSettings,
@@ -349,7 +391,11 @@ export default function App({ currentUser = null }) {
     const encoded = new URLSearchParams(window.location.search).get('d');
     if (!encoded) return;
     decodeDesignFromUrl(encoded)
-      .then((snapshot) => applyDesignSnapshot(snapshot, true))
+      .then((snapshot) => {
+        const sharedPayload = resolveSharedDesignPayload(snapshot);
+        setDesignRuntime(sharedPayload.runtime);
+        return applyDesignSnapshot(sharedPayload.design, true);
+      })
       .catch((error) => showLoadNotice('Failed to load shared design link:', 'We couldn’t open the shared design. The current design is still available.', error));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -362,6 +408,7 @@ export default function App({ currentUser = null }) {
     if (!projectId) return;
     fetchJson(`/api/projects/${projectId}`)
       .then((row) => {
+        setDesignRuntime(createDesignRuntime(row.runtime?.unitSystem));
         const restoredDesign = applyDesignSnapshot(row.design, true);
         setCurrentProjectId(projectId);
         markDesignPersisted(restoredDesign);
@@ -565,6 +612,7 @@ export default function App({ currentUser = null }) {
   // before. Also clears currentProjectId so the next "Download" creates a
   // fresh database record instead of overwriting the previous project.
   const handleNewProject = () => {
+    if (projectActionBusy) return;
     if (!window.confirm('Start a new project? Any unsaved changes to the current design will be lost.')) return;
     const newProjectDesign = buildNewProjectDesignSnapshot({
       companySettings,
@@ -580,6 +628,31 @@ export default function App({ currentUser = null }) {
     setApprovedAt(null);
   };
 
+  // One save/download path serves both the top-bar action and ProjectsPanel,
+  // so project identity, persistence tracking, and the pointer download can
+  // never drift between the two entry points.
+  const handleSaveProject = async () => {
+    if (!projectOperations.canSave || projectActionBusy) return null;
+    setProjectActionBusy(true);
+    setProjectActionStatus('Saving...');
+    try {
+      const design = buildDesignSnapshot();
+      const saved = await saveOrUpdateProject(design, currentProjectId);
+      setOwnerProjectId(saved.id);
+      markDesignPersisted(design);
+      downloadProjectFile(saved.id, design, defaultProjectName(house));
+      setProjectListRevision((revision) => revision + 1);
+      showTimedProjectActionStatus('Project saved — file downloaded.');
+      return saved;
+    } catch (error) {
+      console.error('Projects API error:', error);
+      showTimedProjectActionStatus('Could not reach the Projects database — it may not be reachable from this environment yet.');
+      return null;
+    } finally {
+      setProjectActionBusy(false);
+    }
+  };
+
   const handleRoofProductChange = (id) => {
     setRoofProductId(id);
     setRoofProfile(ROOF_PROFILES[id]?.[0] || '');
@@ -587,6 +660,23 @@ export default function App({ currentUser = null }) {
   const handleWallProductChange = (id) => {
     setWallProductId(id);
     setWallProfile(WALL_PROFILES[id]?.[0] || '');
+  };
+
+  const handleTrimAccentsChange = (nextTrimAccents) => {
+    setTrimAccents(nextTrimAccents);
+    setMeasurements((current) => syncTrimAccentsToLegacy(nextTrimAccents, {
+      measurements: current,
+    }).measurements);
+    setAccessoryColors((current) => syncTrimAccentsToLegacy(nextTrimAccents, {
+      accessoryColors: current,
+    }).accessoryColors);
+    setLockedServices((current) => syncTrimAccentsToLegacy(nextTrimAccents, {
+      lockedServices: current,
+    }).lockedServices);
+  };
+
+  const handleCustomServiceLinesChange = (nextLines) => {
+    setCustomServiceLines(normalizeCustomServiceLines(nextLines));
   };
 
   const handleHouseMetaChange = (patch) => setHouse((h) => ({ ...h, ...patch }));
@@ -671,70 +761,83 @@ export default function App({ currentUser = null }) {
   };
 
   const handleExportHtml = async () => {
-    if (!persistence.ready) return;
-    const state = buildDesignSnapshot();
-
-    // The template fetch and the project save (see below) don't depend on
-    // each other's result, so they run concurrently rather than one
-    // round-trip blocking the other.
-    const templatePromise = fetch('/snapshot-template.html').then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.text();
-    });
-    // Save (or update) this design as a project first, same save-or-update
-    // call ProjectsPanel's Download button makes, so the exported file has a
-    // real project id to embed — without one, "Approve This Design" has
-    // nothing to POST to and never renders (see the ?p= view, which always
-    // has an id).
-    const projectSavePromise = saveOrUpdateProject(state, currentProjectId);
-
-    let template;
+    if (!projectOperations.canShare || projectActionBusy) return null;
+    setProjectActionBusy(true);
+    setProjectActionStatus('Preparing shared design...');
     try {
-      template = await templatePromise;
-    } catch (err) {
-      alert('Could not load the export template. Please try again.');
-      return;
-    }
+      const state = buildDesignSnapshot();
 
-    // A failed save leaves the export without a project id, so the customer's
-    // file can't show an Approve button. Rather than silently hand over a
-    // button-less file (the old behavior — the #1 cause of "there's no Approve
-    // button" reports), tell the owner why and let them decide.
-    let saved = null;
-    try {
-      saved = await projectSavePromise;
-    } catch (err) {
-      console.error('Failed to save project before HTML export:', err);
-      const proceed = window.confirm(
-        "Couldn't save this design to your account, so the shared file won't include an \"Approve This Design\" button. "
-        + "Make sure you're signed in and try again — or click OK to download it without the Approve button."
-      );
-      if (!proceed) return;
-    }
-    if (saved?.id) {
-      setOwnerProjectId(saved.id);
-      markDesignPersisted(state);
-    }
-    const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
+      // Template fetch and project save are independent, so settle both in
+      // parallel while keeping the shared operation lock for their full life.
+      const [templateResult, projectSaveResult] = await Promise.allSettled([
+        fetch('/snapshot-template.html').then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.text();
+        }),
+        saveOrUpdateProject(state, currentProjectId),
+      ]);
 
-    // Escape "</script>" sequences that could appear inside string values
-    // (e.g. a customer name) so they can't break out of the inline script.
-    const stateJson = JSON.stringify(stateWithProject).replace(/</g, '\\u003c');
-    // The exported file is a standalone download the customer may open from
-    // anywhere (email attachment, file://, another host), so its Approve
-    // button can't use a relative /api path — it embeds the origin it was
-    // exported from and POSTs there (see handleApproveDesign). Only set for
-    // exports; the live app and ?p= links leave it undefined and stay relative.
-    const originJson = JSON.stringify(window.location.origin);
-    const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson}; window.__IRONWRAP_ORIGIN__ = ${originJson};</script>\n`;
-    const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `IronWrap_Design_${house.jobNumber || 'export'}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+      // Reconcile a completed database write before considering whether the
+      // template can be downloaded. Otherwise a template-only failure leaves
+      // App on a stale identity and a retry creates a duplicate project.
+      let saved = null;
+      if (projectSaveResult.status === 'fulfilled') {
+        saved = projectSaveResult.value;
+        if (saved?.id) {
+          setOwnerProjectId(saved.id);
+          markDesignPersisted(state);
+        }
+      }
+
+      if (templateResult.status === 'rejected') {
+        console.error('Failed to load the export template:', templateResult.reason);
+        alert('Could not load the export template. Please try again.');
+        showTimedProjectActionStatus('Could not prepare the shared design. Please try again.');
+        return null;
+      }
+      const template = templateResult.value;
+
+      // A failed save leaves the export without a project id and therefore
+      // without customer approval. Preserve the existing explicit opt-in to
+      // download that reduced file.
+      if (projectSaveResult.status === 'rejected') {
+        console.error('Failed to save project before HTML export:', projectSaveResult.reason);
+        const proceed = window.confirm(
+          "Couldn't save this design to your account, so the shared file won't include an \"Approve This Design\" button. "
+          + "Make sure you're signed in and try again — or click OK to download it without the Approve button."
+        );
+        if (!proceed) {
+          showTimedProjectActionStatus('Shared design was not downloaded because the project could not be saved.');
+          return null;
+        }
+      }
+      const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
+
+      // Escape "</script>" sequences that could appear inside string values
+      // (e.g. a customer name) so they can't break out of the inline script.
+      const stateJson = JSON.stringify(stateWithProject).replace(/</g, '\\u003c');
+      const runtimeJson = JSON.stringify(createDesignRuntime(effectiveUnitSystem)).replace(/</g, '\\u003c');
+      const originJson = JSON.stringify(window.location.origin);
+      const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson}; window.__IRONWRAP_RUNTIME__ = ${runtimeJson}; window.__IRONWRAP_ORIGIN__ = ${originJson};</script>\n`;
+      const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IronWrap_Design_${house.jobNumber || 'export'}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showTimedProjectActionStatus(saved?.id
+        ? 'Shared design downloaded.'
+        : 'Shared design downloaded without saving to Projects.');
+      return saved;
+    } catch (error) {
+      console.error('Failed to export shared design:', error);
+      showTimedProjectActionStatus('Could not prepare the shared design. Please try again.');
+      return null;
+    } finally {
+      setProjectActionBusy(false);
+    }
   };
 
   const handleExportPdf = async () => {
@@ -834,6 +937,7 @@ export default function App({ currentUser = null }) {
       onToggleVisibility={handleToggleLayerVisibility}
       onRenameLayer={handleRenameLayer}
       onNewProject={handleNewProject}
+      projectOperationBusy={projectActionBusy}
       readOnly={isCustomerView}
     />
   );
@@ -843,13 +947,17 @@ export default function App({ currentUser = null }) {
       {!isCustomerView && (
         <ProjectsPanel
           house={house}
-          getCurrentDesign={buildDesignSnapshot}
-          onOpenProject={(design) => applyDesignSnapshot(design, false)}
+          onSaveProject={handleSaveProject}
+          onOpenProjectStart={cancelInitialEditRestore}
+          onOpenProject={projectDesignApplicationRef.current.apply}
           currentProjectId={currentProjectId}
           onProjectIdChange={setOwnerProjectId}
           onDesignPersisted={markDesignPersisted}
-          persistenceReady={projectPersistenceReady}
-          persistenceMessage={projectPersistenceMessage}
+          canOpen={projectOperations.canOpen}
+          canSave={projectOperations.canSave}
+          persistenceMessage={projectOperations.message}
+          refreshKey={projectListRevision}
+          operationBusy={projectActionBusy}
         />
       )}
 
@@ -954,8 +1062,11 @@ export default function App({ currentUser = null }) {
     readOnlyQuantities: isCustomerView,
     isCustomerView,
     customServiceLines,
-    onCustomServiceLinesChange: setCustomServiceLines,
+    onCustomServiceLinesChange: handleCustomServiceLinesChange,
     customServiceCatalog,
+    trimAccents,
+    onTrimAccentsChange: handleTrimAccentsChange,
+    unitSystem: effectiveUnitSystem,
   };
 
   const servicesContent = (
@@ -996,10 +1107,10 @@ export default function App({ currentUser = null }) {
     <>
       <div className="export-buttons">
         <button type="button" className="btn-secondary" onClick={handleExportText}>Export Text</button>
-        <button type="button" className="btn-secondary" onClick={handleExportHtml} disabled={!persistence.ready}>Share Design</button>
+        <button type="button" className="btn-secondary" onClick={handleExportHtml} disabled={projectActionBusy || !projectOperations.canShare}>Share Design</button>
         <button type="button" className="btn-primary" onClick={handleExportPdf}>Export PDF</button>
       </div>
-      {!persistence.ready && <div className="control-sublabel" role="status">{persistence.message}</div>}
+      {!projectOperations.canShare && <div className="control-sublabel" role="status">{projectOperations.message}</div>}
     </>
   );
 
@@ -1117,8 +1228,22 @@ export default function App({ currentUser = null }) {
                 logoUrl={companySettings?.logo_url}
                 projectLabel={house.jobNumber || 'Untitled project'}
                 projectStatus={projectSaveStatus}
-                onOpenProject={handleOpenProjectTools}
-                canUseExpert={canEnterExpert(currentUser?.role || null)}
+                projectActions={{
+                  onNew: handleNewProject,
+                  onOpen: handleOpenProjectTools,
+                  onSave: handleSaveProject,
+                  onShare: handleExportHtml,
+                  canOpen: projectOperations.canOpen,
+                  canSave: projectOperations.canSave,
+                  canShare: projectOperations.canShare,
+                  busy: projectActionBusy,
+                  status: projectActionStatus || (
+                    (!projectOperations.canSave || !projectOperations.canShare)
+                      ? projectOperations.message
+                      : ''
+                  ),
+                }}
+                canShowExpert={showExpertControl}
                 expertActive={studioMode === 'expert'}
                 onToggleExpert={() => {
                   setActiveSection('configurator');
@@ -1150,7 +1275,6 @@ export default function App({ currentUser = null }) {
                     Platform
                   </button>
                 )}
-                <BrandToggle brandId={brandId} onChange={setBrandId} />
                 {canViewPlatform && (
                   <div data-interface-design-placeholder>
                     <button type="button" className="app-nav-tab" disabled>Import Interface Design</button>

@@ -15,7 +15,7 @@ export default function EstimateDock({ estimate, activeStep, onPrevious, onNext,
           Previous
         </StudioButton>
         <span className="estimate-dock-active-step" aria-live="polite">{activeStep}</span>
-        <StudioButton aria-label="Next step" disabled={atLastStep} onClick={onNext}>
+        <StudioButton aria-label="Next step" disabled={atLastStep} onClick={onNext} variant="primary">
           Next
         </StudioButton>
       </nav>
