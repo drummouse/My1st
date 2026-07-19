@@ -26,6 +26,8 @@ export const captureApi = {
   archive: (id, reason) => request(`/api/capture/sessions/${id}`, { method: 'PATCH', body: { status: 'archived', reason } }),
   addAsset: (id, asset) => request(`/api/capture/sessions/${id}/assets`, { method: 'POST', body: asset }),
   removeAsset: (id, assetId) => request(`/api/capture/sessions/${id}/assets/${assetId}`, { method: 'DELETE' }),
+  validate: (id) => request(`/api/capture/sessions/${id}/validate`),
+  submit: (id) => request(`/api/capture/sessions/${id}/submit`, { method: 'POST' }),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

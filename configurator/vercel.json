@@ -8,6 +8,8 @@
     { "source": "/api/capture/sessions", "destination": "/api/capture?action=sessions" },
     { "source": "/api/capture/sessions/:id/assets/:assetId", "destination": "/api/capture?action=asset&id=:id&assetId=:assetId" },
     { "source": "/api/capture/sessions/:id/assets", "destination": "/api/capture?action=assets&id=:id" },
+    { "source": "/api/capture/sessions/:id/validate", "destination": "/api/capture?action=validate&id=:id" },
+    { "source": "/api/capture/sessions/:id/submit", "destination": "/api/capture?action=submit&id=:id" },
     { "source": "/api/capture/sessions/:id", "destination": "/api/capture?action=session&id=:id" },
     { "source": "/api/projects/:id/approve", "destination": "/api/projects?id=:id&sub=approve" },
     { "source": "/api/projects/:id", "destination": "/api/projects?id=:id" },

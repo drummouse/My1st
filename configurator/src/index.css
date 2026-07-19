@@ -1024,3 +1024,27 @@ body {
   margin-bottom: 0.5rem;
 }
 .capture-gallery-btn { display: inline-block; cursor: pointer; text-align: center; }
+
+/* Capture (Stage 3): metadata form details and completeness checklist. */
+.capture-dims-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.capture-color-input {
+  width: 64px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.capture-check-list {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+  font-size: 0.78rem;
+  color: #92400e;
+}
+.capture-check-list li { margin: 0.15rem 0; }
+.capture-check-errors { color: #991b1b; font-weight: 600; }

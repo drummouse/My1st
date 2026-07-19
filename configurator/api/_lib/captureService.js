@@ -6,6 +6,7 @@ import {
   normalizeAssetInput,
   normalizeCreateInput,
   normalizeDraftPatch,
+  validateCompleteness,
 } from './capturePolicy.js';
 
 export function toCaptureSession(row) {
@@ -189,6 +190,48 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       return { removed: true };
     },
 
+    // Server-truth completeness for a session — the client runs the same
+    // validateCompleteness locally, this endpoint answers with what the
+    // submit gate will actually enforce.
+    async validateSession(actor, id) {
+      const detail = await this.getSession(actor, id);
+      return validateCompleteness(detail);
+    },
+
+    // Submit (and resubmit, from changes_requested): completeness errors
+    // block; success freezes an immutable snapshot of exactly what was
+    // submitted — session content, fields, assets, and the completeness
+    // result — so review always sees what the contributor sent even if
+    // later stages evolve the live records.
+    async submitSession(actor, id) {
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      const outcome = assertTransition(actor.role, row.status, 'submitted');
+      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const detail = {
+        session: toCaptureSession(row),
+        fields: fields.map(toCaptureField),
+        assets: assets.map(toCaptureAsset),
+      };
+      const completeness = validateCompleteness(detail);
+      if (completeness.errors.length) {
+        throw new CaptureValidationError('CAPTURE_INCOMPLETE', 'The capture is not complete enough to submit', {
+          errors: completeness.errors, warnings: completeness.warnings,
+        });
+      }
+      const snapshot = { ...detail, completeness, submittedBy: actor.id, snapshotAt: new Date().toISOString() };
+      return store.transaction(async () => {
+        const updated = await store.applySubmission(id, row.status, snapshot, completeness.score);
+        await store.appendAudit(audit(actor, outcome.audit, id, null, {
+          ...outcome.metadata, completenessScore: completeness.score, warningCount: completeness.warnings.length,
+        }));
+        return {
+          session: toCaptureSession(updated ?? { ...row, status: 'submitted', completeness: completeness.score }),
+          completeness,
+        };
+      });
+    },
+
     async transitionSession(actor, id, toStatus, reason) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
@@ -267,6 +310,15 @@ export function createNeonCaptureStore(sql) {
           current_step = case when ${'currentStep' in patch} then ${patch.currentStep ?? null} else current_step end,
           updated_at = now()
         where id = ${id} returning *`;
+      return execute(query, null);
+    },
+    async applySubmission(id, fromStatus, snapshot, completeness) {
+      const query = sql`update capture_sessions set status = 'submitted',
+          submitted_snapshot = ${JSON.stringify(snapshot)}::jsonb,
+          completeness = ${completeness},
+          submitted_at = now(),
+          updated_at = now()
+        where id = ${id} and status = ${fromStatus} returning *`;
       return execute(query, null);
     },
     // Guarded by the current status so a concurrent transition can't be

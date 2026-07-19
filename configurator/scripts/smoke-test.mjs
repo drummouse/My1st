@@ -93,6 +93,15 @@ await check(
   },
 );
 await check(
+  'auth guard /api/capture submit',
+  '/api/capture/sessions/smoke-test/submit',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',
   (response) => {

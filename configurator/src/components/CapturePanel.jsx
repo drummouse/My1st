@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { captureApi, newClientRef } from '../lib/captureClient.js';
 import { uploadCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
+// Shared verbatim with the server's submit gate (pure ESM, D-021) — the
+// completeness the user sees is the completeness the server enforces.
+import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
 
 const PHOTO_PURPOSES = [
@@ -33,24 +36,91 @@ const STATUS_LABELS = {
   archived: 'Archived',
 };
 
-// Stage 1 Capture workspace: create, resume, edit, and archive draft
-// capture sessions. Photos, guided steps, submission, and review arrive in
-// later stages — this panel is deliberately just the recoverable-draft
-// foundation, mobile-first (single column, large touch targets).
+const numberOrNull = (value) => (value === '' || value == null ? null : Number(value));
+
+const formFromDetail = (detail) => {
+  const field = (key) => detail.fields.find((f) => f.fieldKey === key)?.value;
+  const dims = field('dimensions') || {};
+  const coverage = field('coverage') || {};
+  const color = field('color') || {};
+  return {
+    title: detail.session.title || '',
+    category: detail.session.category || '',
+    description: field('description') || '',
+    manufacturer: field('manufacturer') || '',
+    supplier: field('supplier') || '',
+    sku: field('sku') || '',
+    barcode: field('barcode') || '',
+    notes: field('notes') || '',
+    dimUnit: dims.unit || 'mm',
+    dimWidth: dims.width ?? '',
+    dimLength: dims.length ?? '',
+    dimThickness: dims.thickness ?? '',
+    exposure: coverage.exposure ?? '',
+    colorName: color.name || '',
+    colorHex: color.hex || '',
+  };
+};
+
+const patchFromForm = (form) => ({
+  title: form.title,
+  category: form.category || null,
+  fields: {
+    description: form.description,
+    manufacturer: form.manufacturer,
+    supplier: form.supplier,
+    sku: form.sku,
+    barcode: form.barcode,
+    notes: form.notes,
+    dimensions: {
+      unit: form.dimUnit,
+      width: numberOrNull(form.dimWidth),
+      length: numberOrNull(form.dimLength),
+      thickness: numberOrNull(form.dimThickness),
+    },
+    coverage: { exposure: numberOrNull(form.exposure) },
+    color: form.colorName || form.colorHex
+      ? { mode: 'manual', name: form.colorName || null, hex: form.colorHex || null }
+      : null,
+  },
+});
+
+// Live completeness against the CURRENT form (including unsaved edits) —
+// synthesized into the same shape the server validates after save.
+const completenessFromForm = (open, form) => validateCompleteness({
+  session: { ...open.session, title: form.title, category: form.category || null },
+  fields: Object.entries(patchFromForm(form).fields).map(([fieldKey, value]) => ({ fieldKey, value })),
+  assets: open.assets || [],
+});
+
+// Stage 1–3 Capture workspace: recoverable drafts, main/surface/label
+// photos with upload sync states, guided product metadata, shared
+// completeness validation, and submit/resubmit. Review arrives Stage 4.
 export default function CapturePanel() {
   const [sessions, setSessions] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(null); // { session, fields, assets } | null
-  const [form, setForm] = useState({ title: '', category: '', notes: '' });
+  const [form, setForm] = useState(null);
+  const [submitErrors, setSubmitErrors] = useState(null);
   const [cameraFor, setCameraFor] = useState(null); // purpose id | null
   const [queueItems, setQueueItems] = useState([]);
   const openRef = useRef(null);
   openRef.current = open;
 
-  // One serial upload queue for the panel's lifetime. When an item lands
-  // (or fails), refresh the open session so its assets reflect the truth on
-  // the server rather than optimistic client state.
+  const load = () =>
+    captureApi.list()
+      .then(({ sessions: rows }) => setSessions(rows))
+      .catch((err) => {
+        console.error('Capture API error:', err);
+        setStatus('Could not reach the Capture service.');
+        setSessions([]);
+      });
+
+  useEffect(() => { load(); }, []);
+
+  // One serial upload queue for the panel's lifetime. When an item lands,
+  // refresh the open session so assets reflect the server's truth.
   const queueRef = useRef(null);
   if (!queueRef.current) {
     queueRef.current = createUploadQueue({
@@ -67,28 +137,14 @@ export default function CapturePanel() {
     });
   }
 
-  const load = () =>
-    captureApi.list()
-      .then(({ sessions: rows }) => setSessions(rows))
-      .catch((err) => {
-        console.error('Capture API error:', err);
-        setStatus('Could not reach the Capture service.');
-        setSessions([]);
-      });
-
-  useEffect(() => { load(); }, []);
-
   const openSession = async (id) => {
     setBusy(true);
     setStatus('');
+    setSubmitErrors(null);
     try {
       const detail = await captureApi.get(id);
       setOpen(detail);
-      setForm({
-        title: detail.session.title || '',
-        category: detail.session.category || '',
-        notes: detail.fields.find((f) => f.fieldKey === 'notes')?.value || '',
-      });
+      setForm(formFromDetail(detail));
     } catch (err) {
       setStatus(err.message);
     } finally {
@@ -110,21 +166,47 @@ export default function CapturePanel() {
     }
   };
 
+  const saveDraft = async () => {
+    const { session } = await captureApi.update(open.session.id, patchFromForm(form));
+    const detail = await captureApi.get(session.id);
+    setOpen(detail);
+    return detail;
+  };
+
   const handleSave = async () => {
     if (!open) return;
     setBusy(true);
     setStatus('');
     try {
-      const { session } = await captureApi.update(open.session.id, {
-        title: form.title,
-        category: form.category || null,
-        fields: { notes: form.notes },
-      });
-      setOpen({ ...open, session });
+      await saveDraft();
       setStatus('Draft saved.');
       load();
     } catch (err) {
       setStatus(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!open) return;
+    setBusy(true);
+    setStatus('');
+    setSubmitErrors(null);
+    try {
+      await saveDraft();
+      const { session, completeness } = await captureApi.submit(open.session.id);
+      setOpen({ ...open, session });
+      setStatus(`Submitted for review${completeness.warnings.length
+        ? ` with ${completeness.warnings.length} warning(s) the reviewer will see.` : '.'}`);
+      load();
+    } catch (err) {
+      if (err.code === 'CAPTURE_INCOMPLETE') {
+        setSubmitErrors(err.details?.errors || []);
+        setStatus('Not complete enough to submit yet.');
+      } else {
+        setStatus(err.message);
+      }
     } finally {
       setBusy(false);
     }
@@ -137,13 +219,13 @@ export default function CapturePanel() {
     try {
       await captureApi.archive(open.session.id);
       setOpen(null);
+      setForm(null);
       await load();
     } catch (err) {
       setStatus(err.message);
+    } finally {
       setBusy(false);
-      return;
     }
-    setBusy(false);
   };
 
   if (!sessions) {
@@ -155,12 +237,29 @@ export default function CapturePanel() {
     );
   }
 
-  if (open) {
+  if (open && form) {
     const editable = open.session.status === 'draft' || open.session.status === 'changes_requested';
+    const completeness = completenessFromForm(open, form);
+    const showExposure = EXPOSURE_CATEGORIES.includes(form.category);
+    const text = (key, label, placeholder = '') => (
+      <>
+        <label className="field-label" htmlFor={`capture-${key}`}>{label}</label>
+        <input
+          id={`capture-${key}`}
+          type="text"
+          className="control-select"
+          value={form[key]}
+          disabled={!editable || busy}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+          placeholder={placeholder}
+        />
+      </>
+    );
+
     return (
       <div className="settings-panel">
         <div className="control-label">
-          Capture draft
+          {editable ? 'Capture draft' : 'Capture'}
           <span className={`capture-status capture-status-${open.session.status}`}>
             {STATUS_LABELS[open.session.status] || open.session.status}
           </span>
@@ -169,6 +268,11 @@ export default function CapturePanel() {
           {CAPTURE_TYPES.find((t) => t.id === open.session.captureType)?.label || open.session.captureType}
           {' · '}started {new Date(open.session.createdAt).toLocaleString()}
         </div>
+        {open.session.status === 'changes_requested' && (
+          <div className="control-sublabel" role="status">
+            The reviewer returned this capture. Update it below and submit again.
+          </div>
+        )}
 
         <div className="field-label">Photos</div>
         <div className="capture-photo-grid">
@@ -196,8 +300,7 @@ export default function CapturePanel() {
                           onClick={async () => {
                             try {
                               await captureApi.removeAsset(open.session.id, source.id);
-                              const detail = await captureApi.get(open.session.id);
-                              setOpen(detail);
+                              setOpen(await captureApi.get(open.session.id));
                               setCameraFor(id);
                             } catch (err) { setStatus(err.message); }
                           }}
@@ -256,17 +359,8 @@ export default function CapturePanel() {
           />
         )}
 
-        <label className="field-label" htmlFor="capture-title">Product name / title</label>
-        <input
-          id="capture-title"
-          type="text"
-          className="control-select"
-          value={form.title}
-          disabled={!editable || busy}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="e.g. Standing-seam panel, charcoal"
-        />
-
+        <div className="field-label">Product identity</div>
+        {text('title', 'Product name / title', 'e.g. Standing-seam panel, charcoal')}
         <label className="field-label" htmlFor="capture-category">Product category</label>
         <select
           id="capture-category"
@@ -278,25 +372,131 @@ export default function CapturePanel() {
           <option value="">Choose a category…</option>
           {CATEGORIES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
+        <label className="field-label" htmlFor="capture-description">Description</label>
+        <textarea
+          id="capture-description"
+          className="control-select"
+          rows={3}
+          value={form.description}
+          disabled={!editable || busy}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="What is it, where is it used, anything notable"
+        />
+        {text('manufacturer', 'Manufacturer')}
+        {text('supplier', 'Supplier')}
+        {text('sku', 'SKU / product code')}
+        {text('barcode', 'Barcode (manual entry)')}
 
-        <label className="field-label" htmlFor="capture-notes">Notes</label>
+        <div className="field-label">Measurements</div>
+        <label className="field-label" htmlFor="capture-dim-unit">Unit</label>
+        <select
+          id="capture-dim-unit"
+          className="control-select"
+          value={form.dimUnit}
+          disabled={!editable || busy}
+          onChange={(e) => setForm({ ...form, dimUnit: e.target.value })}
+        >
+          {DIMENSION_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+        </select>
+        <div className="capture-dims-row">
+          {[['dimWidth', 'Width'], ['dimLength', 'Length'], ['dimThickness', 'Thickness']].map(([key, label]) => (
+            <div key={key}>
+              <label className="field-label" htmlFor={`capture-${key}`}>{label}</label>
+              <input
+                id={`capture-${key}`}
+                type="number"
+                min="0"
+                step="any"
+                className="control-select"
+                value={form[key]}
+                disabled={!editable || busy}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+              />
+            </div>
+          ))}
+        </div>
+        {showExposure && (
+          <>
+            <label className="field-label" htmlFor="capture-exposure">
+              Exposure (visible width per course, {form.dimUnit})
+            </label>
+            <input
+              id="capture-exposure"
+              type="number"
+              min="0"
+              step="any"
+              className="control-select"
+              value={form.exposure}
+              disabled={!editable || busy}
+              onChange={(e) => setForm({ ...form, exposure: e.target.value })}
+            />
+          </>
+        )}
+
+        <div className="field-label">Color sample</div>
+        <div className="control-sublabel">
+          Approximate only — phone cameras and screens are not color-accurate. A reviewer confirms
+          final color against manufacturer references.
+        </div>
+        {text('colorName', 'Color name', 'e.g. Charcoal RAL 7024')}
+        <label className="field-label" htmlFor="capture-colorHex">Approximate color</label>
+        <input
+          id="capture-colorHex"
+          type="color"
+          className="capture-color-input"
+          value={/^#[0-9a-fA-F]{6}$/.test(form.colorHex) ? form.colorHex : '#888888'}
+          disabled={!editable || busy}
+          onChange={(e) => setForm({ ...form, colorHex: e.target.value })}
+        />
+
+        <label className="field-label" htmlFor="capture-notes">Notes for the reviewer</label>
         <textarea
           id="capture-notes"
           className="control-select"
-          rows={4}
+          rows={3}
           value={form.notes}
           disabled={!editable || busy}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          placeholder="Anything a reviewer should know — supplier, where it was seen, condition…"
+          placeholder="Supplier yard, condition, anything the reviewer should know"
         />
+
+        <div className="field-label">Review &amp; submit</div>
+        <div className="control-sublabel">
+          Completeness: {completeness.score}% · Visibility: private to your company until reviewed.
+        </div>
+        {(submitErrors || completeness.errors).length > 0 && (
+          <ul className="capture-check-list capture-check-errors">
+            {(submitErrors || completeness.errors).map((item) => <li key={item.code}>{item.message}</li>)}
+          </ul>
+        )}
+        {completeness.warnings.length > 0 && (
+          <ul className="capture-check-list">
+            {completeness.warnings.map((item) => <li key={item.code}>{item.message}</li>)}
+          </ul>
+        )}
 
         <div className="export-buttons">
           {editable && (
-            <button type="button" className="btn-primary" onClick={handleSave} disabled={busy}>
-              Save Draft
-            </button>
+            <>
+              <button type="button" className="btn-secondary" onClick={handleSave} disabled={busy}>
+                Save Draft
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSubmit}
+                disabled={busy || completeness.errors.length > 0}
+              >
+                {open.session.status === 'changes_requested' ? 'Resubmit for Review' : 'Submit for Review'}
+              </button>
+            </>
           )}
-          <button type="button" className="btn-secondary" onClick={() => { setOpen(null); setStatus(''); load(); }} disabled={busy}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => { setOpen(null); setForm(null); setStatus(''); load(); }}
+            disabled={busy}
+          >
             Back to List
           </button>
           {open.session.status === 'draft' && (

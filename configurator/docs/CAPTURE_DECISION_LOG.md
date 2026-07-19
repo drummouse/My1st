@@ -5,6 +5,15 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-19 — Stage 3 (guided product metadata and submission)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-021 | Client and server run the SAME completeness validator: `validateCompleteness` lives in `capturePolicy.js` (pure ESM) and `CapturePanel.jsx` imports it directly, so Vite bundles the identical function the submit endpoint enforces. A contract test pins the import. | "Server validation matches client validation" by construction rather than by discipline; no schema library needed (upholds D-009's Zod deferral). | Duplicated client-side rules (rejected: guaranteed drift); Zod schemas shared via a new package (rejected: new dependency + idiom). |
+| D-022 | `PATCH /api/capture/sessions/:id` may only drive the archive transition; submission is a dedicated `POST …/submit` that validates completeness and freezes the snapshot, and future review decisions get their own endpoints. | A generic status-patch endpoint would let a client reach `submitted` while skipping validation and the immutable snapshot. Blocking non-archive statuses at the route keeps the state machine's side effects mandatory. | Generic transition endpoint with per-status side-effect dispatch (rejected: side effects become implicit). |
+| D-023 | Category-dependent requirements: base checks (title, category, main photo) are errors for every capture type; identity (manufacturer or SKU) and dimensions are errors for `guided_product` but warnings for `quick`; coverage/exposure is an error only for roofing/siding. Warnings never block and ride into the review snapshot. | Matches the roadplan's "quick capture remains visibly incomplete" and "required fields vary correctly by category" without a per-category rules engine. | Configurable per-category rule tables in the DB (deferred until real categories demand it). |
+| D-024 | MVP visibility is fixed at tenant-private (shown as informational text, no selector); the color sample is manual name + hex with a permanent accuracy disclaimer. | Single-seat tenancy has no other visibility to offer yet (D-003); honest-color rules forbid implying measurement accuracy (region sampling is Stage 8). | Visibility dropdown with one option (rejected: fake choice). |
+
 ## 2026-07-19 — Stage 2 (secure image capture and upload)
 
 | # | Decision | Rationale | Alternatives considered |

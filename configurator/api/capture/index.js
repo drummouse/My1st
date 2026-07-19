@@ -48,17 +48,40 @@ export default async function handler(req, res) {
         return res.status(200).json(await service.getSession(actor, id));
       }
       if (req.method === 'PATCH') {
-        // A status in the body is a state-machine transition (Stage 1
-        // exposes archive; submit/review arrive with their stages); anything
-        // else is a draft-content save.
+        // The only transition PATCH may drive is archive. Submission has a
+        // dedicated endpoint because it validates completeness and freezes
+        // the review snapshot — allowing it here would bypass both.
         if (req.body?.status) {
-          const { session } = await service.transitionSession(actor, id, String(req.body.status), req.body?.reason);
+          if (String(req.body.status) !== 'archived') {
+            return res.status(409).json({
+              error: { code: 'CAPTURE_TRANSITION_INVALID', message: 'Use the dedicated endpoint for this transition' },
+            });
+          }
+          const { session } = await service.archiveSession(actor, id, req.body?.reason);
           return res.status(200).json({ session });
         }
         const { session } = await service.updateDraft(actor, id, req.body || {});
         return res.status(200).json({ session });
       }
       return methodNotAllowed(res, 'GET, PATCH');
+    }
+
+    // /api/capture/sessions/<id>/validate — server-truth completeness.
+    if (action === 'validate') {
+      if (req.method === 'GET') {
+        return res.status(200).json(await service.validateSession(actor, String(req.query.id || '')));
+      }
+      return methodNotAllowed(res, 'GET');
+    }
+
+    // /api/capture/sessions/<id>/submit — validated submit/resubmit that
+    // freezes the immutable review snapshot.
+    if (action === 'submit') {
+      if (req.method === 'POST') {
+        const { session, completeness } = await service.submitSession(actor, String(req.query.id || ''));
+        return res.status(200).json({ session, completeness });
+      }
+      return methodNotAllowed(res, 'POST');
     }
 
     // /api/capture/sessions/<id>/assets — finalize a direct Blob upload as

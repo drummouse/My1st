@@ -32,6 +32,12 @@ export const CAPTURE_IMAGE_TYPES = Object.freeze([
   'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif',
 ]);
 export const MAX_CAPTURE_IMAGE_BYTES = 15 * 1024 * 1024;
+export const DIMENSION_UNITS = Object.freeze(['mm', 'cm', 'in', 'ft']);
+// Categories where a repeating panel's coverage/exposure is part of the
+// product's identity — a roofing or siding panel without its exposure
+// cannot be estimated against, so it blocks submission for those
+// categories only.
+export const EXPOSURE_CATEGORIES = Object.freeze(['roofing', 'siding']);
 
 export class CaptureValidationError extends Error {
   constructor(code, message, details = {}) {
@@ -106,6 +112,65 @@ export function normalizeCreateInput(input = {}) {
     title: clean(input.title).slice(0, 200) || null,
     clientRef: clean(input.clientRef).slice(0, 100) || null,
     currentStep: clean(input.currentStep).slice(0, 60) || null,
+  };
+}
+
+// Completeness validation, shared verbatim by client and server: this
+// module is pure ESM, so CapturePanel bundles the exact function the
+// submit endpoint runs — the two can never disagree (D-021). Errors block
+// submission; warnings ride along so the reviewer sees what's thin. A
+// `quick` capture only hard-requires the base identity (it exists to be
+// visibly incomplete); a `guided_product` capture must be reviewable.
+export function validateCompleteness({ session = {}, fields = [], assets = [] }) {
+  const errors = [];
+  const warnings = [];
+  const field = (key) => fields.find((f) => (f.fieldKey ?? f.field_key) === key)?.value ?? null;
+  const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
+  const hasPhoto = (purpose) => assets.some((a) => a.purpose === purpose
+    && (a.classification || 'source') === 'source');
+  const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
+  const add = (list, code, message) => list.push({ code, message });
+
+  const guided = (session.captureType ?? session.capture_type) !== 'quick';
+  const category = session.category || null;
+
+  if (!hasText(session.title)) add(errors, 'TITLE_REQUIRED', 'Give the product a name.');
+  if (!category) add(errors, 'CATEGORY_REQUIRED', 'Choose a product category.');
+  if (!hasPhoto('main')) add(errors, 'MAIN_PHOTO_REQUIRED', 'Add a main photo of the product.');
+
+  const identity = hasText(field('manufacturer')) || hasText(field('sku'));
+  if (!identity) {
+    add(guided ? errors : warnings, 'IDENTITY_REQUIRED', 'Enter a manufacturer or a SKU so the product can be identified.');
+  }
+
+  const dimensions = field('dimensions') || {};
+  const anyDimension = ['width', 'length', 'thickness'].some((key) => positive(dimensions[key]));
+  if (!DIMENSION_UNITS.includes(dimensions.unit) || !anyDimension) {
+    add(guided ? errors : warnings, 'DIMENSIONS_REQUIRED', 'Enter at least one measured dimension with its unit.');
+  }
+
+  if (category && EXPOSURE_CATEGORIES.includes(category)) {
+    const coverage = field('coverage') || {};
+    if (!positive(coverage.exposure)) {
+      add(guided ? errors : warnings, 'EXPOSURE_REQUIRED',
+        'Roofing and siding panels need their exposure (visible width per course).');
+    }
+  }
+
+  if (!hasPhoto('surface')) add(warnings, 'SURFACE_PHOTO_MISSING', 'A surface close-up helps texture review.');
+  if (!hasPhoto('label')) add(warnings, 'LABEL_PHOTO_MISSING', 'A label/packaging photo speeds up identification.');
+  if (!hasText(field('description'))) add(warnings, 'DESCRIPTION_MISSING', 'A short description helps the reviewer.');
+  const color = field('color') || {};
+  if (!hasText(color.hex) && !hasText(color.name)) {
+    add(warnings, 'COLOR_MISSING', 'Add an approximate color sample or color name.');
+  }
+
+  const totalChecks = 9;
+  const failed = errors.length + warnings.length;
+  return {
+    errors,
+    warnings,
+    score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)),
   };
 }
 
