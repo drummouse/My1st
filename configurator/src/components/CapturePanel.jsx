@@ -1,5 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { captureApi, newClientRef } from '../lib/captureClient.js';
+import { uploadCaptureImage } from '../lib/captureUpload.js';
+import { createUploadQueue } from '../lib/captureUploadQueue.js';
+import CaptureCamera from './CaptureCamera.jsx';
+
+const PHOTO_PURPOSES = [
+  { id: 'main', label: 'Main photo', hint: 'The whole product, straight on' },
+  { id: 'surface', label: 'Surface close-up', hint: 'Fill the frame with the finish/texture' },
+  { id: 'label', label: 'Label / packaging', hint: 'SKU, barcode, and manufacturer text readable' },
+];
 
 const CAPTURE_TYPES = [
   { id: 'guided_product', label: 'Guided product capture' },
@@ -32,8 +41,31 @@ export default function CapturePanel() {
   const [sessions, setSessions] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(null); // { session, fields } | null
+  const [open, setOpen] = useState(null); // { session, fields, assets } | null
   const [form, setForm] = useState({ title: '', category: '', notes: '' });
+  const [cameraFor, setCameraFor] = useState(null); // purpose id | null
+  const [queueItems, setQueueItems] = useState([]);
+  const openRef = useRef(null);
+  openRef.current = open;
+
+  // One serial upload queue for the panel's lifetime. When an item lands
+  // (or fails), refresh the open session so its assets reflect the truth on
+  // the server rather than optimistic client state.
+  const queueRef = useRef(null);
+  if (!queueRef.current) {
+    queueRef.current = createUploadQueue({
+      performUpload: (job) => uploadCaptureImage(job),
+      onChange: (items) => {
+        setQueueItems(items);
+        const current = openRef.current;
+        if (current && items.some((item) => item.status === 'done' && item.job.sessionId === current.session.id)) {
+          captureApi.get(current.session.id)
+            .then((detail) => { if (openRef.current?.session.id === detail.session.id) setOpen(detail); })
+            .catch(() => {});
+        }
+      },
+    });
+  }
 
   const load = () =>
     captureApi.list()
@@ -137,6 +169,92 @@ export default function CapturePanel() {
           {CAPTURE_TYPES.find((t) => t.id === open.session.captureType)?.label || open.session.captureType}
           {' · '}started {new Date(open.session.createdAt).toLocaleString()}
         </div>
+
+        <div className="field-label">Photos</div>
+        <div className="capture-photo-grid">
+          {PHOTO_PURPOSES.map(({ id, label, hint }) => {
+            const source = (open.assets || []).find((a) => a.purpose === id && a.classification === 'source');
+            const thumb = source && (open.assets || []).find((a) => a.classification === 'derived' && a.sourceAssetId === source.id);
+            const pending = queueItems.find((item) => item.job.sessionId === open.session.id
+              && item.job.purpose === id && item.status !== 'done');
+            const lowRes = source?.captureMetadata?.qualityWarnings?.includes('low_resolution');
+            return (
+              <div className="capture-photo-slot" key={id}>
+                <div className="capture-photo-slot-title">{label}</div>
+                {source ? (
+                  <>
+                    <a href={source.url} target="_blank" rel="noreferrer">
+                      <img className="capture-photo-thumb" src={(thumb || source).url} alt={`${label} — opens full size`} />
+                    </a>
+                    {lowRes && <div className="control-sublabel">⚠ Low resolution — consider retaking closer or in better light.</div>}
+                    {editable && (
+                      <div className="export-buttons">
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={busy || Boolean(pending)}
+                          onClick={async () => {
+                            try {
+                              await captureApi.removeAsset(open.session.id, source.id);
+                              const detail = await captureApi.get(open.session.id);
+                              setOpen(detail);
+                              setCameraFor(id);
+                            } catch (err) { setStatus(err.message); }
+                          }}
+                        >
+                          Retake
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={busy || Boolean(pending)}
+                          onClick={async () => {
+                            try {
+                              await captureApi.removeAsset(open.session.id, source.id);
+                              setOpen(await captureApi.get(open.session.id));
+                            } catch (err) { setStatus(err.message); }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : pending ? (
+                  <div className="control-sublabel" role="status">
+                    {pending.status === 'uploading' && 'Uploading…'}
+                    {pending.status === 'waiting' && 'Waiting to upload…'}
+                    {pending.status === 'failed' && (
+                      <>
+                        Upload failed: {pending.error}{' '}
+                        <button type="button" className="btn-secondary" onClick={() => queueRef.current.retry(pending.id)}>
+                          Retry
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="control-sublabel">{hint}</div>
+                    {editable && (
+                      <button type="button" className="btn-secondary" disabled={busy} onClick={() => setCameraFor(id)}>
+                        Add Photo
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {cameraFor && (
+          <CaptureCamera
+            purposeLabel={PHOTO_PURPOSES.find((p) => p.id === cameraFor)?.label || cameraFor}
+            onAccept={(file) => queueRef.current.enqueue({ sessionId: open.session.id, purpose: cameraFor, file })}
+            onClose={() => setCameraFor(null)}
+          />
+        )}
 
         <label className="field-label" htmlFor="capture-title">Product name / title</label>
         <input

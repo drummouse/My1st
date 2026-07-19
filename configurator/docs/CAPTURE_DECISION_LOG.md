@@ -5,6 +5,16 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-19 — Stage 2 (secure image capture and upload)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-016 | Capture image read-access posture for MVP: Vercel Blob public-but-unguessable URLs (`addRandomSuffix`), identical to the platform's existing attachments/logos. URLs are only handed out through the capability-guarded, tenant-scoped Capture API. Resolves the decision deferred in D-008. | The Hobby function cap leaves one slot; spending it on a read-proxy now buys little because the proxy still redirects to the same unguessable URL. Revisit before any genuinely sensitive imagery or at Stage 12 hardening. | Authenticated read-proxy (deferred — costs the last function slot); switching storage providers for signed reads (out of scope). |
+| D-017 | Upload-token issuance is session-scoped: `api/upload.js` verifies the capture session exists, belongs to the requester, and is still editable before generating a Blob token; the finalize route then re-validates all metadata (purpose, Blob-host URL, MIME, size, dimensions) server-side. | The token and the row are the two doors into storage; both check the same policy constants (`CAPTURE_IMAGE_TYPES`, `MAX_CAPTURE_IMAGE_BYTES`) so they cannot drift — a contract test enforces it. | Trusting the finalize call alone (rejected: a stale token could park bytes for locked sessions). |
+| D-018 | Thumbnails are generated on-device (canvas, ≤320px JPEG) and stored as `derived` assets referencing their source; thumbnail failure never blocks the original. No server-side image processing (Sharp) in MVP. | Serverless function limits and the plugin policy; the original is the authority, the thumbnail is a convenience. | Sharp derivative pipeline (deferred to Stage 9 texture work). |
+| D-019 | The Stage 2 upload queue is an in-memory serial queue with exponential-backoff retry and manual retry after exhaustion; explicit states (waiting/uploading/failed/done) drive the UI. Queue persistence across page reloads (IndexedDB blobs) is Stage 6, as planned in Stage 0. | Retry-on-flaky-network is the field problem today; refresh-survival needs IndexedDB and belongs with the offline stage. The queue is a pure module with injected upload work, so the interruption path is unit-tested now. | Dexie/IndexedDB immediately (deferred per D-009 plugin table). |
+| D-020 | Camera UX: native `getUserMedia` with rear-camera preference; permission-denied, no-camera, and unsupported-browser paths all land on the same gallery file-input fallback; capture → accept/retake before any upload. Low-resolution warning (<800px min side) is recorded in asset metadata and shown, never blocking. | Master-prompt camera requirements with zero dependencies; warnings must not block field captures on older phones. | Camera wrapper library (rejected in D-009). |
+
 ## 2026-07-19 — Stage 1 (capture domain foundation)
 
 | # | Decision | Rationale | Alternatives considered |

@@ -23,6 +23,15 @@ export const ASSET_PURPOSES = Object.freeze([
   'main', 'front', 'back', 'edge', 'surface', 'label', 'packaging', 'profile', 'installed', 'other',
 ]);
 export const FIELD_SOURCES = Object.freeze(['manual', 'barcode', 'ocr', 'ai', 'imported', 'reviewer']);
+export const ASSET_CLASSIFICATIONS = Object.freeze(['source', 'derived']);
+// Single source of truth for what a capture image may be — api/upload.js
+// enforces the same values when issuing the Blob upload token, and the
+// finalize route re-checks them server-side (client metadata is a claim,
+// not an authority).
+export const CAPTURE_IMAGE_TYPES = Object.freeze([
+  'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif',
+]);
+export const MAX_CAPTURE_IMAGE_BYTES = 15 * 1024 * 1024;
 
 export class CaptureValidationError extends Error {
   constructor(code, message, details = {}) {
@@ -97,6 +106,63 @@ export function normalizeCreateInput(input = {}) {
     title: clean(input.title).slice(0, 200) || null,
     clientRef: clean(input.clientRef).slice(0, 100) || null,
     currentStep: clean(input.currentStep).slice(0, 60) || null,
+  };
+}
+
+// Finalize-upload input for one capture asset. The image itself already
+// went straight to Blob storage via the signed direct-upload flow — this
+// validates the metadata row we are about to trust. The URL must point at
+// Vercel Blob (never an arbitrary external host), and a derived asset
+// (thumbnail, crop) must name the source it came from so originals are
+// never silently replaced.
+export function normalizeAssetInput(input = {}) {
+  const purpose = enumValue(input.purpose, ASSET_PURPOSES, '', 'CAPTURE_ASSET_PURPOSE_INVALID');
+  const classification = enumValue(input.classification, ASSET_CLASSIFICATIONS, 'source', 'CAPTURE_ASSET_CLASSIFICATION_INVALID');
+  const sourceAssetId = clean(input.sourceAssetId) || null;
+  if (classification === 'derived' && !sourceAssetId) {
+    throw new CaptureValidationError('CAPTURE_ASSET_SOURCE_REQUIRED', 'A derived asset must reference its source asset');
+  }
+  if (classification === 'source' && sourceAssetId) {
+    throw new CaptureValidationError('CAPTURE_ASSET_SOURCE_INVALID', 'A source asset cannot reference another source');
+  }
+  let url;
+  try {
+    url = new URL(clean(input.url));
+  } catch {
+    throw new CaptureValidationError('CAPTURE_ASSET_URL_INVALID', 'Asset URL must be a valid URL');
+  }
+  if (url.protocol !== 'https:' || !url.hostname.endsWith('.blob.vercel-storage.com')) {
+    throw new CaptureValidationError('CAPTURE_ASSET_URL_INVALID', 'Asset URL must be a Vercel Blob URL', { host: url.hostname });
+  }
+  const mimeType = clean(input.mimeType).toLowerCase();
+  if (!CAPTURE_IMAGE_TYPES.includes(mimeType)) {
+    throw new CaptureValidationError('CAPTURE_ASSET_TYPE_INVALID', `Unsupported image type: ${mimeType || '(none)'}`);
+  }
+  const sizeBytes = Number(input.sizeBytes);
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0 || sizeBytes > MAX_CAPTURE_IMAGE_BYTES) {
+    throw new CaptureValidationError('CAPTURE_ASSET_SIZE_INVALID',
+      `Image size must be between 1 byte and ${MAX_CAPTURE_IMAGE_BYTES} bytes`);
+  }
+  const dimension = (value, field) => {
+    if (value == null || value === '') return null;
+    const result = Number(value);
+    if (!Number.isInteger(result) || result <= 0 || result > 50000) {
+      throw new CaptureValidationError('CAPTURE_ASSET_DIMENSION_INVALID', `${field} must be a positive integer`);
+    }
+    return result;
+  };
+  return {
+    purpose,
+    classification,
+    sourceAssetId,
+    url: url.toString(),
+    checksum: clean(input.checksum).slice(0, 128) || null,
+    mimeType,
+    sizeBytes,
+    width: dimension(input.width, 'width'),
+    height: dimension(input.height, 'height'),
+    captureMetadata: input.captureMetadata && typeof input.captureMetadata === 'object' && !Array.isArray(input.captureMetadata)
+      ? input.captureMetadata : {},
   };
 }
 

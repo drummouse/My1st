@@ -17,6 +17,7 @@ function methodNotAllowed(res, allowed) {
 
 const ERROR_STATUS = {
   CAPTURE_SESSION_NOT_FOUND: 404,
+  CAPTURE_ASSET_NOT_FOUND: 404,
   CAPTURE_TRANSITION_INVALID: 409,
   CAPTURE_SESSION_LOCKED: 409,
   CAPTURE_NOT_AUTHORIZED: 403,
@@ -58,6 +59,26 @@ export default async function handler(req, res) {
         return res.status(200).json({ session });
       }
       return methodNotAllowed(res, 'GET, PATCH');
+    }
+
+    // /api/capture/sessions/<id>/assets — finalize a direct Blob upload as
+    // an asset row (the bytes never pass through this function).
+    if (action === 'assets') {
+      const id = String(req.query.id || '');
+      if (req.method === 'POST') {
+        const { asset } = await service.addAsset(actor, id, req.body || {});
+        return res.status(201).json({ asset });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/assets/<assetId> — delete before submit.
+    if (action === 'asset') {
+      if (req.method === 'DELETE') {
+        await service.removeAsset(actor, String(req.query.id || ''), String(req.query.assetId || ''));
+        return res.status(204).end();
+      }
+      return methodNotAllowed(res, 'DELETE');
     }
 
     res.status(404).json({ error: 'Unknown Capture action' });

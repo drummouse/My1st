@@ -1,5 +1,7 @@
 import { handleUpload } from '@vercel/blob/client';
 import { requireUserId } from './_lib/auth.js';
+import { sql, ensureSchema } from './_lib/db.js';
+import { CAPTURE_IMAGE_TYPES, MAX_CAPTURE_IMAGE_BYTES, EDITABLE_STATUSES } from './_lib/capturePolicy.js';
 
 // One shared upload route for every Blob-backed file in the app (company
 // logo now; project File/Photo attachments later) — the caller says which
@@ -23,7 +25,28 @@ const LIMITS = {
     allowedContentTypes: undefined, // any format
     maximumSizeInBytes: 25 * 1024 * 1024,
   },
+  // Capture product photos — constants shared with capturePolicy.js so the
+  // upload token and the finalize route can never disagree about what a
+  // capture image is allowed to be.
+  capture: {
+    allowedContentTypes: [...CAPTURE_IMAGE_TYPES],
+    maximumSizeInBytes: MAX_CAPTURE_IMAGE_BYTES,
+  },
 };
+
+// A capture upload is scoped to a specific session: the token is only
+// issued when that session exists, belongs to the authenticated user, and
+// is still editable — a submitted/locked capture cannot quietly grow new
+// images through a stale upload token request.
+async function assertCaptureUploadAllowed(userId, sessionId) {
+  if (!sessionId) throw new Error('A capture upload requires a sessionId');
+  await ensureSchema();
+  const [session] = await sql`select owner_id, status from capture_sessions where id = ${sessionId}`;
+  if (!session || session.owner_id !== userId) throw new Error('Capture session not found');
+  if (!EDITABLE_STATUSES.includes(session.status)) {
+    throw new Error(`A ${session.status} capture cannot receive new images`);
+  }
+}
 
 export default async function handler(req, res) {
   const userId = await requireUserId(req, res);
@@ -34,13 +57,14 @@ export default async function handler(req, res) {
       body: req.body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        const { kind } = JSON.parse(clientPayload || '{}');
+        const { kind, sessionId } = JSON.parse(clientPayload || '{}');
+        if (kind === 'capture') await assertCaptureUploadAllowed(userId, sessionId);
         const limits = LIMITS[kind] || LIMITS.file;
         return {
           addRandomSuffix: true,
           allowedContentTypes: limits.allowedContentTypes,
           maximumSizeInBytes: limits.maximumSizeInBytes,
-          tokenPayload: JSON.stringify({ userId, kind }),
+          tokenPayload: JSON.stringify({ userId, kind, ...(sessionId ? { sessionId } : {}) }),
         };
       },
       onUploadCompleted: async () => {

@@ -3,6 +3,7 @@ import {
   CaptureValidationError,
   EDITABLE_STATUSES,
   assertTransition,
+  normalizeAssetInput,
   normalizeCreateInput,
   normalizeDraftPatch,
 } from './capturePolicy.js';
@@ -39,6 +40,25 @@ export function toCaptureField(row) {
   };
 }
 
+export function toCaptureAsset(row) {
+  return {
+    id: row.id,
+    sessionId: row.session_id ?? row.sessionId,
+    purpose: row.purpose,
+    classification: row.classification || 'source',
+    sourceAssetId: row.source_asset_id ?? row.sourceAssetId ?? null,
+    url: row.url,
+    checksum: row.checksum ?? null,
+    mimeType: row.mime_type ?? row.mimeType ?? null,
+    sizeBytes: Number(row.size_bytes ?? row.sizeBytes ?? 0),
+    width: row.width ?? null,
+    height: row.height ?? null,
+    captureMetadata: row.capture_metadata ?? row.captureMetadata ?? {},
+    uploadStatus: row.upload_status ?? row.uploadStatus ?? 'complete',
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
 const rowOwner = (row) => row.owner_id ?? row.ownerId;
 
 // Ownership is enforced here (the policy module checks capabilities only).
@@ -70,8 +90,12 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     async getSession(actor, id) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
-      const fields = await store.listFields(id);
-      return { session: toCaptureSession(row), fields: fields.map(toCaptureField) };
+      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      return {
+        session: toCaptureSession(row),
+        fields: fields.map(toCaptureField),
+        assets: assets.map(toCaptureAsset),
+      };
     },
 
     // Idempotent by (owner, clientRef): retrying a create — flaky mobile
@@ -120,6 +144,49 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
         }
         return { session: toCaptureSession(updated ?? { ...row, ...patch }) };
       });
+    },
+
+    // Finalizes one direct-to-Blob upload as an asset row. Like other draft
+    // content it is only writable while the contributor holds the ball and
+    // is not audited per-save (D-012). Derived assets (thumbnails, crops)
+    // must point at a source asset in the same session — originals are
+    // never replaced, only referenced.
+    async addAsset(actor, sessionId, input) {
+      const normalized = normalizeAssetInput(input);
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot receive new images`, { status: row.status });
+      }
+      if (normalized.sourceAssetId) {
+        const source = await store.getAsset(normalized.sourceAssetId);
+        if (!source || (source.session_id ?? source.sessionId) !== sessionId) {
+          throw new CaptureValidationError('CAPTURE_ASSET_SOURCE_INVALID',
+            'The source asset does not belong to this capture session');
+        }
+      }
+      const change = { id: randomUUID(), sessionId, ownerId: rowOwner(row), ...normalized };
+      const created = await store.insertAsset(change);
+      return { asset: toCaptureAsset(created ?? change) };
+    },
+
+    // Delete-before-submit: allowed only while editable. Removing a source
+    // asset removes its derivatives with it (a thumbnail without its
+    // original is meaningless); a locked session's assets are immutable.
+    async removeAsset(actor, sessionId, assetId) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture's images cannot be removed`, { status: row.status });
+      }
+      const asset = await store.getAsset(assetId);
+      if (!asset || (asset.session_id ?? asset.sessionId) !== sessionId) {
+        throw new CaptureValidationError('CAPTURE_ASSET_NOT_FOUND', 'Capture asset not found');
+      }
+      await store.deleteAssetWithDerivatives(assetId);
+      return { removed: true };
     },
 
     async transitionSession(actor, id, toStatus, reason) {
@@ -213,6 +280,28 @@ export function createNeonCaptureStore(sql) {
     },
     async listFields(sessionId) {
       return sql`select * from capture_fields where session_id = ${sessionId} order by field_key`;
+    },
+    async listAssets(sessionId) {
+      return sql`select * from capture_assets where session_id = ${sessionId} order by created_at`;
+    },
+    async getAsset(id) {
+      const [row] = await sql`select * from capture_assets where id = ${id}`;
+      return row || null;
+    },
+    async insertAsset(change) {
+      const query = sql`insert into capture_assets
+        (id, session_id, owner_id, purpose, classification, source_asset_id, url, checksum,
+         mime_type, size_bytes, width, height, capture_metadata, upload_status)
+        values (${change.id}, ${change.sessionId}, ${change.ownerId}, ${change.purpose},
+                ${change.classification}, ${change.sourceAssetId}, ${change.url}, ${change.checksum},
+                ${change.mimeType}, ${change.sizeBytes}, ${change.width}, ${change.height},
+                ${JSON.stringify(change.captureMetadata || {})}::jsonb, 'complete')
+        returning *`;
+      return execute(query, change);
+    },
+    async deleteAssetWithDerivatives(id) {
+      await sql`delete from capture_assets where source_asset_id = ${id}`;
+      await sql`delete from capture_assets where id = ${id}`;
     },
     async upsertField(sessionId, fieldKey, value) {
       const query = sql`insert into capture_fields (session_id, field_key, value)
