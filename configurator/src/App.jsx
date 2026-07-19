@@ -776,7 +776,9 @@ export default function App({ currentUser = null }) {
         </nav>
       )}
 
-      {activeSection === 'capture' && canCapture && !isCustomerView && <CapturePanel />}
+      {activeSection === 'capture' && canCapture && !isCustomerView && (
+        <CapturePanel canReview={currentUser?.capabilities?.includes('capture.review')} />
+      )}
 
       {activeSection === 'platform' && canViewPlatform && <PlatformConsole capabilities={currentUser?.capabilities || []} />}
 

@@ -60,6 +60,30 @@ export function toCaptureAsset(row) {
   };
 }
 
+export function toCaptureComment(row) {
+  return {
+    id: row.id,
+    sessionId: row.session_id ?? row.sessionId,
+    authorId: row.author_id ?? row.authorId,
+    authorLabel: row.author_label ?? row.authorLabel ?? null,
+    body: row.body,
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
+// The statuses a reviewer's queue cares about (everything past draft that
+// is not archived). Draft content is private to the contributor until they
+// submit — it never appears in a queue.
+export const REVIEW_QUEUE_STATUSES = Object.freeze([
+  'submitted', 'in_review', 'changes_requested', 'approved', 'publishing', 'published', 'rejected',
+]);
+
+const REVIEW_DECISIONS = Object.freeze({
+  approve: 'approved',
+  request_changes: 'changes_requested',
+  reject: 'rejected',
+});
+
 const rowOwner = (row) => row.owner_id ?? row.ownerId;
 
 // Ownership is enforced here (the policy module checks capabilities only).
@@ -91,11 +115,14 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     async getSession(actor, id) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
-      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const [fields, assets, comments] = await Promise.all([
+        store.listFields(id), store.listAssets(id), store.listComments(id),
+      ]);
       return {
         session: toCaptureSession(row),
         fields: fields.map(toCaptureField),
         assets: assets.map(toCaptureAsset),
+        comments: comments.map(toCaptureComment),
       };
     },
 
@@ -232,6 +259,53 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       });
     },
 
+    // Review queue: submitted-and-beyond sessions the actor may review.
+    // Same row scoping as everything else — an owner reviews its own
+    // tenant's submissions (single-seat tenancy, D-003), superadmin sees
+    // all tenants. Capability enforcement happens at the route.
+    async listReviewQueue(actor, filters = {}) {
+      const status = filters.status && REVIEW_QUEUE_STATUSES.includes(filters.status) ? filters.status : null;
+      const rows = await store.listReviewQueue({
+        ownerId: actor.id,
+        includeAllOwners: actor.role === 'superadmin',
+        status,
+        limit: Math.min(100, Math.max(1, Number(filters.limit) || 50)),
+      });
+      return rows.map(toCaptureSession);
+    },
+
+    async startReview(actor, id) {
+      return this.transitionSession(actor, id, 'in_review');
+    },
+
+    // approve | request_changes | reject. The state machine supplies the
+    // capability check, reason requirements, and audit action; this just
+    // maps the reviewer's verb onto the target status.
+    async decideReview(actor, id, decision, reason) {
+      const toStatus = REVIEW_DECISIONS[decision];
+      if (!toStatus) {
+        throw new CaptureValidationError('CAPTURE_DECISION_INVALID',
+          'Decision must be approve, request_changes, or reject', { decision });
+      }
+      return this.transitionSession(actor, id, toStatus, reason);
+    },
+
+    async addComment(actor, sessionId, body) {
+      const text = String(body || '').trim();
+      if (!text || text.length > 4000) {
+        throw new CaptureValidationError('CAPTURE_COMMENT_INVALID', 'A comment needs 1-4000 characters');
+      }
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (row.status === 'draft' || row.status === 'archived') {
+        throw new CaptureValidationError('CAPTURE_COMMENT_INVALID',
+          `Comments are not available on a ${row.status} capture`, { status: row.status });
+      }
+      const change = { id: randomUUID(), sessionId, authorId: actor.id, body: text };
+      const created = await store.insertComment(change);
+      return { comment: toCaptureComment(created ?? change) };
+    },
+
     async transitionSession(actor, id, toStatus, reason) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
@@ -332,6 +406,26 @@ export function createNeonCaptureStore(sql) {
     },
     async listFields(sessionId) {
       return sql`select * from capture_fields where session_id = ${sessionId} order by field_key`;
+    },
+    async listReviewQueue({ ownerId, includeAllOwners, status, limit }) {
+      return sql`select * from capture_sessions
+        where (${Boolean(includeAllOwners)} or owner_id = ${ownerId})
+          and (${status || null}::text is null or status = ${status || null})
+          and status in ('submitted','in_review','changes_requested','approved','publishing','published','rejected')
+        order by submitted_at desc nulls last, updated_at desc limit ${limit}`;
+    },
+    async listComments(sessionId) {
+      return sql`select c.*, coalesce(u.business_name, u.company_name, u.email) as author_label
+        from capture_review_comments c
+        left join users u on u.id = c.author_id
+        where c.session_id = ${sessionId}
+        order by c.created_at`;
+    },
+    async insertComment(change) {
+      const query = sql`insert into capture_review_comments (id, session_id, author_id, body)
+        values (${change.id}, ${change.sessionId}, ${change.authorId}, ${change.body})
+        returning *`;
+      return execute(query, change);
     },
     async listAssets(sessionId) {
       return sql`select * from capture_assets where session_id = ${sessionId} order by created_at`;

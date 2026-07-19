@@ -29,6 +29,7 @@ function makeStore(session) {
     updateSessionStatus: async (id, from, to) => { state.writes.push({ kind: 'status', id, from, to }); return { ...state.session, status: to }; },
     listFields: async () => state.fields,
     listAssets: async () => [],
+    listComments: async () => [],
     upsertField: async (id, fieldKey, value) => { state.writes.push({ kind: 'field', id, fieldKey, value }); },
     appendAudit: async (event) => { state.audits.push(event); },
   };

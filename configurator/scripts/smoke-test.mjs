@@ -101,6 +101,10 @@ await check(
   },
   { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
 );
+await check('auth guard /api/capture/review', '/api/capture/review', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
 await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',

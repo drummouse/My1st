@@ -5,6 +5,15 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-19 — Stage 4 (review workspace)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-025 | Review lives inside the existing `/api/capture` function with a per-action capability map (`review.*` → `capture.review`, everything else → `capture.create`); unknown actions 404 before authorization. **Zero new function slots** (still 11 of 12). | Honors the standing commitment to flag before slot 12 is consumed; mirrors `api/superadmin/index.js`'s proven `capabilityByAction` idiom; contract-tested. | A separate `/api/review` function (rejected: spends a slot for no isolation gain). |
+| D-026 | Reviewer assignment is deferred: tenancy is single-seat, so the only possible reviewers are the owner (own tenant) and superadmin — an assignment table would model a choice that cannot exist yet. Queue scoping is the same row-scoping rule as everywhere else. | No fake features; the queue + `in_review` claim step covers the real workflow. Revisit with multi-seat accounts. | `review_assignments` table now (rejected: dead weight). |
+| D-027 | Reviewer metadata edits ("approve with edits") are deferred; Stage 4 reviewers decide and comment, contributors fix via request-changes → resubmit. Decisions are audited transitions with recorded reasons; comments are permanent records with author + timestamp. | The request-changes loop already exists and keeps the contributor the author of record; reviewer edits need an audit-diff mechanism worth designing properly (flagged for Stage 5+). | Unlocking `updateDraft` for reviewers in `in_review` (rejected: silent reviewer overwrites without diffs). |
+| D-028 | Comments allowed on any non-draft, non-archived session by `capture.review` holders; the contributor sees the thread in their own capture view (drafts stay private — no comments until submitted). | Matches "review comments + contributor changes-requested view" with one table and one rule. | Per-status comment matrix (rejected: complexity without need). |
+
 ## 2026-07-19 — Stage 3 (guided product metadata and submission)
 
 | # | Decision | Rationale | Alternatives considered |
