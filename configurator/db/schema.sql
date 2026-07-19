@@ -213,6 +213,73 @@ create table if not exists library_import_batches (
   created_at timestamptz not null default now(),
   committed_at timestamptz
 );
+-- IronWrap Capture — additive only (Stage 1). Sessions carry the server-side
+-- state machine; client_ref makes draft creation idempotent. Image bytes
+-- never live in these tables — capture_assets stores Blob URLs and metadata.
+create table if not exists capture_sessions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id),
+  client_ref text,
+  capture_type text not null default 'guided_product'
+    check (capture_type in ('guided_product','quick','texture','color','profile','label')),
+  category text check (category is null or category in ('roofing','siding','soffit','fascia','gutter','downspout','trim','accessory','other')),
+  title text,
+  status text not null default 'draft'
+    check (status in ('draft','submitted','in_review','changes_requested','approved','publishing','published','rejected','archived')),
+  current_step text,
+  completeness integer not null default 0,
+  submitted_snapshot jsonb,
+  published_record_id uuid references library_records(id),
+  published_version integer,
+  submitted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null;
+create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status);
+
+create table if not exists capture_assets (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other')),
+  classification text not null default 'source' check (classification in ('source','derived')),
+  source_asset_id uuid references capture_assets(id),
+  url text not null,
+  checksum text,
+  mime_type text,
+  size_bytes bigint not null default 0,
+  width integer,
+  height integer,
+  capture_metadata jsonb not null default '{}'::jsonb,
+  upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_assets_session_id_idx on capture_assets (session_id);
+
+create table if not exists capture_fields (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  field_key text not null,
+  value jsonb,
+  source text not null default 'manual' check (source in ('manual','barcode','ocr','ai','imported','reviewer')),
+  confidence numeric,
+  confirmed_by uuid references users(id),
+  confirmed_at timestamptz,
+  source_asset_id uuid references capture_assets(id),
+  updated_at timestamptz not null default now(),
+  unique (session_id, field_key)
+);
+
+create table if not exists capture_review_comments (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  author_id uuid not null references users(id),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
+
 create table if not exists library_migrations (
   id uuid primary key,
   migration_key text not null,

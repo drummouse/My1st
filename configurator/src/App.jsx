@@ -17,6 +17,7 @@ import MaterialsPanel from './components/MaterialsPanel.jsx';
 import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import PlatformConsole from './components/PlatformConsole.jsx';
+import CapturePanel from './components/CapturePanel.jsx';
 import { parseAppliCadXML, facetKey, collectOpenings, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -124,6 +125,7 @@ export default function App({ currentUser = null }) {
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
   const canViewPlatform = currentUser?.capabilities?.includes('platform.diagnostics.read');
+  const canCapture = currentUser?.capabilities?.includes('capture.create');
   const [companySettings, setCompanySettings] = useState(null);
   // Business identity/contact (name, phone, address, website/social) — on
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
@@ -753,6 +755,15 @@ export default function App({ currentUser = null }) {
               {label}
             </button>
           ))}
+          {canCapture && (
+            <button
+              type="button"
+              className={`app-nav-tab${activeSection === 'capture' ? ' active' : ''}`}
+              onClick={() => setActiveSection('capture')}
+            >
+              Capture
+            </button>
+          )}
           {canViewPlatform && (
             <button
               type="button"
@@ -764,6 +775,8 @@ export default function App({ currentUser = null }) {
           )}
         </nav>
       )}
+
+      {activeSection === 'capture' && canCapture && !isCustomerView && <CapturePanel />}
 
       {activeSection === 'platform' && canViewPlatform && <PlatformConsole capabilities={currentUser?.capabilities || []} />}
 

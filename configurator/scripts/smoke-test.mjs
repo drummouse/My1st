@@ -62,6 +62,23 @@ for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/
     return true;
   });
 }
+await check('auth guard /api/capture/sessions', '/api/capture/sessions', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/capture/sessions create',
+  '/api/capture/sessions',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  },
+);
 await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',

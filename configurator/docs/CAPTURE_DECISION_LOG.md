@@ -5,6 +5,15 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-19 — Stage 1 (capture domain foundation)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-012 | Audit granularity: session creation, every state-machine transition, and archive are audited (`capture.*` actions in `superadmin_audit_events`); keystroke-level draft-content saves are not. | State changes and reviewer decisions are the events with accountability weight; auditing every autosave would bury them. Submission snapshots (Stage 3) preserve exact submitted content anyway. | Auditing all draft saves (rejected: noise), audit nothing until submit (rejected: loses create/archive trail). |
+| D-013 | The Capture tab is shown when the session's capabilities include `capture.create` (same client pattern as the Platform tab) — enforcement stays entirely server-side in `requireCapability` + row scoping. | Resellers (no capture capabilities) shouldn't see a tab that only 403s; client gating is UX, not security. | Static `NAV_SECTIONS` entry for everyone (rejected: broken tab for resellers). |
+| D-014 | All four Capture tables (`capture_sessions`, `capture_assets`, `capture_fields`, `capture_review_comments`) ship in Stage 1 even though assets/comments are written by later stages, with CHECK constraints generated from `capturePolicy.js` vocabularies and drift blocked by `captureSchema.test.mjs`. | One reviewed additive migration instead of three; the parity test makes policy↔schema drift a test failure rather than a runtime surprise. | Table-per-stage migrations (rejected: three review cycles for one contract). |
+| D-015 | Concurrent-transition safety: status updates are compare-and-set (`where status = <expected>`); the idempotent-create race falls through to the partial unique index, and the loser's retry resolves to the winner's row. | Cheap, testable protection against double-submit/double-archive from two open tabs without introducing a version column on sessions in Stage 1. | Optimistic `version` column like `library_records` (deferred: revisit when reviewer edits land in Stage 4). |
+
 ## 2026-07-19 — Stage 0 (repository audit)
 
 | # | Decision | Rationale | Alternatives considered |

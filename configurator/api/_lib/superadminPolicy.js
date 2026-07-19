@@ -6,7 +6,15 @@
 // its own id) is enforced in api/superadmin/index.js — this map only
 // controls which actions a role can attempt at all, not which rows.
 const ROLE_CAPABILITIES = {
-  owner: [],
+  // Capture: tenancy is single-seat (one login = one company), so the owner
+  // is both contributor and reviewer for its own tenant's captures — row
+  // scoping to the owner's records is enforced in captureService.js, not
+  // here. Global publication stays superadmin-only (catalog.publish).
+  owner: [
+    'capture.create',
+    'capture.review',
+    'capture.publish.tenant',
+  ],
   reseller: [
     'users.create',
     'users.freeze',
@@ -19,6 +27,9 @@ const ROLE_CAPABILITIES = {
     'skins.manage',
   ],
   superadmin: [
+    'capture.create',
+    'capture.review',
+    'capture.publish.tenant',
     'users.create',
     'users.freeze',
     'users.block',
