@@ -40,6 +40,7 @@ For Library Core, use the OneDrive subject folder:
 | --- | --- | --- |
 | Capture Stage 0 audit and architecture plan | Prepared | `configurator/docs/superpowers/specs/2026-07-19-capture-stage0-architecture.md` |
 | Capture decision log | Active | `configurator/docs/CAPTURE_DECISION_LOG.md` |
+| Capture Stage 1 foundation verification | Automated checks complete; interactive preview walkthrough pending | `configurator/docs/milestones/2026-07-19-capture-stage1-foundation.md` |
 
 ## Completion Rule
 
