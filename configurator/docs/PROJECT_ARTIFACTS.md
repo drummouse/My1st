@@ -34,6 +34,16 @@ For Library Core, use the OneDrive subject folder:
 | Capture/Scanner handoff | Prepared | `configurator/docs/CAPTURE_LIBRARY_HANDOFF.md` |
 | Library Core verification report | Local automation complete; deployment pending | `configurator/docs/milestones/2026-07-17-library-core-verification.md` |
 
+## IronWrap Capture Artifact Register
+
+| Artifact | Status | Canonical path |
+| --- | --- | --- |
+| Capture Stage 0 audit and architecture plan | Prepared | `configurator/docs/superpowers/specs/2026-07-19-capture-stage0-architecture.md` |
+| Capture decision log | Active | `configurator/docs/CAPTURE_DECISION_LOG.md` |
+| Capture Stage 1 foundation verification | Automated checks complete; interactive preview walkthrough pending | `configurator/docs/milestones/2026-07-19-capture-stage1-foundation.md` |
+| Capture Stage 2 upload verification | Automated checks complete; phone camera walkthrough pending | `configurator/docs/milestones/2026-07-19-capture-stage2-uploads.md` |
+| Capture Stage 3 metadata/submit verification | Automated checks complete; browser walkthrough pending | `configurator/docs/milestones/2026-07-19-capture-stage3-metadata-submit.md` |
+
 ## Completion Rule
 
 A milestone is not complete until its canonical artifact is committed, its automated verification is recorded, and its approved documents are saved in the related Google Drive folder that mirrors the OneDrive working environment.

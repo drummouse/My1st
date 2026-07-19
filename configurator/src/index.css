@@ -939,3 +939,112 @@ body {
   .app-body.viewer-minimized .controls-pane { height: auto; flex: 1 1 auto; }
   .app-body.viewer-maximized .viewer-pane { height: 100%; }
 }
+
+/* Capture (Stage 1): draft list + status chips. Mobile-first — full-width
+   tap targets in one column; the shared .settings-panel wrapper already
+   handles page width/padding. */
+.capture-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.capture-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.capture-item:disabled { opacity: 0.6; cursor: default; }
+.capture-item-title { font-weight: 600; color: #1c1f24; }
+.capture-status {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+  vertical-align: middle;
+}
+.capture-status-draft { background: #fef3c7; color: #92400e; }
+.capture-status-submitted, .capture-status-in_review { background: #dbeafe; color: #1e40af; }
+.capture-status-changes_requested { background: #ffedd5; color: #9a3412; }
+.capture-status-approved, .capture-status-published { background: #dcfce7; color: #166534; }
+.capture-status-rejected { background: #fee2e2; color: #991b1b; }
+
+/* Capture (Stage 2): photo slots and guided camera. */
+.capture-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.capture-photo-slot {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.capture-photo-slot-title { font-weight: 600; font-size: 0.78rem; color: #1c1f24; }
+.capture-photo-thumb {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.capture-camera {
+  margin: 0.75rem 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+.capture-camera-view {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 6px;
+  background: #101418;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.capture-gallery-btn { display: inline-block; cursor: pointer; text-align: center; }
+
+/* Capture (Stage 3): metadata form details and completeness checklist. */
+.capture-dims-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.capture-color-input {
+  width: 64px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.capture-check-list {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+  font-size: 0.78rem;
+  color: #92400e;
+}
+.capture-check-list li { margin: 0.15rem 0; }
+.capture-check-errors { color: #991b1b; font-weight: 600; }
