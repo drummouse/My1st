@@ -253,6 +253,9 @@ create table if not exists capture_assets (
   height integer,
   capture_metadata jsonb not null default '{}'::jsonb,
   upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+  -- R2.2: points a superseded (replaced) source asset at its replacement.
+  -- The superseded row's other columns are never changed — see D-039.
+  superseded_by uuid references capture_assets(id),
   created_at timestamptz not null default now()
 );
 create index if not exists capture_assets_session_id_idx on capture_assets (session_id);

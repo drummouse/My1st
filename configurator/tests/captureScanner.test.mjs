@@ -103,6 +103,27 @@ test('evidence gates in order: calibration, initial views, adaptive view, comple
   assert.deepEqual(done.shotRequests, []);
 });
 
+test('R2.2: a superseded (replaced) source asset no longer satisfies its view', () => {
+  const supersededLeftEnd = { id: 'a0', purpose: 'left_end', classification: 'source', supersededBy: 'a-new' };
+  const currentLeftEndReplacement = { id: 'a-new', purpose: 'left_end', classification: 'source' };
+
+  // Only the superseded asset exists — the view still reads as missing.
+  const withOnlySuperseded = evaluateProfileEvidence({
+    fields: [calibrationField()],
+    assets: [supersededLeftEnd, ...viewAssets(['right_end', 'front', 'iso_front_left'])],
+    measurements: [],
+  });
+  assert.ok(withOnlySuperseded.shotRequests.some((r) => r.view === 'left_end'), 'a superseded asset must not count as satisfying the view');
+
+  // The current replacement satisfies it again.
+  const withReplacement = evaluateProfileEvidence({
+    fields: [calibrationField()],
+    assets: [supersededLeftEnd, currentLeftEndReplacement, ...viewAssets(['right_end', 'front', 'iso_front_left'])],
+    measurements: [],
+  });
+  assert.ok(!withReplacement.shotRequests.some((r) => r.view === 'left_end'), 'the current (non-superseded) replacement satisfies the view');
+});
+
 test('every shot request carries the full prompt contract', () => {
   for (const guide of Object.values(SHOT_GUIDES)) {
     for (const key of ['view', 'title', 'position', 'angle', 'distance', 'orientation', 'requiredFeature', 'reason']) {
@@ -140,6 +161,19 @@ test('profile_geometry completeness requires calibration, all views, and a measu
   });
   assert.deepEqual(complete.errors, []);
   assert.equal(complete.score, 100);
+});
+
+test('R2.2: completeness treats a superseded source asset as not covering its view', () => {
+  const session = { captureType: 'profile_geometry', title: 'Standing seam 450', category: null };
+  const assets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]);
+  assets[0] = { ...assets[0], supersededBy: 'replacement-id' }; // left_end is now superseded, no replacement present
+  const result = validateCompleteness({
+    session,
+    fields: [calibrationField()],
+    assets,
+    measurements: [confirmedMeasurement()],
+  });
+  assert.ok(result.errors.some((e) => e.code === 'SHOT_COVERAGE_INCOMPLETE'));
 });
 
 test('the measured preview SVG appears only with width and height and carries real values', () => {

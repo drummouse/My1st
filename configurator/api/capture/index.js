@@ -13,6 +13,7 @@ const capabilityByAction = {
   session: 'capture.create',
   assets: 'capture.create',
   asset: 'capture.create',
+  'asset.replace': 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
   calibration: 'capture.create',
@@ -38,6 +39,8 @@ const ERROR_STATUS = {
   CAPTURE_TRANSITION_INVALID: 409,
   CAPTURE_SESSION_LOCKED: 409,
   CAPTURE_NOT_AUTHORIZED: 403,
+  CAPTURE_ASSET_NOT_REPLACEABLE: 409,
+  CAPTURE_ASSET_ALREADY_SUPERSEDED: 409,
 };
 
 export default async function handler(req, res) {
@@ -108,8 +111,8 @@ export default async function handler(req, res) {
     if (action === 'assets') {
       const id = String(req.query.id || '');
       if (req.method === 'POST') {
-        const { asset } = await service.addAsset(actor, id, req.body || {});
-        return res.status(201).json({ asset });
+        const { asset, duplicate } = await service.addAsset(actor, id, req.body || {});
+        return res.status(duplicate ? 200 : 201).json({ asset, duplicate });
       }
       return methodNotAllowed(res, 'POST');
     }
@@ -121,6 +124,19 @@ export default async function handler(req, res) {
         return res.status(204).end();
       }
       return methodNotAllowed(res, 'DELETE');
+    }
+
+    // /api/capture/sessions/<id>/assets/<assetId>/replace — R2.2: preserve
+    // the prior accepted image (superseded_by lineage) instead of deleting
+    // it when the contributor replaces a shot with a better photo.
+    if (action === 'asset.replace') {
+      if (req.method === 'POST') {
+        const { asset, supersededAssetId } = await service.replaceAsset(
+          actor, String(req.query.id || ''), String(req.query.assetId || ''), req.body || {},
+        );
+        return res.status(201).json({ asset, supersededAssetId });
+      }
+      return methodNotAllowed(res, 'POST');
     }
 
     // /api/capture/sessions/<id>/calibration — save calibration evidence

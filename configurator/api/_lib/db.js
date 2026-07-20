@@ -481,10 +481,17 @@ export function ensureSchema() {
           height integer,
           capture_metadata jsonb not null default '{}'::jsonb,
           upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+          superseded_by uuid references capture_assets(id),
           created_at timestamptz not null default now()
         )
       `;
       await sql`create index if not exists capture_assets_session_id_idx on capture_assets (session_id)`;
+      // R2.2: an accepted source image is never overwritten. Replacing it
+      // inserts a fresh immutable asset and points the OLD row at the new
+      // one via this column — additive metadata only, every other column on
+      // the superseded row (url/checksum/capture_metadata/timestamps) stays
+      // exactly as originally accepted (decision D-039).
+      await sql`alter table capture_assets add column if not exists superseded_by uuid references capture_assets(id)`;
 
       await sql`
         create table if not exists capture_fields (

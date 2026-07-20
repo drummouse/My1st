@@ -1,12 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { captureApi } from '../lib/captureClient.js';
-import { uploadCaptureImage } from '../lib/captureUpload.js';
+import { uploadCaptureImage, replaceCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
+import { createCaptureLocalStore, createIndexedDbDriver, createMemoryDriver } from '../lib/captureLocalStore.js';
 // Shared with the server (D-021): the guidance shown is the guidance the
 // submit gate enforces.
 import { evaluateProfileEvidence, buildProfilePreviewSvg, SHOT_GUIDES } from '../../api/_lib/captureEvidence.js';
 import { validateCompleteness, DIMENSION_UNITS } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
+
+// IndexedDB may be unavailable (locked-down browsing contexts, some test
+// harnesses) — degrade to an in-memory driver rather than crash the scan.
+// Local durability is a resilience layer, not the primary source of truth.
+function createBrowserLocalStore() {
+  try {
+    return createCaptureLocalStore({ driver: createIndexedDbDriver() });
+  } catch {
+    return createCaptureLocalStore({ driver: createMemoryDriver() });
+  }
+}
 
 const PHASES = [
   ['setup', 'Setup'],
@@ -33,6 +45,7 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [cameraFor, setCameraFor] = useState(null); // view id | null
+  const [replaceAssetId, setReplaceAssetId] = useState(null); // set when cameraFor is a replacement shot
   const [queueItems, setQueueItems] = useState([]);
   const [calibrationForm, setCalibrationForm] = useState({
     units: 'mm', knownValue: '', knownFeature: 'overall width', rulerConfirmed: false,
@@ -56,12 +69,33 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     return next;
   };
 
+  const localStoreRef = useRef(null);
+  if (!localStoreRef.current) localStoreRef.current = createBrowserLocalStore();
+
   const queueRef = useRef(null);
   if (!queueRef.current) {
     queueRef.current = createUploadQueue({
-      performUpload: (job) => uploadCaptureImage(job),
+      performUpload: (job) => (job.replaceAssetId
+        ? replaceCaptureImage(job)
+        : uploadCaptureImage(job)),
       onChange: (items) => {
         setQueueItems(items);
+        // Local durability tracks the SAME status the upload queue reports
+        // (R2.2): a reload rehydrates from this, not from memory. Local
+        // evidence is pruned only on 'done' — a server-confirmed finalize —
+        // never on 'failed' or optimistically (confirmation-before-prune).
+        items.forEach((item) => {
+          if (!item.job.localId) return;
+          localStoreRef.current.saveQueueEntry({
+            id: item.job.localId, sessionId: item.job.sessionId, status: item.status,
+            attempts: item.attempts, lastError: item.error,
+          }).catch(() => {});
+          if (item.status === 'done') {
+            localStoreRef.current.confirmSynced(item.job.sessionId, item.job.localId, {
+              serverAssetId: item.result?.asset?.id,
+            }).catch(() => {});
+          }
+        });
         if (items.some((item) => item.status === 'done' && item.job.sessionId === detailRef.current.session.id)) {
           captureApi.get(detailRef.current.session.id).then(onDetailChange).catch(() => {});
         }
@@ -71,8 +105,52 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
 
   useEffect(() => {
     if (calibration && phase === 'setup') setPhase('geometry');
+    // Resume anything interrupted by a reload/close: normalize stuck
+    // "uploading" rows back to "waiting" and re-enqueue every resumable
+    // pending photo from durable storage, exactly as it was accepted.
+    (async () => {
+      const resumable = await localStoreRef.current.rehydrateQueue(session.id).catch(() => []);
+      for (const entry of resumable) {
+        // eslint-disable-next-line no-await-in-loop
+        const pending = await localStoreRef.current.getPendingAsset(entry.id).catch(() => null);
+        if (!pending) continue;
+        queueRef.current.enqueue({
+          sessionId: pending.sessionId,
+          purpose: pending.purpose,
+          file: pending.blob,
+          requestedPose: pending.requestedPose || null,
+          replaceAssetId: pending.replaceAssetId || null,
+          oldAssetId: pending.replaceAssetId || undefined,
+          localId: pending.id,
+          priorHashes: [],
+        });
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Non-superseded, non-derived accepted photos' perceptual hashes, so a
+  // new accept can be compared against everything already captured in this
+  // session (R2.2 near-duplicate indication).
+  const priorHashesFor = () => (detail.assets || [])
+    .filter((a) => a.classification === 'source' && !a.supersededBy && a.captureMetadata?.perceptualHash)
+    .map((a) => ({ hash: a.captureMetadata.perceptualHash }));
+
+  // Write-through to durable local storage BEFORE enqueueing the network
+  // upload — "Saved on device" must be true the instant the user accepts a
+  // photo, not once the upload finishes (R2.2/R2.1).
+  const acceptPhoto = async (file, view, oldAssetId) => {
+    const localId = (crypto.randomUUID ? crypto.randomUUID() : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const requestedPose = SHOT_GUIDES[view] || null;
+    await localStoreRef.current.savePendingAsset({
+      id: localId, sessionId: session.id, purpose: view, blob: file, requestedPose, replaceAssetId: oldAssetId || null,
+    });
+    await localStoreRef.current.enqueueForSync({ pendingAssetId: localId, sessionId: session.id });
+    queueRef.current.enqueue({
+      sessionId: session.id, purpose: view, file, requestedPose,
+      replaceAssetId: oldAssetId || null, oldAssetId, localId, priorHashes: priorHashesFor(),
+    });
+  };
 
   const act = async (work) => {
     setBusy(true);
@@ -119,9 +197,13 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
 
   const pendingFor = (view) => queueItems.find((item) => item.job.sessionId === session.id
     && item.job.purpose === view && item.status !== 'done');
-  const shotDone = (view) => (detail.assets || []).some((a) => a.purpose === view && a.classification === 'source');
+  // A superseded (replaced) source asset no longer counts as "the" photo
+  // for its view — only the current, non-superseded one does (R2.2).
+  const currentSourceFor = (view) => (detail.assets || [])
+    .find((a) => a.purpose === view && a.classification === 'source' && !a.supersededBy);
+  const shotDone = (view) => Boolean(currentSourceFor(view));
   const thumbFor = (view) => {
-    const source = (detail.assets || []).find((a) => a.purpose === view && a.classification === 'source');
+    const source = currentSourceFor(view);
     const thumb = source && (detail.assets || []).find((a) => a.classification === 'derived' && a.sourceAssetId === source.id);
     return (thumb || source)?.url || null;
   };
@@ -136,7 +218,19 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     <div className="capture-photo-slot" key={guide.view}>
       <div className="capture-photo-slot-title">{guide.title}</div>
       {shotDone(guide.view) ? (
-        <img className="capture-photo-thumb" src={thumbFor(guide.view)} alt={`${guide.title} — captured`} />
+        <>
+          <img className="capture-photo-thumb" src={thumbFor(guide.view)} alt={`${guide.title} — captured`} />
+          {editable && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={busy}
+              onClick={() => { setReplaceAssetId(currentSourceFor(guide.view).id); setCameraFor(guide.view); }}
+            >
+              Replace This Photo
+            </button>
+          )}
+        </>
       ) : pendingFor(guide.view) ? (
         <div className="control-sublabel" role="status">
           {SYNC_LABELS[pendingFor(guide.view).status] || pendingFor(guide.view).status}
@@ -280,8 +374,13 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
       {cameraFor && (
         <CaptureCamera
           purposeLabel={SHOT_GUIDES[cameraFor]?.title || cameraFor}
-          onAccept={(file) => queueRef.current.enqueue({ sessionId: session.id, purpose: cameraFor, file })}
-          onClose={() => setCameraFor(null)}
+          onAccept={(file) => {
+            const oldAssetId = replaceAssetId;
+            setCameraFor(null);
+            setReplaceAssetId(null);
+            acceptPhoto(file, cameraFor, oldAssetId).catch((err) => setStatus(err.message));
+          }}
+          onClose={() => { setCameraFor(null); setReplaceAssetId(null); }}
         />
       )}
 

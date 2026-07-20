@@ -60,6 +60,9 @@ export function toCaptureAsset(row) {
     height: row.height ?? null,
     captureMetadata: row.capture_metadata ?? row.captureMetadata ?? {},
     uploadStatus: row.upload_status ?? row.uploadStatus ?? 'complete',
+    // Set once, by replaceAsset, when a later accepted photo supersedes
+    // this one. Never null-to-set-back — supersession is permanent (R2.2).
+    supersededBy: row.superseded_by ?? row.supersededBy ?? null,
     createdAt: row.created_at ?? row.createdAt ?? null,
   };
 }
@@ -270,6 +273,11 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     // is not audited per-save (D-012). Derived assets (thumbnails, crops)
     // must point at a source asset in the same session — originals are
     // never replaced, only referenced.
+    //
+    // Checksum idempotency (R2.2): a finalize retry (flaky network — the
+    // client never learned the first attempt succeeded) for the same
+    // session + checksum returns the existing source asset instead of
+    // inserting a duplicate row.
     async addAsset(actor, sessionId, input) {
       const normalized = normalizeAssetInput(input);
       const row = await store.getSession(sessionId);
@@ -285,14 +293,26 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
             'The source asset does not belong to this capture session');
         }
       }
+      if (normalized.classification === 'source' && normalized.checksum) {
+        const existing = await store.listAssets(sessionId);
+        const duplicate = existing.find((a) => (a.classification || 'source') === 'source'
+          && a.checksum === normalized.checksum
+          && !(a.superseded_by ?? a.supersededBy));
+        if (duplicate) {
+          return { asset: toCaptureAsset(duplicate), duplicate: true };
+        }
+      }
       const change = { id: randomUUID(), sessionId, ownerId: rowOwner(row), ...normalized };
       const created = await store.insertAsset(change);
-      return { asset: toCaptureAsset(created ?? change) };
+      return { asset: toCaptureAsset(created ?? change), duplicate: false };
     },
 
     // Delete-before-submit: allowed only while editable. Removing a source
     // asset removes its derivatives with it (a thumbnail without its
     // original is meaningless); a locked session's assets are immutable.
+    // This remains for genuinely unwanted shots (wrong session, mistaken
+    // purpose); replaceAsset below is the path for "this view needs a
+    // better photo," which preserves rather than deletes the original.
     async removeAsset(actor, sessionId, assetId) {
       const row = await store.getSession(sessionId);
       assertVisible(actor, row);
@@ -306,6 +326,44 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       }
       await store.deleteAssetWithDerivatives(assetId);
       return { removed: true };
+    },
+
+    // Replace an already-accepted source image for the same shot (R2.2,
+    // decision D-039): the prior asset is never overwritten or deleted —
+    // its url/checksum/capture_metadata/timestamps are preserved exactly as
+    // originally accepted, and it is linked forward via superseded_by. The
+    // new asset is inserted as an ordinary immutable source asset, forced
+    // onto the SAME purpose as the one it replaces (a replacement cannot
+    // smuggle in a different view), with capture_metadata.supersedesAssetId
+    // recording the reverse link for the new row.
+    async replaceAsset(actor, sessionId, oldAssetId, input) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture's images cannot be replaced`, { status: row.status });
+      }
+      const oldAsset = await store.getAsset(oldAssetId);
+      if (!oldAsset || (oldAsset.session_id ?? oldAsset.sessionId) !== sessionId) {
+        throw new CaptureValidationError('CAPTURE_ASSET_NOT_FOUND', 'Capture asset not found');
+      }
+      if ((oldAsset.classification ?? 'source') !== 'source') {
+        throw new CaptureValidationError('CAPTURE_ASSET_NOT_REPLACEABLE', 'Only an accepted source image can be replaced');
+      }
+      if (oldAsset.superseded_by ?? oldAsset.supersededBy) {
+        throw new CaptureValidationError('CAPTURE_ASSET_ALREADY_SUPERSEDED', 'This image was already replaced');
+      }
+      const normalized = normalizeAssetInput({ ...input, classification: 'source', purpose: oldAsset.purpose });
+      const change = {
+        id: randomUUID(),
+        sessionId,
+        ownerId: rowOwner(row),
+        ...normalized,
+        captureMetadata: { ...normalized.captureMetadata, supersedesAssetId: oldAssetId },
+      };
+      const created = await store.insertAsset(change);
+      await store.markSuperseded(oldAssetId, change.id);
+      return { asset: toCaptureAsset(created ?? change), supersededAssetId: oldAssetId };
     },
 
     // Server-truth completeness for a session — the client runs the same
@@ -675,6 +733,12 @@ export function createNeonCaptureStore(sql) {
     async deleteAssetWithDerivatives(id) {
       await sql`delete from capture_assets where source_asset_id = ${id}`;
       await sql`delete from capture_assets where id = ${id}`;
+    },
+    // The ONLY write replaceAsset makes to the superseded row — touches
+    // superseded_by alone, leaving url/checksum/capture_metadata/timestamps
+    // exactly as originally accepted (D-039).
+    async markSuperseded(assetId, supersededByAssetId) {
+      await sql`update capture_assets set superseded_by = ${supersededByAssetId} where id = ${assetId}`;
     },
     async upsertField(sessionId, fieldKey, value) {
       const query = sql`insert into capture_fields (session_id, field_key, value)

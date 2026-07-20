@@ -76,8 +76,11 @@ export const SHOT_GUIDES = Object.freeze({
   },
 });
 
+// A superseded (replaced) source asset no longer counts as satisfying its
+// view — only the current, non-superseded accepted photo does (R2.2).
 const hasView = (assets, view) => assets.some((a) => a.purpose === view
-  && (a.classification || 'source') === 'source');
+  && (a.classification || 'source') === 'source'
+  && !(a.supersededBy ?? a.superseded_by));
 
 const calibrationComplete = (fields) => {
   const calibration = fields.find((f) => (f.fieldKey ?? f.field_key) === 'calibration')?.value;

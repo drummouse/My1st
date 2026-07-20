@@ -145,8 +145,11 @@ export function validateCompleteness({ session = {}, fields = [], assets = [], m
   const warnings = [];
   const field = (key) => fields.find((f) => (f.fieldKey ?? f.field_key) === key)?.value ?? null;
   const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
+  // A superseded (replaced) source asset no longer counts as "the" photo
+  // for its view — only the current, non-superseded one does (R2.2).
   const hasPhoto = (purpose) => assets.some((a) => a.purpose === purpose
-    && (a.classification || 'source') === 'source');
+    && (a.classification || 'source') === 'source'
+    && !(a.supersededBy ?? a.superseded_by));
   const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
   const add = (list, code, message) => list.push({ code, message });
   const captureType = session.captureType ?? session.capture_type;
@@ -280,6 +283,30 @@ export function normalizeMeasurementInput(input = {}) {
   };
 }
 
+const REQUESTED_POSE_TEXT_MAX = 300;
+
+// Bounded, best-effort normalization of the requested-pose contract (§9:
+// position/angle/distance/orientation/requiredFeature/rulerVisible/reason)
+// recorded alongside an accepted photo, so an asset's lineage always shows
+// what shot was actually asked for — not just what was uploaded (R2.2).
+// Deliberately not validated against SHOT_GUIDES verbatim so both the
+// deterministic guide and a future Claude-sourced request populate it the
+// same way.
+function normalizeRequestedPose(pose) {
+  if (!pose || typeof pose !== 'object') return null;
+  const text = (value) => clean(value).slice(0, REQUESTED_POSE_TEXT_MAX) || null;
+  const normalized = {
+    position: text(pose.position),
+    angle: text(pose.angle),
+    distance: text(pose.distance),
+    orientation: text(pose.orientation),
+    requiredFeature: text(pose.requiredFeature),
+    rulerVisible: pose.rulerVisible == null ? null : Boolean(pose.rulerVisible),
+    reason: text(pose.reason),
+  };
+  return Object.values(normalized).some((value) => value !== null) ? normalized : null;
+}
+
 // Finalize-upload input for one capture asset. The image itself already
 // went straight to Blob storage via the signed direct-upload flow — this
 // validates the metadata row we are about to trust. The URL must point at
@@ -322,6 +349,12 @@ export function normalizeAssetInput(input = {}) {
     }
     return result;
   };
+  const captureMetadata = input.captureMetadata && typeof input.captureMetadata === 'object' && !Array.isArray(input.captureMetadata)
+    ? { ...input.captureMetadata } : {};
+  const requestedPose = normalizeRequestedPose(input.requestedPose ?? captureMetadata.requestedPose);
+  if (requestedPose) captureMetadata.requestedPose = requestedPose;
+  else delete captureMetadata.requestedPose;
+
   return {
     purpose,
     classification,
@@ -332,8 +365,7 @@ export function normalizeAssetInput(input = {}) {
     sizeBytes,
     width: dimension(input.width, 'width'),
     height: dimension(input.height, 'height'),
-    captureMetadata: input.captureMetadata && typeof input.captureMetadata === 'object' && !Array.isArray(input.captureMetadata)
-      ? input.captureMetadata : {},
+    captureMetadata,
   };
 }
 
