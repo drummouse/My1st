@@ -8,6 +8,10 @@ import { createCaptureLocalStore, createIndexedDbDriver, createMemoryDriver } fr
 import { evaluateProfileEvidence, buildProfilePreviewSvg, SHOT_GUIDES } from '../../api/_lib/captureEvidence.js';
 import { validateCompleteness, DIMENSION_UNITS } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
+import CaptureFlatWallPreview from './CaptureFlatWallPreview.jsx';
+
+const MM_PER_UNIT = { mm: 1, cm: 10, in: 25.4, ft: 304.8 };
+const toMm = (measurement) => (measurement ? Number(measurement.value) * (MM_PER_UNIT[measurement.unit] || 1) : null);
 
 // IndexedDB may be unavailable (locked-down browsing contexts, some test
 // harnesses) — degrade to an in-memory driver rather than crash the scan.
@@ -210,6 +214,23 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     const { session: updated, completeness: result } = await captureApi.submit(session.id);
     onDetailChange({ ...detail, session: updated });
     setSubmitted(result);
+  });
+
+  // R2.5 — material-ready schematic proof. None of this affects the
+  // deterministic evidence gate above; it's a separate, additive readiness
+  // check for the flat-wall technical compatibility preview.
+  const materialZoneConfirmed = session.materialZoneState?.zones?.[0]?.confirmed === true;
+  const handleConfirmMaterialZone = () => act(async () => {
+    await captureApi.saveMaterialZone(session.id, { mainVisibleFaceConfirmed: true });
+    await refresh();
+  });
+  const handleTextureDirection = (value) => act(async () => {
+    await captureApi.saveTextureDirection(session.id, value);
+    await refresh();
+  });
+  const handleRunValidation = () => act(async () => {
+    await captureApi.evaluateStudioValidation(session.id);
+    await refresh();
   });
 
   const pendingFor = (view) => queueItems.find((item) => item.job.sessionId === session.id
@@ -528,6 +549,62 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
             Schematic from your confirmed measurements — not a photographic reconstruction.
             Evidence confidence: {(evidence.confidence * 100).toFixed(0)}%.
           </div>
+
+          <div className="field-label">Material zone</div>
+          <div className="control-sublabel">
+            Confirm the main visible face — the required material zone for R2. Backside and cut-edge
+            zones are not part of this technical proof.
+          </div>
+          {materialZoneConfirmed ? (
+            <div className="control-sublabel" role="status">Main visible face confirmed.</div>
+          ) : editable && (
+            <button type="button" className="btn-secondary" disabled={busy} onClick={handleConfirmMaterialZone}>
+              Confirm Main Visible Face
+            </button>
+          )}
+
+          <div className="field-label">Texture direction</div>
+          <select
+            className="control-select"
+            value={session.textureDirection || ''}
+            disabled={busy || !editable}
+            onChange={(e) => e.target.value && handleTextureDirection(e.target.value)}
+          >
+            <option value="" disabled>Choose a direction…</option>
+            <option value="along_run">Along installation run</option>
+            <option value="across_coverage">Across coverage width</option>
+            <option value="custom">Custom direction</option>
+            <option value="not_applicable">Not applicable</option>
+          </select>
+
+          <div className="field-label">Flat-wall technical compatibility preview</div>
+          {session.studioValidation ? (
+            <>
+              <div className="control-sublabel" role="status">
+                Status: {session.studioValidation.status === 'ready' ? 'Ready' : 'Needs attention'}
+              </div>
+              {session.studioValidation.issues.length > 0 && (
+                <ul className="capture-check-list">
+                  {session.studioValidation.issues.map((issue) => <li key={issue.code}>{issue.message}</li>)}
+                </ul>
+              )}
+              {session.studioValidation.status === 'ready' && (
+                <CaptureFlatWallPreview
+                  widthMm={toMm((detail.measurements || []).find((m) => m.axis === 'width'))}
+                  heightMm={toMm((detail.measurements || []).find((m) => m.axis === 'height' || m.axis === 'depth'))}
+                  textureDirection={session.textureDirection}
+                />
+              )}
+            </>
+          ) : (
+            <div className="control-sublabel">Not yet checked.</div>
+          )}
+          {editable && (
+            <button type="button" className="btn-secondary" disabled={busy} onClick={handleRunValidation}>
+              Run Technical Compatibility Check
+            </button>
+          )}
+
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={() => setPhase('measurements')} disabled={busy}>
               Back

@@ -49,6 +49,11 @@ export const DIMENSION_UNITS = Object.freeze(['mm', 'cm', 'in', 'ft']);
 // cannot be estimated against, so it blocks submission for those
 // categories only.
 export const EXPOSURE_CATEGORIES = Object.freeze(['roofing', 'siding']);
+// R2.5: the only material zone R2 requires — see the R2 authorization's
+// explicit scope ("Required main_visible_face material zone"). Backside/
+// cut-edge/custom zones are R4+ per the Material Package Specification.
+export const REQUIRED_MATERIAL_ZONE = 'main_visible_face';
+export const TEXTURE_DIRECTIONS = Object.freeze(['along_run', 'across_coverage', 'custom', 'not_applicable']);
 
 export class CaptureValidationError extends Error {
   constructor(code, message, details = {}) {
@@ -281,6 +286,32 @@ export function normalizeMeasurementInput(input = {}) {
     confidence: input.confidence == null ? null : Math.max(0, Math.min(1, Number(input.confidence))),
     sourceAssetId: clean(input.sourceAssetId) || null,
   };
+}
+
+// R2.5: material zone + texture direction — deliberately minimal. R2
+// requires confirming exactly one zone (main_visible_face); it does not
+// implement the full geometry-behavior/dimension-behavior model, backside/
+// cut-edge zones, or UV/procedural mapping — those remain R4+.
+export const MATERIAL_ZONE_SCHEMA_VERSION = 1;
+export function normalizeMaterialZoneState(input = {}) {
+  if (input.mainVisibleFaceConfirmed !== true) {
+    throw new CaptureValidationError('CAPTURE_MATERIAL_ZONE_INVALID',
+      'Confirm the main visible face material zone before continuing');
+  }
+  return {
+    schemaVersion: MATERIAL_ZONE_SCHEMA_VERSION,
+    zones: [{ zoneId: REQUIRED_MATERIAL_ZONE, confirmed: true }],
+    confirmedAt: new Date().toISOString(),
+  };
+}
+
+export function normalizeTextureDirection(input) {
+  const value = clean(input);
+  if (!TEXTURE_DIRECTIONS.includes(value)) {
+    throw new CaptureValidationError('CAPTURE_TEXTURE_DIRECTION_INVALID',
+      `Texture direction must be one of: ${TEXTURE_DIRECTIONS.join(', ')}`);
+  }
+  return value;
 }
 
 const REQUESTED_POSE_TEXT_MAX = 300;

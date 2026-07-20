@@ -458,10 +458,20 @@ export function ensureSchema() {
           published_record_id uuid references library_records(id),
           published_version integer,
           submitted_at timestamptz,
+          material_zone_state jsonb,
+          texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+          studio_validation jsonb,
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
         )
       `;
+      // R2.5: additive/nullable — existing sessions are unaffected.
+      await sql`alter table capture_sessions add column if not exists material_zone_state jsonb`;
+      await sql`alter table capture_sessions add column if not exists texture_direction text`;
+      await sql`alter table capture_sessions drop constraint if exists capture_sessions_texture_direction_check`;
+      await sql`alter table capture_sessions add constraint capture_sessions_texture_direction_check
+        check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable'))`;
+      await sql`alter table capture_sessions add column if not exists studio_validation jsonb`;
       await sql`create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null`;
       await sql`create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status)`;
 

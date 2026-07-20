@@ -232,6 +232,10 @@ create table if not exists capture_sessions (
   published_record_id uuid references library_records(id),
   published_version integer,
   submitted_at timestamptz,
+  -- R2.5: material-ready schematic proof — additive/nullable.
+  material_zone_state jsonb,
+  texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+  studio_validation jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

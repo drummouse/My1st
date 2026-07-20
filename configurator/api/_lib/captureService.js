@@ -8,6 +8,8 @@ import {
   normalizeCreateInput,
   normalizeDraftPatch,
   normalizeMeasurementInput,
+  normalizeMaterialZoneState,
+  normalizeTextureDirection,
   validateCompleteness,
 } from './capturePolicy.js';
 import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
@@ -19,6 +21,7 @@ import {
   CLAUDE_GUIDANCE_SCHEMA_VERSION,
 } from './captureClaudePolicy.js';
 import { requestClaudeGuidance as defaultRequestClaudeGuidance } from './captureClaudeClient.js';
+import { evaluateFlatWallValidation } from './captureStudioValidation.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -35,6 +38,10 @@ export function toCaptureSession(row) {
     submittedAt: row.submitted_at ?? row.submittedAt ?? null,
     publishedRecordId: row.published_record_id ?? row.publishedRecordId ?? null,
     publishedVersion: row.published_version ?? row.publishedVersion ?? null,
+    // R2.5 — material-ready schematic proof (not reconstructed geometry).
+    materialZoneState: row.material_zone_state ?? row.materialZoneState ?? null,
+    textureDirection: row.texture_direction ?? row.textureDirection ?? null,
+    studioValidation: row.studio_validation ?? row.studioValidation ?? null,
     createdAt: row.created_at ?? row.createdAt ?? null,
     updatedAt: row.updated_at ?? row.updatedAt ?? null,
   };
@@ -473,6 +480,48 @@ export function createCaptureService({
       return { analysis: toCaptureClaudeAnalysis(created ?? record) };
     },
 
+    // R2.5 — confirm the one material zone R2 requires. Does not implement
+    // backside/cut-edge zones or geometry-behavior modeling (R4+).
+    async saveMaterialZone(actor, sessionId, input) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot update material zone`, { status: row.status });
+      }
+      const materialZoneState = normalizeMaterialZoneState(input);
+      const updated = await store.updateMaterialReadiness(sessionId, { materialZoneState });
+      return { session: toCaptureSession(updated ?? { ...row, material_zone_state: materialZoneState }) };
+    },
+
+    async saveTextureDirection(actor, sessionId, input) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot update texture direction`, { status: row.status });
+      }
+      const textureDirection = normalizeTextureDirection(input?.textureDirection);
+      const updated = await store.updateMaterialReadiness(sessionId, { textureDirection });
+      return { session: toCaptureSession(updated ?? { ...row, texture_direction: textureDirection }) };
+    },
+
+    // Deterministic evaluation only — the actual on-screen preview is a
+    // client-side Three.js schematic built from these same confirmed
+    // values (D-046). Never populates the Studio DTO's geometryUrl.
+    async evaluateStudioValidation(actor, sessionId) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      const measurements = await store.listMeasurements(sessionId);
+      const result = evaluateFlatWallValidation({
+        measurements: measurements.map(toCaptureMeasurement),
+        materialZoneState: row.material_zone_state ?? row.materialZoneState ?? null,
+        textureDirection: row.texture_direction ?? row.textureDirection ?? null,
+      });
+      const updated = await store.updateMaterialReadiness(sessionId, { studioValidation: result });
+      return { validation: result, session: toCaptureSession(updated ?? { ...row, studio_validation: result }) };
+    },
+
     // Server-truth completeness for a session — the client runs the same
     // validateCompleteness locally, this endpoint answers with what the
     // submit gate will actually enforce.
@@ -863,6 +912,18 @@ export function createNeonCaptureStore(sql) {
     },
     async listClaudeAnalyses(sessionId) {
       return sql`select * from capture_claude_analyses where session_id = ${sessionId} order by created_at desc`;
+    },
+    // R2.5 — one targeted UPDATE per call; only the field(s) actually
+    // passed change, everything else on the row is untouched.
+    async updateMaterialReadiness(id, patch) {
+      const query = sql`update capture_sessions set
+          material_zone_state = coalesce(${patch.materialZoneState ? JSON.stringify(patch.materialZoneState) : null}::jsonb, material_zone_state),
+          texture_direction = coalesce(${patch.textureDirection ?? null}, texture_direction),
+          studio_validation = coalesce(${patch.studioValidation ? JSON.stringify(patch.studioValidation) : null}::jsonb, studio_validation),
+          updated_at = now()
+        where id = ${id}
+        returning *`;
+      return execute(query, null);
     },
     async upsertField(sessionId, fieldKey, value) {
       const query = sql`insert into capture_fields (session_id, field_key, value)

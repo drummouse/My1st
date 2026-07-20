@@ -15,6 +15,9 @@ const capabilityByAction = {
   asset: 'capture.create',
   'asset.replace': 'capture.create',
   'claude.guidance': 'capture.create',
+  materialZone: 'capture.create',
+  textureDirection: 'capture.create',
+  studioValidation: 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
   calibration: 'capture.create',
@@ -158,6 +161,35 @@ export default async function handler(req, res) {
       if (req.method === 'POST') {
         const { calibration } = await service.saveCalibration(actor, String(req.query.id || ''), req.body || {});
         return res.status(200).json({ calibration });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/material-zone — R2.5: confirm the single
+    // required main_visible_face zone.
+    if (action === 'materialZone') {
+      if (req.method === 'POST') {
+        const { session } = await service.saveMaterialZone(actor, String(req.query.id || ''), req.body || {});
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/texture-direction — R2.5.
+    if (action === 'textureDirection') {
+      if (req.method === 'POST') {
+        const { session } = await service.saveTextureDirection(actor, String(req.query.id || ''), req.body || {});
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/studio-validation — R2.5: honest flat-wall
+    // technical compatibility check (schematic, not reconstructed geometry).
+    if (action === 'studioValidation') {
+      if (req.method === 'POST') {
+        const { validation, session } = await service.evaluateStudioValidation(actor, String(req.query.id || ''));
+        return res.status(200).json({ validation, session });
       }
       return methodNotAllowed(res, 'POST');
     }

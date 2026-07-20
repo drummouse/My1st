@@ -177,7 +177,7 @@ export function buildProfilePreviewSvg(measurements = []) {
   const h = Math.max(24, Math.min(300, Math.round(w * ratio)));
   const label = (m) => `${m.value} ${m.unit}`;
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w + 80} ${h + 60}" role="img" aria-label="Measured profile cross-section schematic">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w + 80} ${h + 60}" role="img" aria-label="Measured schematic preview — not reconstructed geometry, not fabrication grade.">`,
     `<rect x="40" y="20" width="${w}" height="${h}" fill="none" stroke="#1c1f24" stroke-width="2"/>`,
     `<line x1="40" y1="${h + 40}" x2="${w + 40}" y2="${h + 40}" stroke="#E8541A" stroke-width="1.5"/>`,
     `<text x="${40 + w / 2}" y="${h + 56}" text-anchor="middle" font-size="14" fill="#1c1f24">${label(width)}</text>`,

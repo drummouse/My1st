@@ -40,6 +40,9 @@ export const captureApi = {
   removeMeasurement: (id, measurementId) => request(`/api/capture/sessions/${id}/measurements/${measurementId}`, { method: 'DELETE' }),
   evidence: (id) => request(`/api/capture/sessions/${id}/evidence`),
   claudeGuidance: (id) => request(`/api/capture/sessions/${id}/claude-guidance`, { method: 'POST' }),
+  saveMaterialZone: (id, input) => request(`/api/capture/sessions/${id}/material-zone`, { method: 'POST', body: input }),
+  saveTextureDirection: (id, textureDirection) => request(`/api/capture/sessions/${id}/texture-direction`, { method: 'POST', body: { textureDirection } }),
+  evaluateStudioValidation: (id) => request(`/api/capture/sessions/${id}/studio-validation`, { method: 'POST' }),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a
