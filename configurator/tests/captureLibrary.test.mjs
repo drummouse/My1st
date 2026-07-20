@@ -81,6 +81,7 @@ function makeStore(session) {
     listFields: async () => fieldsDto().map((f) => ({ field_key: f.fieldKey, value: f.value })),
     listAssets: async () => assetsDto().map((a) => ({ ...a, session_id: 'sess-1', size_bytes: 10 })),
     listComments: async () => [],
+    listMeasurements: async () => [],
     updateSessionStatus: async (id, from, to) => {
       state.statusWrites.push({ from, to });
       state.session = { ...state.session, status: to };

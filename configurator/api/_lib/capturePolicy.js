@@ -9,7 +9,13 @@ export const CAPTURE_STATUSES = Object.freeze([
   'draft', 'submitted', 'in_review', 'changes_requested',
   'approved', 'publishing', 'published', 'rejected', 'archived',
 ]);
-export const CAPTURE_TYPES = Object.freeze(['guided_product', 'quick', 'texture', 'color', 'profile', 'label']);
+// 'profile_geometry' and 'color_finish' are the revised Scanner scan types
+// (Slice R1); the earlier values stay valid so existing rows never violate
+// the widened CHECK constraint.
+export const CAPTURE_TYPES = Object.freeze([
+  'guided_product', 'quick', 'texture', 'color', 'profile', 'label',
+  'profile_geometry', 'color_finish',
+]);
 export const CAPTURE_CATEGORIES = Object.freeze([
   'roofing', 'siding', 'soffit', 'fascia', 'gutter', 'downspout', 'trim', 'accessory', 'other',
 ]);
@@ -21,7 +27,12 @@ export const EDITABLE_STATUSES = Object.freeze(['draft', 'changes_requested']);
 // already exists; nothing in Stage 1 writes them yet.
 export const ASSET_PURPOSES = Object.freeze([
   'main', 'front', 'back', 'edge', 'surface', 'label', 'packaging', 'profile', 'installed', 'other',
+  // Profile Geometry shot views (Slice R1) — adaptive capture stores each
+  // guided view under its position label.
+  'left_end', 'right_end', 'top', 'bottom', 'iso_front_left', 'iso_front_right',
 ]);
+export const MEASUREMENT_METHODS = Object.freeze(['manual', 'ruler', 'marker', 'inferred']);
+export const MEASUREMENT_FEATURES_MAX = 60;
 export const FIELD_SOURCES = Object.freeze(['manual', 'barcode', 'ocr', 'ai', 'imported', 'reviewer']);
 export const ASSET_CLASSIFICATIONS = Object.freeze(['source', 'derived']);
 // Single source of truth for what a capture image may be — api/upload.js
@@ -115,13 +126,21 @@ export function normalizeCreateInput(input = {}) {
   };
 }
 
+// Profile Geometry guided shot plan (Slice R1): the initial guided set,
+// plus one deterministic adaptive follow-up view. The adaptive request
+// machinery (positions, distances, reasons) lives in captureEvidence.js;
+// these constants are the single source of truth both it and the
+// completeness gate read.
+export const PROFILE_INITIAL_VIEWS = Object.freeze(['left_end', 'right_end', 'front', 'iso_front_left']);
+export const PROFILE_ADAPTIVE_VIEW = 'back';
+
 // Completeness validation, shared verbatim by client and server: this
 // module is pure ESM, so CapturePanel bundles the exact function the
 // submit endpoint runs — the two can never disagree (D-021). Errors block
 // submission; warnings ride along so the reviewer sees what's thin. A
 // `quick` capture only hard-requires the base identity (it exists to be
 // visibly incomplete); a `guided_product` capture must be reviewable.
-export function validateCompleteness({ session = {}, fields = [], assets = [] }) {
+export function validateCompleteness({ session = {}, fields = [], assets = [], measurements = [] }) {
   const errors = [];
   const warnings = [];
   const field = (key) => fields.find((f) => (f.fieldKey ?? f.field_key) === key)?.value ?? null;
@@ -130,8 +149,31 @@ export function validateCompleteness({ session = {}, fields = [], assets = [] })
     && (a.classification || 'source') === 'source');
   const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
   const add = (list, code, message) => list.push({ code, message });
+  const captureType = session.captureType ?? session.capture_type;
 
-  const guided = (session.captureType ?? session.capture_type) !== 'quick';
+  // Profile Geometry scan (Slice R1): evidence-driven, no category or fixed
+  // product-photo requirements — calibration, the guided view set, the
+  // adaptive follow-up, and at least one confirmed real-world measurement.
+  if (captureType === 'profile_geometry') {
+    if (!hasText(session.title)) add(errors, 'TITLE_REQUIRED', 'Name the profile.');
+    const calibration = field('calibration');
+    if (!calibration || calibration.rulerConfirmed !== true || !positive(calibration.knownMeasurement?.value)) {
+      add(errors, 'CALIBRATION_REQUIRED', 'Complete calibration: units, ruler placement, and one known measurement.');
+    }
+    const missingViews = [...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW].filter((view) => !hasPhoto(view));
+    if (missingViews.length) {
+      add(errors, 'SHOT_COVERAGE_INCOMPLETE', `Capture the remaining views: ${missingViews.join(', ')}.`);
+    }
+    if (!measurements.length) {
+      add(errors, 'MEASUREMENT_REQUIRED', 'Record at least one confirmed measurement.');
+    }
+    if (!hasText(field('description'))) add(warnings, 'DESCRIPTION_MISSING', 'A short description helps the reviewer.');
+    const totalChecks = 5;
+    const failed = errors.length + warnings.length;
+    return { errors, warnings, score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)) };
+  }
+
+  const guided = captureType !== 'quick';
   const category = session.category || null;
 
   if (!hasText(session.title)) add(errors, 'TITLE_REQUIRED', 'Give the product a name.');
@@ -171,6 +213,70 @@ export function validateCompleteness({ session = {}, fields = [], assets = [] })
     errors,
     warnings,
     score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)),
+  };
+}
+
+// Calibration evidence (Slice R1): units, one user-confirmed known
+// measurement, and ruler-adjacency confirmation, versioned so later
+// marker/CV evidence extends rather than replaces it. Stored as the
+// 'calibration' capture field.
+export const CALIBRATION_SCHEMA_VERSION = 1;
+export function normalizeCalibration(input = {}) {
+  const unit = clean(input.units);
+  if (!DIMENSION_UNITS.includes(unit)) {
+    throw new CaptureValidationError('CAPTURE_CALIBRATION_INVALID', 'Choose measurement units (mm, cm, in, ft)');
+  }
+  const known = input.knownMeasurement || {};
+  const value = Number(known.value);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new CaptureValidationError('CAPTURE_CALIBRATION_INVALID', 'Enter one known measurement of the sample');
+  }
+  const feature = clean(known.feature).slice(0, MEASUREMENT_FEATURES_MAX);
+  if (!feature) {
+    throw new CaptureValidationError('CAPTURE_CALIBRATION_INVALID', 'Name the feature the known measurement refers to');
+  }
+  if (input.rulerConfirmed !== true) {
+    throw new CaptureValidationError('CAPTURE_CALIBRATION_INVALID',
+      'Confirm the ruler is placed beside or touching the sample');
+  }
+  return {
+    schemaVersion: CALIBRATION_SCHEMA_VERSION,
+    units: unit,
+    knownMeasurement: { feature, value, unit },
+    rulerConfirmed: true,
+    confirmedAt: new Date().toISOString(),
+  };
+}
+
+// One real-world measurement row (supersedes the D-010 JSON-blob approach
+// for scan sessions; the guided_product 'dimensions' field keeps working).
+export function normalizeMeasurementInput(input = {}) {
+  const feature = clean(input.feature).slice(0, MEASUREMENT_FEATURES_MAX);
+  if (!feature) throw new CaptureValidationError('CAPTURE_MEASUREMENT_INVALID', 'Name the measured feature');
+  const value = Number(input.value);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new CaptureValidationError('CAPTURE_MEASUREMENT_INVALID', 'Measurement value must be a positive number');
+  }
+  const unit = clean(input.unit);
+  if (!DIMENSION_UNITS.includes(unit)) {
+    throw new CaptureValidationError('CAPTURE_MEASUREMENT_INVALID', 'Measurement unit must be mm, cm, in, or ft');
+  }
+  const method = clean(input.method) || 'manual';
+  if (!MEASUREMENT_METHODS.includes(method)) {
+    throw new CaptureValidationError('CAPTURE_MEASUREMENT_INVALID', `Unsupported method: ${method}`);
+  }
+  const axis = clean(input.axis) || null;
+  if (axis && !['width', 'height', 'depth', 'length'].includes(axis)) {
+    throw new CaptureValidationError('CAPTURE_MEASUREMENT_INVALID', `Unsupported axis: ${axis}`);
+  }
+  return {
+    feature,
+    axis,
+    value,
+    unit,
+    method,
+    confidence: input.confidence == null ? null : Math.max(0, Math.min(1, Number(input.confidence))),
+    sourceAssetId: clean(input.sourceAssetId) || null,
   };
 }
 

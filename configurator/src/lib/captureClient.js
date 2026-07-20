@@ -34,6 +34,10 @@ export const captureApi = {
   addComment: (id, body) => request(`/api/capture/review/${id}/comments`, { method: 'POST', body: { body } }),
   publish: (id) => request(`/api/capture/review/${id}/publish`, { method: 'POST' }),
   libraryProducts: () => request('/api/library/products'),
+  saveCalibration: (id, calibration) => request(`/api/capture/sessions/${id}/calibration`, { method: 'POST', body: calibration }),
+  addMeasurement: (id, measurement) => request(`/api/capture/sessions/${id}/measurements`, { method: 'POST', body: measurement }),
+  removeMeasurement: (id, measurementId) => request(`/api/capture/sessions/${id}/measurements/${measurementId}`, { method: 'DELETE' }),
+  evidence: (id) => request(`/api/capture/sessions/${id}/evidence`),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

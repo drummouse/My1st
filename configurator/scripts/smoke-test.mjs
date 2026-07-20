@@ -105,6 +105,10 @@ await check('auth guard /api/capture/review', '/api/capture/review', (response) 
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;
 });
+await check('auth guard /api/capture evidence', '/api/capture/sessions/smoke-test/evidence', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
 await check('auth guard /api/library/products', '/api/library/products', (response) => {
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;

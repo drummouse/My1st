@@ -7,6 +7,7 @@ import { createUploadQueue } from '../lib/captureUploadQueue.js';
 import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
 import CaptureReview from './CaptureReview.jsx';
+import CaptureProfileScan from './CaptureProfileScan.jsx';
 
 const PHOTO_PURPOSES = [
   { id: 'main', label: 'Main photo', hint: 'The whole product, straight on' },
@@ -15,6 +16,7 @@ const PHOTO_PURPOSES = [
 ];
 
 const CAPTURE_TYPES = [
+  { id: 'profile_geometry', label: 'Profile Geometry scan' },
   { id: 'guided_product', label: 'Guided product capture' },
   { id: 'quick', label: 'Quick capture' },
 ];
@@ -312,6 +314,18 @@ export default function CapturePanel({ canReview = false }) {
         <div className="control-label">Capture</div>
         <div className="control-sublabel">{status || 'Loading capture sessions…'}</div>
       </div>
+    );
+  }
+
+  // Profile Geometry scans use the phase-based Scanner flow (Slice R1);
+  // everything else keeps the guided-product editor below.
+  if (open && open.session.captureType === 'profile_geometry') {
+    return (
+      <CaptureProfileScan
+        detail={open}
+        onDetailChange={setOpen}
+        onExit={() => { setOpen(null); setForm(null); setStatus(''); load(); }}
+      />
     );
   }
 

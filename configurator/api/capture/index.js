@@ -15,6 +15,10 @@ const capabilityByAction = {
   asset: 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
+  calibration: 'capture.create',
+  measurements: 'capture.create',
+  measurement: 'capture.create',
+  evidence: 'capture.create',
   'review.queue': 'capture.review',
   'review.start': 'capture.review',
   'review.decide': 'capture.review',
@@ -117,6 +121,42 @@ export default async function handler(req, res) {
         return res.status(204).end();
       }
       return methodNotAllowed(res, 'DELETE');
+    }
+
+    // /api/capture/sessions/<id>/calibration — save calibration evidence
+    // and the known reference measurement (Slice R1).
+    if (action === 'calibration') {
+      if (req.method === 'POST') {
+        const { calibration } = await service.saveCalibration(actor, String(req.query.id || ''), req.body || {});
+        return res.status(200).json({ calibration });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/measurements — confirmed measurement rows.
+    if (action === 'measurements') {
+      if (req.method === 'POST') {
+        const { measurement } = await service.addMeasurement(actor, String(req.query.id || ''), req.body || {});
+        return res.status(201).json({ measurement });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    if (action === 'measurement') {
+      if (req.method === 'DELETE') {
+        await service.removeMeasurement(actor, String(req.query.id || ''), String(req.query.measurementId || ''));
+        return res.status(204).end();
+      }
+      return methodNotAllowed(res, 'DELETE');
+    }
+
+    // /api/capture/sessions/<id>/evidence — server-truth adaptive shot
+    // guidance (same module the client bundles).
+    if (action === 'evidence') {
+      if (req.method === 'GET') {
+        return res.status(200).json(await service.evaluateEvidence(actor, String(req.query.id || '')));
+      }
+      return methodNotAllowed(res, 'GET');
     }
 
     // /api/capture/review — permission-aware review queue.

@@ -4,11 +4,14 @@ import {
   EDITABLE_STATUSES,
   assertTransition,
   normalizeAssetInput,
+  normalizeCalibration,
   normalizeCreateInput,
   normalizeDraftPatch,
+  normalizeMeasurementInput,
   validateCompleteness,
 } from './capturePolicy.js';
 import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
+import { evaluateProfileEvidence } from './captureEvidence.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -57,6 +60,23 @@ export function toCaptureAsset(row) {
     height: row.height ?? null,
     captureMetadata: row.capture_metadata ?? row.captureMetadata ?? {},
     uploadStatus: row.upload_status ?? row.uploadStatus ?? 'complete',
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
+export function toCaptureMeasurement(row) {
+  return {
+    id: row.id,
+    sessionId: row.session_id ?? row.sessionId,
+    feature: row.feature,
+    axis: row.axis ?? null,
+    value: Number(row.value),
+    unit: row.unit,
+    method: row.method || 'manual',
+    confidence: row.confidence == null ? null : Number(row.confidence),
+    sourceAssetId: row.source_asset_id ?? row.sourceAssetId ?? null,
+    confirmedBy: row.confirmed_by ?? row.confirmedBy ?? null,
+    confirmedAt: row.confirmed_at ?? row.confirmedAt ?? null,
     createdAt: row.created_at ?? row.createdAt ?? null,
   };
 }
@@ -116,15 +136,85 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     async getSession(actor, id) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
-      const [fields, assets, comments] = await Promise.all([
-        store.listFields(id), store.listAssets(id), store.listComments(id),
+      const [fields, assets, comments, measurements] = await Promise.all([
+        store.listFields(id), store.listAssets(id), store.listComments(id), store.listMeasurements(id),
       ]);
       return {
         session: toCaptureSession(row),
         fields: fields.map(toCaptureField),
         assets: assets.map(toCaptureAsset),
         comments: comments.map(toCaptureComment),
+        measurements: measurements.map(toCaptureMeasurement),
       };
+    },
+
+    // Calibration setup (Slice R1): validated evidence saved as the
+    // 'calibration' field, and the known reference measurement recorded as
+    // a confirmed measurement row in the same step.
+    async saveCalibration(actor, id, input) {
+      const calibration = normalizeCalibration(input);
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot change calibration`, { status: row.status });
+      }
+      return store.transaction(async () => {
+        await store.upsertField(id, 'calibration', calibration);
+        await store.insertMeasurement({
+          id: randomUUID(),
+          sessionId: id,
+          ownerId: rowOwner(row),
+          feature: calibration.knownMeasurement.feature,
+          axis: null,
+          value: calibration.knownMeasurement.value,
+          unit: calibration.units,
+          method: 'ruler',
+          confidence: 1,
+          sourceAssetId: null,
+          confirmedBy: actor.id,
+        });
+        return { calibration };
+      });
+    },
+
+    async addMeasurement(actor, id, input) {
+      const normalized = normalizeMeasurementInput(input);
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot record measurements`, { status: row.status });
+      }
+      const change = {
+        id: randomUUID(), sessionId: id, ownerId: rowOwner(row),
+        // User-entered values are confirmed by the person entering them.
+        confirmedBy: actor.id, ...normalized,
+      };
+      const created = await store.insertMeasurement(change);
+      return { measurement: toCaptureMeasurement(created ?? { ...change, confirmed_at: new Date().toISOString() }) };
+    },
+
+    async removeMeasurement(actor, id, measurementId) {
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture's measurements cannot change`, { status: row.status });
+      }
+      const measurement = await store.getMeasurement(measurementId);
+      if (!measurement || (measurement.session_id ?? measurement.sessionId) !== id) {
+        throw new CaptureValidationError('CAPTURE_MEASUREMENT_NOT_FOUND', 'Measurement not found');
+      }
+      await store.deleteMeasurement(measurementId);
+      return { removed: true };
+    },
+
+    // Adaptive evidence for a profile_geometry session — same module the
+    // client runs, served here as the enforceable truth.
+    async evaluateEvidence(actor, id) {
+      const detail = await this.getSession(actor, id);
+      return evaluateProfileEvidence(detail);
     },
 
     // Idempotent by (owner, clientRef): retrying a create — flaky mobile
@@ -235,11 +325,14 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
       const outcome = assertTransition(actor.role, row.status, 'submitted');
-      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const [fields, assets, measurements] = await Promise.all([
+        store.listFields(id), store.listAssets(id), store.listMeasurements(id),
+      ]);
       const detail = {
         session: toCaptureSession(row),
         fields: fields.map(toCaptureField),
         assets: assets.map(toCaptureAsset),
+        measurements: measurements.map(toCaptureMeasurement),
       };
       const completeness = validateCompleteness(detail);
       if (completeness.errors.length) {
@@ -486,6 +579,25 @@ export function createNeonCaptureStore(sql) {
           and (${status || null}::text is null or status = ${status || null})
           and status in ('submitted','in_review','changes_requested','approved','publishing','published','rejected')
         order by submitted_at desc nulls last, updated_at desc limit ${limit}`;
+    },
+    async listMeasurements(sessionId) {
+      return sql`select * from capture_measurements where session_id = ${sessionId} order by created_at`;
+    },
+    async getMeasurement(id) {
+      const [row] = await sql`select * from capture_measurements where id = ${id}`;
+      return row || null;
+    },
+    async insertMeasurement(change) {
+      const query = sql`insert into capture_measurements
+        (id, session_id, owner_id, feature, axis, value, unit, method, confidence, source_asset_id, confirmed_by, confirmed_at)
+        values (${change.id}, ${change.sessionId}, ${change.ownerId}, ${change.feature}, ${change.axis},
+                ${change.value}, ${change.unit}, ${change.method}, ${change.confidence},
+                ${change.sourceAssetId}, ${change.confirmedBy}, now())
+        returning *`;
+      return execute(query, change);
+    },
+    async deleteMeasurement(id) {
+      await sql`delete from capture_measurements where id = ${id}`;
     },
     async listComments(sessionId) {
       return sql`select c.*, coalesce(u.business_name, u.company_name, u.email) as author_label

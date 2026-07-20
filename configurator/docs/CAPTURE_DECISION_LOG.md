@@ -5,6 +5,15 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-20 — Scanner Slice R1 (guided Profile Geometry scan foundation)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-033 | Slice R1 implements exactly the revised spec's first vertical slice — calibration setup, four guided initial views, one deterministic adaptive follow-up ('back'), confirmed measurements, measured SVG schematic + confidence, tenant-private submission — and nothing further from the revised roadmap (per explicit authorization). Flexible tags, Field Pro, color/texture scans, reconstruction, and multi-asset publication remain unauthorized. | Scope discipline; the slice proves adaptive guidance, calibration, draft recovery, and the Scanner-to-Library contract before broad UI construction, as §20 requires. | — |
+| D-034 | The adaptive-shot model is a deterministic evidence ledger (`captureEvidence.js`, pure, bundled by the client and enforced by the server — the D-021 pattern): calibration gate → initial views → one adaptive view → complete, with every shot request carrying the full §9 prompt contract (position/angle/distance/orientation/feature/ruler/reason). No computer-vision claims; CV evidence sources plug in later without changing the contract. | Honest capability boundaries; testable exhaustively in node; completion is enforceable, not advisory. | Heuristic image analysis now (rejected: unverifiable quality claims); server-only evaluation (rejected: guidance/enforcement drift). |
+| D-035 | Vocabulary widening is drop-and-re-add of named CHECK constraints (`capture_sessions_capture_type_check`, `capture_assets_purpose_check`) with legacy values retained — the repo's `users_role_check` precedent; measurements become first-class rows (`capture_measurements` with unit/method/confidence/source/confirmed-by provenance), superseding the D-010 JSON-blob for scan sessions while the guided_product `dimensions` field keeps working. The flexible-tags table is deferred with the classification slice (not in R1's acceptance). | Additive-safe on existing rows; provenance is a §8 requirement; no speculative tables. | Dropping CHECKs entirely (rejected: still-valuable typo guard); building capture_tags now (rejected: outside authorization). |
+| D-036 | The measured preview is an honestly-labelled SVG schematic (outline + real dimension callouts) generated from confirmed measurements only, shown with the evidence-confidence percentage; it is explicitly not a photographic reconstruction. Calibration saves also record the known reference as a confirmed ruler-method measurement, so scale evidence and measurements share one provenance trail. | §20's "basic measured profile preview and confidence result" without implying reconstruction capability that doesn't exist yet. | Canvas/Three.js mock reconstruction (rejected: dishonest). |
+
 ## 2026-07-20 — Stage 5 (Library publication and Studio contract)
 
 | # | Decision | Rationale | Alternatives considered |
