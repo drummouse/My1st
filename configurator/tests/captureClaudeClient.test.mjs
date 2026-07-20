@@ -3,10 +3,17 @@ import assert from 'node:assert/strict';
 import {
   isClaudeGuidanceEnabled,
   claudeGuidanceUnavailableReason,
+  claudeModelConfigured,
   requestClaudeGuidance,
 } from '../api/_lib/captureClaudeClient.js';
 
-const ENABLED_ENV = { CAPTURE_CLAUDE_GUIDANCE_ENABLED: 'true', ANTHROPIC_API_KEY: 'test-key' };
+// A deliberately unremarkable placeholder model id — this test suite never
+// asserts a specific "correct" model name; it only asserts that WHATEVER
+// value CAPTURE_CLAUDE_MODEL holds is passed through exactly, unmodified,
+// with no hardcoded fallback anywhere in the client.
+const TEST_MODEL = 'test-configured-model-id';
+const ENABLED_ENV = { CAPTURE_CLAUDE_GUIDANCE_ENABLED: 'true', ANTHROPIC_API_KEY: 'test-key', CAPTURE_CLAUDE_MODEL: TEST_MODEL };
+const ENABLED_ENV_NO_MODEL = { CAPTURE_CLAUDE_GUIDANCE_ENABLED: 'true', ANTHROPIC_API_KEY: 'test-key' };
 const baseRequest = () => ({ calibration: { units: 'mm', knownFeature: 'width' }, measurementCount: 1, acceptedAssets: [] });
 
 function okThumbnailBytes() {
@@ -49,7 +56,17 @@ test('isClaudeGuidanceEnabled / claudeGuidanceUnavailableReason require both the
   assert.equal(claudeGuidanceUnavailableReason(ENABLED_ENV), null);
 });
 
-test('disabled: no network call is made at all', async () => {
+test('claudeModelConfigured requires a non-empty string, no default, no inference', () => {
+  assert.equal(claudeModelConfigured({}), false);
+  assert.equal(claudeModelConfigured({ CAPTURE_CLAUDE_MODEL: '' }), false);
+  assert.equal(claudeModelConfigured({ CAPTURE_CLAUDE_MODEL: '   ' }), false);
+  assert.equal(claudeModelConfigured({ CAPTURE_CLAUDE_MODEL: 123 }), false, 'non-string values are rejected, not coerced');
+  assert.equal(claudeModelConfigured({ CAPTURE_CLAUDE_MODEL: TEST_MODEL }), true);
+});
+
+// Required test 1: guidance disabled with no model configured — the model
+// gate must never even be reached; the reason stays exactly 'disabled'.
+test('1. disabled with no model configured: reason is "disabled", not a model-related error, no network call', async () => {
   const fetchImpl = mockFetch();
   const result = await requestClaudeGuidance(baseRequest(), { env: {}, fetchImpl });
   assert.deepEqual(result, { ok: false, reason: 'disabled' });
@@ -63,6 +80,51 @@ test('unavailable (flag on, no key): no network call is made', async () => {
   });
   assert.deepEqual(result, { ok: false, reason: 'unavailable' });
   assert.equal(fetchImpl.calls.length, 0);
+});
+
+// Required test 2 + 5: guidance enabled but CAPTURE_CLAUDE_MODEL missing —
+// a controlled 'configuration_error', never a request, never a hardcoded
+// substitute model.
+test('2/5. enabled with no model configured: reason is "configuration_error", no network call, no hardcoded fallback', async () => {
+  const fetchImpl = mockFetch();
+  const result = await requestClaudeGuidance(baseRequest(), { env: ENABLED_ENV_NO_MODEL, fetchImpl });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'configuration_error');
+  assert.equal(fetchImpl.calls.length, 0, 'a missing model must never reach the network — not even the thumbnail fetch');
+});
+
+// Required test 3: guidance enabled with a valid configured model succeeds
+// normally, end to end.
+test('3. enabled with a valid configured model: the call proceeds and succeeds normally', async () => {
+  const fetchImpl = mockFetch({ toolInput: { confidence: 0.5, shotRequest: null } });
+  const result = await requestClaudeGuidance(baseRequest(), {
+    env: ENABLED_ENV, fetchImpl, assetThumbnails: [{ assetId: 'a1', url: 'https://thumb.example/a1.jpg' }],
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.raw, { confidence: 0.5, shotRequest: null });
+});
+
+// Required test 4: the configured model string is passed EXACTLY to the
+// Anthropic request body — never altered, never defaulted.
+test('4. the configured model is passed exactly, verbatim, in the API request body', async () => {
+  const fetchImpl = mockFetch({ toolInput: { confidence: 0.5 } });
+  await requestClaudeGuidance(baseRequest(), {
+    env: ENABLED_ENV, fetchImpl, assetThumbnails: [{ assetId: 'a1', url: 'https://thumb.example/a1.jpg' }],
+  });
+  const apiCall = fetchImpl.calls.find((c) => c.options && c.options.method === 'POST');
+  const sentBody = JSON.parse(apiCall.options.body);
+  assert.equal(sentBody.model, TEST_MODEL);
+
+  // A different configured value is passed exactly as-is too — proving
+  // there's no hardcoded model string anywhere in the client.
+  const otherFetch = mockFetch({ toolInput: { confidence: 0.5 } });
+  await requestClaudeGuidance(baseRequest(), {
+    env: { ...ENABLED_ENV, CAPTURE_CLAUDE_MODEL: 'a-completely-different-model-id' },
+    fetchImpl: otherFetch,
+    assetThumbnails: [{ assetId: 'a1', url: 'https://thumb.example/a1.jpg' }],
+  });
+  const otherApiCall = otherFetch.calls.find((c) => c.options && c.options.method === 'POST');
+  assert.equal(JSON.parse(otherApiCall.options.body).model, 'a-completely-different-model-id');
 });
 
 test('a successful call returns the raw tool input and image count, using only thumbnails', async () => {

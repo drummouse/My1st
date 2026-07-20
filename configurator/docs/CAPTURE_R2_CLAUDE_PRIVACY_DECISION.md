@@ -137,6 +137,47 @@ JPEG is sufficient for "what feature is unclear" and "what shot would help"
 — the same judgment a human reviewer could make from a decent-quality
 photo, not from forensic-grade pixels.
 
+## 14. Model configuration (release-readiness correction, 2026-07-20)
+
+The Anthropic model identifier is **not hardcoded anywhere in the code**.
+It is read exclusively from a third, independent, server-only environment
+variable: `CAPTURE_CLAUDE_MODEL`.
+
+**Required-value matrix, by state:**
+
+| `CAPTURE_CLAUDE_GUIDANCE_ENABLED` | `ANTHROPIC_API_KEY` | `CAPTURE_CLAUDE_MODEL` | Result |
+| --- | --- | --- | --- |
+| not `'true'` | (any) | (any) | `disabled` — no network call, model is irrelevant and never checked |
+| `'true'` | absent | (any) | `unavailable` — no network call |
+| `'true'` | present | absent/empty | `configuration_error` — no network call, deterministic fallback preserved, workflow not blocked |
+| `'true'` | present | a non-empty string | The call proceeds; that exact string is sent as `model` in the Anthropic Messages API request body, unmodified |
+
+**Failure behavior:** a `configuration_error` outcome is recorded as an
+immutable `capture_claude_analyses` row (`status: 'configuration_error'`,
+`findings: null`, a short non-sensitive `diagnostic`), exactly like every
+other non-`advisory` outcome (`disabled`, `unavailable`, `timeout`,
+`error`, `invalid`, `no_images_available`). It is surfaced to the client as
+an ordinary unsuccessful-guidance response — the deterministic evidence
+gate (calibration + guided views + confirmed measurement) is completely
+unaware this ever happened.
+
+**Changing the model without a code deployment:** because the value is
+read fresh from `process.env` on every call (never cached, never
+compiled in), an operator changes which Anthropic model is used by editing
+`CAPTURE_CLAUDE_MODEL` in the hosting platform's environment-variable
+settings and redeploying (or, on platforms supporting live env-var
+updates without a rebuild, immediately) — no source change, no new
+release, no PR.
+
+**Recommended value once the owner is ready to provision this:** at the
+time of this decision, a current, valid Anthropic Messages API model
+identifier is `claude-sonnet-5` (the latest generally-available Sonnet
+tier, per Anthropic's own model-naming guidance to default to the latest
+capable model for new integrations). This is a **documentation
+recommendation only** — nothing in the code defaults to it, silently
+substitutes it, or requires it. The owner may configure any valid
+Anthropic Messages API model identifier for their account.
+
 ## Conclusion
 
 The design above already follows the stated default recommendation in
@@ -144,14 +185,18 @@ full: original preserved and never sent, minimum-sufficient derived image
 generated and sent, derivative never represented as the original, no new
 public/temporary URL created, audit metadata recorded for every attempt
 (including failures), timeout/failure paths that never block capture
-completion.
+completion. Model selection is now a pure, server-only, no-default
+environment concern (§14), closing the "hardcoded model" release-readiness
+finding.
 
 **Decision: implementation may proceed** (kill switch off by default,
 building the integration code and its tests is not itself "enabling" it).
 **Going live in any real environment still requires**, separately from this
 document: (a) the owner provisioning a real `ANTHROPIC_API_KEY` as an
 environment secret (this session does not do that and cannot — no secrets
-are committed), and (b) the owner explicitly setting
-`CAPTURE_CLAUDE_GUIDANCE_ENABLED=true` for that environment, ideally after
-confirming §7/§8 (provider retention terms, tenant disclosure) for that
-specific deployment. Recorded as decision D-043 in `CAPTURE_DECISION_LOG.md`.
+are committed), (b) the owner setting `CAPTURE_CLAUDE_MODEL` to a valid
+Anthropic Messages API model identifier for that environment, and (c) the
+owner explicitly setting `CAPTURE_CLAUDE_GUIDANCE_ENABLED=true` for that
+environment, ideally after confirming §7/§8 (provider retention terms,
+tenant disclosure) for that specific deployment. Recorded as decisions
+D-043 and D-048 in `CAPTURE_DECISION_LOG.md`.

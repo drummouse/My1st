@@ -573,7 +573,7 @@ export function ensureSchema() {
           session_id uuid not null references capture_sessions(id) on delete cascade,
           owner_id uuid not null references users(id),
           status text not null check (status in
-            ('advisory','disabled','unavailable','no_images_available','timeout','error','invalid')),
+            ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
           model text,
           prompt_version text,
           schema_version integer,
@@ -585,6 +585,13 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id)`;
+      // Release-readiness fixup: 'configuration_error' added for the
+      // required-CAPTURE_CLAUDE_MODEL correction — widen the existing
+      // constraint for preview branches that already created this table
+      // with the narrower list (same drop-and-re-add idiom as D-035).
+      await sql`alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check`;
+      await sql`alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
+        ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'))`;
     })().catch((err) => {
       schemaReady = undefined;
       throw err;

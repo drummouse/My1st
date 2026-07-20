@@ -2,18 +2,25 @@ import { CLAUDE_GUIDANCE_TOOL_SCHEMA } from './captureClaudePolicy.js';
 
 // Server-side Claude vision integration (R2.4). Direct `fetch` against the
 // Anthropic Messages API — no SDK dependency (decision log: a single call
-// site doesn't justify @anthropic-ai/sdk). Two independent gates must both
-// be true before any network call happens:
-//   1. CAPTURE_CLAUDE_GUIDANCE_ENABLED === 'true' — evaluated server-side
-//      only, never trusted from the client.
-//   2. ANTHROPIC_API_KEY is set.
+// site doesn't justify @anthropic-ai/sdk). Three independent, server-only
+// gates must all be satisfied before any network call happens:
+//   1. CAPTURE_CLAUDE_GUIDANCE_ENABLED === 'true' — never trusted from the
+//      client, never exposed to the browser.
+//   2. ANTHROPIC_API_KEY is set — never exposed to the browser.
+//   3. CAPTURE_CLAUDE_MODEL is set — the exact Anthropic Messages API model
+//      identifier to use, required ONLY once (1) and (2) hold. There is no
+//      hardcoded default and no silent fallback to another model: an
+//      operator changes which model is used by editing this one
+//      environment variable and redeploying — no code change, no new
+//      release. Read fresh from `env` on every call (never cached at
+//      module load), so it stays a pure environment concern. See
+//      docs/CAPTURE_R2_CLAUDE_PRIVACY_DECISION.md and decision D-048.
 // What image data this sends and why is documented in
 // docs/CAPTURE_R2_CLAUDE_PRIVACY_DECISION.md — read that before changing
 // this file's request-building logic.
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
-const CLAUDE_MODEL_ID = 'claude-sonnet-5';
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_IMAGES_PER_REQUEST = 6;
 
@@ -22,11 +29,21 @@ export function isClaudeGuidanceEnabled(env = process.env) {
 }
 
 // Reason recorded when the call is skipped entirely — never a secret, never
-// a stack trace, just which of the two independent gates is closed.
+// a stack trace, just which of the first two gates is closed. (The third
+// gate, the model identifier, is checked separately in
+// requestClaudeGuidance — it only matters once guidance is otherwise
+// enabled, so it deliberately isn't folded into this function.)
 export function claudeGuidanceUnavailableReason(env = process.env) {
   if (env.CAPTURE_CLAUDE_GUIDANCE_ENABLED !== 'true') return 'disabled';
   if (!env.ANTHROPIC_API_KEY) return 'unavailable';
   return null;
+}
+
+// True only when CAPTURE_CLAUDE_MODEL is a non-empty string. No default,
+// no inference from another value — an empty/missing value is always a
+// configuration error, never silently resolved.
+export function claudeModelConfigured(env = process.env) {
+  return typeof env.CAPTURE_CLAUDE_MODEL === 'string' && env.CAPTURE_CLAUDE_MODEL.trim().length > 0;
 }
 
 // Fetches an ALREADY-GENERATED derived thumbnail's bytes and base64-encodes
@@ -80,6 +97,12 @@ export async function requestClaudeGuidance(request, {
   if (!isClaudeGuidanceEnabled(env)) {
     return { ok: false, reason: claudeGuidanceUnavailableReason(env) };
   }
+  if (!claudeModelConfigured(env)) {
+    // Enabled but misconfigured: a controlled, diagnosable outcome — never
+    // a request made, never a silently chosen or hardcoded model.
+    return { ok: false, reason: 'configuration_error', error: 'CAPTURE_CLAUDE_MODEL is not set' };
+  }
+  const model = env.CAPTURE_CLAUDE_MODEL.trim();
 
   const thumbnails = [];
   for (const asset of assetThumbnails.slice(0, MAX_IMAGES_PER_REQUEST)) {
@@ -103,7 +126,7 @@ export async function requestClaudeGuidance(request, {
         'anthropic-version': ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL_ID,
+        model,
         max_tokens: 1024,
         tools: [CLAUDE_GUIDANCE_TOOL_SCHEMA],
         tool_choice: { type: 'tool', name: CLAUDE_GUIDANCE_TOOL_SCHEMA.name },
@@ -119,7 +142,7 @@ export async function requestClaudeGuidance(request, {
       return { ok: false, reason: 'invalid', error: 'No structured tool response returned' };
     }
     return {
-      ok: true, raw: toolUse.input, model: body.model || CLAUDE_MODEL_ID, imageCount: thumbnails.length,
+      ok: true, raw: toolUse.input, model: body.model || model, imageCount: thumbnails.length,
     };
   } catch (error) {
     const timedOut = error?.name === 'AbortError';
@@ -128,5 +151,3 @@ export async function requestClaudeGuidance(request, {
     clearTimeout(timer);
   }
 }
-
-export { CLAUDE_MODEL_ID };

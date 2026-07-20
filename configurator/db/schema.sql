@@ -313,7 +313,7 @@ create table if not exists capture_claude_analyses (
   session_id uuid not null references capture_sessions(id) on delete cascade,
   owner_id uuid not null references users(id),
   status text not null check (status in
-    ('advisory','disabled','unavailable','no_images_available','timeout','error','invalid')),
+    ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
   model text,
   prompt_version text,
   schema_version integer,

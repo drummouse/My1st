@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createCaptureService } from '../api/_lib/captureService.js';
+import { evaluateProfileEvidence } from '../api/_lib/captureEvidence.js';
 
 test('claude.guidance is capability-mapped, rewritten, smoke-guarded, and schema-backed', async () => {
   const route = await readFile(new URL('../api/capture/index.js', import.meta.url), 'utf8');
@@ -19,7 +20,7 @@ test('claude.guidance is capability-mapped, rewritten, smoke-guarded, and schema
     await readFile(new URL('../db/schema.sql', import.meta.url), 'utf8'),
   ]) {
     assert.match(source, /create table if not exists capture_claude_analyses/);
-    assert.match(source, /'advisory','disabled','unavailable','no_images_available','timeout','error','invalid'/);
+    assert.match(source, /'advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'/);
   }
 });
 
@@ -80,8 +81,8 @@ test('cross-tenant and locked sessions are refused before any Claude call is att
   assert.equal(calls, 0, 'no Claude call for a request that never should have reached it');
 });
 
-test('a disabled/unavailable/timeout/error outcome is recorded verbatim, with no findings', async () => {
-  for (const reason of ['disabled', 'unavailable', 'no_images_available', 'timeout', 'error']) {
+test('a disabled/unavailable/configuration_error/timeout/error outcome is recorded verbatim, with no findings', async () => {
+  for (const reason of ['disabled', 'unavailable', 'configuration_error', 'no_images_available', 'timeout', 'error']) {
     const store = makeStore(undefined, { assets: [sourceAsset()], fields: [calibrationField()] });
     const requestClaudeGuidance = async () => ({ ok: false, reason, error: reason === 'error' ? 'boom' : undefined });
     const { analysis } = await createCaptureService({ store, requestClaudeGuidance, randomUUID: () => 'analysis-1' })
@@ -91,6 +92,33 @@ test('a disabled/unavailable/timeout/error outcome is recorded verbatim, with no
     assert.equal(analysis.sourceAssetIds.length, 1);
     assert.equal(store.state.inserted.length, 1, 'every attempt is recorded, even failures');
   }
+});
+
+// Required test 6: a missing CAPTURE_CLAUDE_MODEL must never block the
+// Capture workflow — the session's normal evidence/completeness/submission
+// path is completely untouched by requestGuidance's outcome, success or
+// not. requestGuidance itself never throws for this case (matching every
+// other non-ok outcome), so the caller (the API route, then the client)
+// always gets a normal response to fall back to deterministic guidance with.
+test('6. a configuration_error (missing model) does not throw and does not block the capture workflow', async () => {
+  const store = makeStore(undefined, { assets: [sourceAsset()], fields: [calibrationField()] });
+  const requestClaudeGuidance = async () => ({ ok: false, reason: 'configuration_error', error: 'CAPTURE_CLAUDE_MODEL is not set' });
+  const service = createCaptureService({ store, requestClaudeGuidance, randomUUID: () => 'analysis-cfg' });
+
+  const { analysis } = await service.requestGuidance(OWNER, 's1');
+  assert.equal(analysis.status, 'configuration_error');
+  assert.equal(analysis.findings, null);
+
+  // The session itself is completely unaffected — still draft, still
+  // editable — and a second call doesn't throw either (never wedges the
+  // session into some error state).
+  assert.equal(store.state.session.status, 'draft');
+  await assert.doesNotReject(service.requestGuidance(OWNER, 's1'));
+  const evidence = evaluateProfileEvidence({
+    fields: store.state.fields.map((f) => ({ fieldKey: f.field_key, value: f.value })),
+    assets: store.state.assets, measurements: [],
+  });
+  assert.ok(evidence.phase, 'deterministic evidence evaluation is entirely unaffected by the Claude outcome');
 });
 
 test('a valid Claude response is validated, persisted as status "advisory", and returned', async () => {
