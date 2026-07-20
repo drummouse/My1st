@@ -221,7 +221,7 @@ create table if not exists capture_sessions (
   owner_id uuid not null references users(id),
   client_ref text,
   capture_type text not null default 'guided_product'
-    check (capture_type in ('guided_product','quick','texture','color','profile','label')),
+    check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish')),
   category text check (category is null or category in ('roofing','siding','soffit','fascia','gutter','downspout','trim','accessory','other')),
   title text,
   status text not null default 'draft'
@@ -242,7 +242,7 @@ create table if not exists capture_assets (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references capture_sessions(id) on delete cascade,
   owner_id uuid not null references users(id),
-  purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other')),
+  purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right')),
   classification text not null default 'source' check (classification in ('source','derived')),
   source_asset_id uuid references capture_assets(id),
   url text not null,
@@ -278,6 +278,24 @@ create table if not exists capture_review_comments (
   body text not null,
   created_at timestamptz not null default now()
 );
+
+-- Real-world measurements with provenance (Scanner Slice R1).
+create table if not exists capture_measurements (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  feature text not null,
+  axis text check (axis is null or axis in ('width','height','depth','length')),
+  value numeric not null,
+  unit text not null check (unit in ('mm','cm','in','ft')),
+  method text not null default 'manual' check (method in ('manual','ruler','marker','inferred')),
+  confidence numeric,
+  source_asset_id uuid references capture_assets(id),
+  confirmed_by uuid references users(id),
+  confirmed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id);
 create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
 
 create table if not exists library_migrations (

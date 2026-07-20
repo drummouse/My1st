@@ -101,6 +101,7 @@ function makeStore(session) {
     listFields: async () => state.fields,
     listAssets: async () => state.assets,
     listComments: async () => [],
+    listMeasurements: async () => [],
     applySubmission: async (id, fromStatus, snapshot, completeness) => {
       state.submissions.push({ id, fromStatus, snapshot, completeness });
       return { ...state.session, status: 'submitted', completeness };

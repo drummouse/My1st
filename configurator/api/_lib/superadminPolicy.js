@@ -14,6 +14,7 @@ const ROLE_CAPABILITIES = {
     'capture.create',
     'capture.review',
     'capture.publish.tenant',
+    'library.read',
   ],
   reseller: [
     'users.create',
@@ -30,6 +31,7 @@ const ROLE_CAPABILITIES = {
     'capture.create',
     'capture.review',
     'capture.publish.tenant',
+    'library.read',
     'users.create',
     'users.freeze',
     'users.block',

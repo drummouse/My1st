@@ -53,6 +53,7 @@ function makeStore(session) {
     listFields: async () => [],
     listAssets: async () => state.assets,
     listComments: async () => [],
+    listMeasurements: async () => [],
     getAsset: async (id) => state.assets.find((asset) => asset.id === id) || null,
     insertAsset: async (change) => { state.inserted.push(change); return change; },
     deleteAssetWithDerivatives: async (id) => { state.deleted.push(id); },

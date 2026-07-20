@@ -447,7 +447,7 @@ export function ensureSchema() {
           owner_id uuid not null references users(id),
           client_ref text,
           capture_type text not null default 'guided_product'
-            check (capture_type in ('guided_product','quick','texture','color','profile','label')),
+            check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish')),
           category text check (category is null or category in ('roofing','siding','soffit','fascia','gutter','downspout','trim','accessory','other')),
           title text,
           status text not null default 'draft'
@@ -470,7 +470,7 @@ export function ensureSchema() {
           id uuid primary key default gen_random_uuid(),
           session_id uuid not null references capture_sessions(id) on delete cascade,
           owner_id uuid not null references users(id),
-          purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other')),
+          purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right')),
           classification text not null default 'source' check (classification in ('source','derived')),
           source_asset_id uuid references capture_assets(id),
           url text not null,
@@ -512,6 +512,38 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id)`;
+
+      // Slice R1 widening: tables created by the Stage 1 shape carry the
+      // narrower CHECK lists, so drop and re-add with the current allowed
+      // values — same idempotent pattern as users_role_check above. The
+      // create-table literals above already carry the widened lists for
+      // fresh databases.
+      await sql`alter table capture_sessions drop constraint if exists capture_sessions_capture_type_check`;
+      await sql`alter table capture_sessions add constraint capture_sessions_capture_type_check check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish'))`;
+      await sql`alter table capture_assets drop constraint if exists capture_assets_purpose_check`;
+      await sql`alter table capture_assets add constraint capture_assets_purpose_check check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right'))`;
+
+      // Real-world measurements with provenance (Slice R1; supersedes the
+      // JSON-blob dimensions approach for scan sessions — D-010 revisited).
+      // Values never live in Blob storage and images never live here.
+      await sql`
+        create table if not exists capture_measurements (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          owner_id uuid not null references users(id),
+          feature text not null,
+          axis text check (axis is null or axis in ('width','height','depth','length')),
+          value numeric not null,
+          unit text not null check (unit in ('mm','cm','in','ft')),
+          method text not null default 'manual' check (method in ('manual','ruler','marker','inferred')),
+          confidence numeric,
+          source_asset_id uuid references capture_assets(id),
+          confirmed_by uuid references users(id),
+          confirmed_at timestamptz,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id)`;
     })().catch((err) => {
       schemaReady = undefined;
       throw err;

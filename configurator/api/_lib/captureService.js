@@ -4,10 +4,14 @@ import {
   EDITABLE_STATUSES,
   assertTransition,
   normalizeAssetInput,
+  normalizeCalibration,
   normalizeCreateInput,
   normalizeDraftPatch,
+  normalizeMeasurementInput,
   validateCompleteness,
 } from './capturePolicy.js';
+import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
+import { evaluateProfileEvidence } from './captureEvidence.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -56,6 +60,23 @@ export function toCaptureAsset(row) {
     height: row.height ?? null,
     captureMetadata: row.capture_metadata ?? row.captureMetadata ?? {},
     uploadStatus: row.upload_status ?? row.uploadStatus ?? 'complete',
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
+export function toCaptureMeasurement(row) {
+  return {
+    id: row.id,
+    sessionId: row.session_id ?? row.sessionId,
+    feature: row.feature,
+    axis: row.axis ?? null,
+    value: Number(row.value),
+    unit: row.unit,
+    method: row.method || 'manual',
+    confidence: row.confidence == null ? null : Number(row.confidence),
+    sourceAssetId: row.source_asset_id ?? row.sourceAssetId ?? null,
+    confirmedBy: row.confirmed_by ?? row.confirmedBy ?? null,
+    confirmedAt: row.confirmed_at ?? row.confirmedAt ?? null,
     createdAt: row.created_at ?? row.createdAt ?? null,
   };
 }
@@ -115,15 +136,85 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     async getSession(actor, id) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
-      const [fields, assets, comments] = await Promise.all([
-        store.listFields(id), store.listAssets(id), store.listComments(id),
+      const [fields, assets, comments, measurements] = await Promise.all([
+        store.listFields(id), store.listAssets(id), store.listComments(id), store.listMeasurements(id),
       ]);
       return {
         session: toCaptureSession(row),
         fields: fields.map(toCaptureField),
         assets: assets.map(toCaptureAsset),
         comments: comments.map(toCaptureComment),
+        measurements: measurements.map(toCaptureMeasurement),
       };
+    },
+
+    // Calibration setup (Slice R1): validated evidence saved as the
+    // 'calibration' field, and the known reference measurement recorded as
+    // a confirmed measurement row in the same step.
+    async saveCalibration(actor, id, input) {
+      const calibration = normalizeCalibration(input);
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot change calibration`, { status: row.status });
+      }
+      return store.transaction(async () => {
+        await store.upsertField(id, 'calibration', calibration);
+        await store.insertMeasurement({
+          id: randomUUID(),
+          sessionId: id,
+          ownerId: rowOwner(row),
+          feature: calibration.knownMeasurement.feature,
+          axis: null,
+          value: calibration.knownMeasurement.value,
+          unit: calibration.units,
+          method: 'ruler',
+          confidence: 1,
+          sourceAssetId: null,
+          confirmedBy: actor.id,
+        });
+        return { calibration };
+      });
+    },
+
+    async addMeasurement(actor, id, input) {
+      const normalized = normalizeMeasurementInput(input);
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot record measurements`, { status: row.status });
+      }
+      const change = {
+        id: randomUUID(), sessionId: id, ownerId: rowOwner(row),
+        // User-entered values are confirmed by the person entering them.
+        confirmedBy: actor.id, ...normalized,
+      };
+      const created = await store.insertMeasurement(change);
+      return { measurement: toCaptureMeasurement(created ?? { ...change, confirmed_at: new Date().toISOString() }) };
+    },
+
+    async removeMeasurement(actor, id, measurementId) {
+      const row = await store.getSession(id);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture's measurements cannot change`, { status: row.status });
+      }
+      const measurement = await store.getMeasurement(measurementId);
+      if (!measurement || (measurement.session_id ?? measurement.sessionId) !== id) {
+        throw new CaptureValidationError('CAPTURE_MEASUREMENT_NOT_FOUND', 'Measurement not found');
+      }
+      await store.deleteMeasurement(measurementId);
+      return { removed: true };
+    },
+
+    // Adaptive evidence for a profile_geometry session — same module the
+    // client runs, served here as the enforceable truth.
+    async evaluateEvidence(actor, id) {
+      const detail = await this.getSession(actor, id);
+      return evaluateProfileEvidence(detail);
     },
 
     // Idempotent by (owner, clientRef): retrying a create — flaky mobile
@@ -234,11 +325,14 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
       const outcome = assertTransition(actor.role, row.status, 'submitted');
-      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const [fields, assets, measurements] = await Promise.all([
+        store.listFields(id), store.listAssets(id), store.listMeasurements(id),
+      ]);
       const detail = {
         session: toCaptureSession(row),
         fields: fields.map(toCaptureField),
         assets: assets.map(toCaptureAsset),
+        measurements: measurements.map(toCaptureMeasurement),
       };
       const completeness = validateCompleteness(detail);
       if (completeness.errors.length) {
@@ -315,6 +409,78 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
         await store.appendAudit(audit(actor, outcome.audit, id, outcome.reason, outcome.metadata));
         return { session: toCaptureSession(updated ?? { ...row, status: toStatus }) };
       });
+    },
+
+    // Publish an approved capture as a tenant-private Library product.
+    // Deliberately two steps so a failed Library write retries without
+    // re-review: approved -> publishing (audited claim), then the record
+    // insert + publishing -> published atomically. Idempotent throughout —
+    // an existing record for this session (external_reference) is reused,
+    // and publishing a published session returns the stored result.
+    async publishSession(actor, id) {
+      let row = await store.getSession(id);
+      assertVisible(actor, row);
+
+      if (row.status === 'published') {
+        const existing = await store.findLibraryRecordByReference(captureExternalReference(id));
+        return {
+          session: toCaptureSession(row),
+          product: existing ? toStudioProduct(existing, existing.details || {}) : null,
+          alreadyPublished: true,
+        };
+      }
+
+      // Claim (or re-claim for retry) — both transitions are audited and
+      // capability-checked by the state machine.
+      const claim = assertTransition(actor.role, row.status, 'publishing');
+      await store.transaction(async () => {
+        const updated = await store.updateSessionStatus(id, row.status, 'publishing');
+        await store.appendAudit(audit(actor, claim.audit, id, null, claim.metadata));
+        row = updated ?? { ...row, status: 'publishing' };
+      });
+
+      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const detail = {
+        session: toCaptureSession(row),
+        fields: fields.map(toCaptureField),
+        assets: assets.map(toCaptureAsset),
+      };
+
+      let record = await store.findLibraryRecordByReference(captureExternalReference(id));
+      const finish = assertTransition(actor.role, 'publishing', 'published');
+      const result = await store.transaction(async () => {
+        if (!record) {
+          const publication = buildLibraryPublication(detail);
+          record = await store.insertLibraryPublication({
+            id: randomUUID(),
+            version: 1,
+            createdBy: actor.id,
+            ...publication.record,
+          }, publication.details);
+        }
+        const recordVersion = Number(record.version || 1);
+        const updated = await store.updateSessionPublished(id, record.id, recordVersion);
+        await store.appendAudit(audit(actor, finish.audit, id, null, {
+          ...finish.metadata, recordId: record.id, recordVersion,
+        }));
+        return {
+          session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
+          product: toStudioProduct(record, record.details || {}),
+          alreadyPublished: false,
+        };
+      });
+      return result;
+    },
+
+    // Studio-readable published products: approved, active, tenant-scoped
+    // Library records (any source, not only capture) as the Studio DTO.
+    async listPublishedProducts(actor, filters = {}) {
+      const rows = await store.listPublishedLibraryProducts({
+        tenantId: actor.id,
+        includeAllTenants: actor.role === 'superadmin',
+        limit: Math.min(100, Math.max(1, Number(filters.limit) || 50)),
+      });
+      return rows.map((row) => toStudioProduct(row, row.details || {}));
     },
 
     async archiveSession(actor, id, reason) {
@@ -414,6 +580,25 @@ export function createNeonCaptureStore(sql) {
           and status in ('submitted','in_review','changes_requested','approved','publishing','published','rejected')
         order by submitted_at desc nulls last, updated_at desc limit ${limit}`;
     },
+    async listMeasurements(sessionId) {
+      return sql`select * from capture_measurements where session_id = ${sessionId} order by created_at`;
+    },
+    async getMeasurement(id) {
+      const [row] = await sql`select * from capture_measurements where id = ${id}`;
+      return row || null;
+    },
+    async insertMeasurement(change) {
+      const query = sql`insert into capture_measurements
+        (id, session_id, owner_id, feature, axis, value, unit, method, confidence, source_asset_id, confirmed_by, confirmed_at)
+        values (${change.id}, ${change.sessionId}, ${change.ownerId}, ${change.feature}, ${change.axis},
+                ${change.value}, ${change.unit}, ${change.method}, ${change.confidence},
+                ${change.sourceAssetId}, ${change.confirmedBy}, now())
+        returning *`;
+      return execute(query, change);
+    },
+    async deleteMeasurement(id) {
+      await sql`delete from capture_measurements where id = ${id}`;
+    },
     async listComments(sessionId) {
       return sql`select c.*, coalesce(u.business_name, u.company_name, u.email) as author_label
         from capture_review_comments c
@@ -426,6 +611,48 @@ export function createNeonCaptureStore(sql) {
         values (${change.id}, ${change.sessionId}, ${change.authorId}, ${change.body})
         returning *`;
       return execute(query, change);
+    },
+    async findLibraryRecordByReference(externalReference) {
+      const [row] = await sql`select r.*,
+          (select row_to_json(d) from library_product_details d where d.record_id = r.id) as details
+        from library_records r where r.external_reference = ${externalReference}`;
+      return row || null;
+    },
+    async insertLibraryPublication(change, details) {
+      const query = sql`insert into library_records
+        (id, record_type, scope, tenant_id, name, code, description, lifecycle_status, review_status,
+         quality_level, version, source_type, external_reference, thumbnail_url, metadata, created_by, updated_by)
+        values (${change.id}, ${change.recordType}, ${change.scope}, ${change.tenantId}, ${change.name},
+                ${change.code}, ${change.description}, ${change.lifecycleStatus}, ${change.reviewStatus},
+                ${change.qualityLevel}, ${change.version}, ${change.sourceType}, ${change.externalReference},
+                ${change.thumbnailUrl}, ${JSON.stringify(change.metadata || {})}::jsonb, ${change.createdBy}, ${change.createdBy})
+        returning *`;
+      if (pendingQueries) {
+        pendingQueries.push(query);
+        pendingQueries.push(sql`insert into library_product_details (record_id, unit, price, application_metadata)
+          values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
+          on conflict (record_id) do nothing`);
+        return { ...change, details };
+      }
+      const row = await query;
+      await sql`insert into library_product_details (record_id, unit, price, application_metadata)
+        values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
+        on conflict (record_id) do nothing`;
+      return { ...(row[0] || change), details };
+    },
+    async updateSessionPublished(id, recordId, recordVersion) {
+      const query = sql`update capture_sessions set status = 'published',
+          published_record_id = ${recordId}, published_version = ${recordVersion}, updated_at = now()
+        where id = ${id} and status = 'publishing' returning *`;
+      return execute(query, null);
+    },
+    async listPublishedLibraryProducts({ tenantId, includeAllTenants, limit }) {
+      return sql`select r.*,
+          (select row_to_json(d) from library_product_details d where d.record_id = r.id) as details
+        from library_records r
+        where r.record_type = 'product' and r.review_status = 'approved' and r.lifecycle_status = 'active'
+          and (r.scope = 'global' or ${Boolean(includeAllTenants)} or r.tenant_id = ${tenantId})
+        order by r.updated_at desc limit ${limit}`;
     },
     async listAssets(sessionId) {
       return sql`select * from capture_assets where session_id = ${sessionId} order by created_at`;
