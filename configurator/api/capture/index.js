@@ -18,6 +18,7 @@ const capabilityByAction = {
   materialZone: 'capture.create',
   textureDirection: 'capture.create',
   studioValidation: 'capture.create',
+  'materialPackage.dryRun': 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
   calibration: 'capture.create',
@@ -192,6 +193,17 @@ export default async function handler(req, res) {
         return res.status(200).json({ validation, session });
       }
       return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/material-package/dry-run — R2.6: side-
+    // effect-free validation of the R2 material-package manifest subset.
+    // GET, not POST — nothing here is ever written.
+    if (action === 'materialPackage.dryRun') {
+      if (req.method === 'GET') {
+        const result = await service.dryRunMaterialPackage(actor, String(req.query.id || ''));
+        return res.status(200).json(result);
+      }
+      return methodNotAllowed(res, 'GET');
     }
 
     // /api/capture/sessions/<id>/measurements — confirmed measurement rows.

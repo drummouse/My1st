@@ -43,6 +43,7 @@ export const captureApi = {
   saveMaterialZone: (id, input) => request(`/api/capture/sessions/${id}/material-zone`, { method: 'POST', body: input }),
   saveTextureDirection: (id, textureDirection) => request(`/api/capture/sessions/${id}/texture-direction`, { method: 'POST', body: { textureDirection } }),
   evaluateStudioValidation: (id) => request(`/api/capture/sessions/${id}/studio-validation`, { method: 'POST' }),
+  dryRunMaterialPackage: (id) => request(`/api/capture/sessions/${id}/material-package/dry-run`),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

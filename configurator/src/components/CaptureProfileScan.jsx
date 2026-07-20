@@ -233,6 +233,14 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     await refresh();
   });
 
+  // R2.6 — side-effect-free: this never creates a Library record, never
+  // changes session/review status, never publishes anything.
+  const [dryRunResult, setDryRunResult] = useState(null);
+  const handleDryRun = () => act(async () => {
+    const result = await captureApi.dryRunMaterialPackage(session.id);
+    setDryRunResult(result);
+  });
+
   const pendingFor = (view) => queueItems.find((item) => item.job.sessionId === session.id
     && item.job.purpose === view && item.status !== 'done');
   // A superseded (replaced) source asset no longer counts as "the" photo
@@ -639,6 +647,28 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
               <div className="control-sublabel">
                 Completeness {completeness.score}% · visibility: private to your company.
               </div>
+
+              <div className="field-label">Material package (dry run)</div>
+              <div className="control-sublabel">
+                Side-effect-free check — validates the proposed tenant-private submission shape.
+                Does not create a Library record, change status, or publish anything.
+              </div>
+              <button type="button" className="btn-secondary" disabled={busy} onClick={handleDryRun}>
+                Preview Material Package (Dry Run)
+              </button>
+              {dryRunResult && (
+                <>
+                  <div className="control-sublabel" role="status">
+                    {dryRunResult.validation.valid ? 'Package shape valid.' : `${dryRunResult.validation.errors.length} issue(s) found:`}
+                  </div>
+                  {dryRunResult.validation.errors.length > 0 && (
+                    <ul className="capture-check-list capture-check-errors">
+                      {dryRunResult.validation.errors.map((e, i) => <li key={`${e.code}-${i}`}>{e.message}</li>)}
+                    </ul>
+                  )}
+                </>
+              )}
+
               {editable && (
                 <button
                   type="button"

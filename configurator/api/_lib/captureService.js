@@ -22,6 +22,7 @@ import {
 } from './captureClaudePolicy.js';
 import { requestClaudeGuidance as defaultRequestClaudeGuidance } from './captureClaudeClient.js';
 import { evaluateFlatWallValidation } from './captureStudioValidation.js';
+import { buildR2PackageManifest, validateR2PackageDryRun } from './captureMaterialPackage.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -520,6 +521,41 @@ export function createCaptureService({
       });
       const updated = await store.updateMaterialReadiness(sessionId, { studioValidation: result });
       return { validation: result, session: toCaptureSession(updated ?? { ...row, studio_validation: result }) };
+    },
+
+    // R2.6 — side-effect-free dry-run over the R2 material-package
+    // manifest subset. Read-only by construction: every store call below
+    // is a list/get, never an insert/update/delete. Does not create a
+    // Library record, does not change capture session status, does not
+    // transition review status, does not publish anything, and does not
+    // touch the existing approved->publishing->published flow
+    // (capturePublish.js is not imported by this method at all).
+    // `identity.proposedReviewStatus` is always the literal string
+    // 'pending_review' — describing the PROPOSED target of a future real
+    // submission, never something this call writes anywhere.
+    async dryRunMaterialPackage(actor, sessionId) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      const [fields, assets, measurements, claudeAnalyses] = await Promise.all([
+        store.listFields(sessionId), store.listAssets(sessionId), store.listMeasurements(sessionId),
+        store.listClaudeAnalyses(sessionId),
+      ]);
+      const session = toCaptureSession(row);
+      const fieldDtos = fields.map(toCaptureField);
+      const assetDtos = assets.map(toCaptureAsset);
+      const measurementDtos = measurements.map(toCaptureMeasurement);
+      const claudeDtos = claudeAnalyses.map(toCaptureClaudeAnalysis);
+
+      const evidence = evaluateProfileEvidence({ fields: fieldDtos, assets: assetDtos, measurements: measurementDtos });
+      const completeness = validateCompleteness({ session, fields: fieldDtos, assets: assetDtos, measurements: measurementDtos });
+
+      const manifest = buildR2PackageManifest({
+        session, fields: fieldDtos, assets: assetDtos, measurements: measurementDtos,
+        claudeAnalyses: claudeDtos, evidence, actor,
+      });
+      const validation = validateR2PackageDryRun({ completeness, studioValidation: session.studioValidation });
+
+      return { manifest, validation };
     },
 
     // Server-truth completeness for a session — the client runs the same
