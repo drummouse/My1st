@@ -42,6 +42,15 @@ test('reseller gets full user lifecycle + catalog + skins, but no platform-wide 
   }
 });
 
+test('owner, reseller, and superadmin can all manage their own comms identity; only superadmin can drain the outbox', () => {
+  for (const role of ['owner', 'reseller', 'superadmin']) {
+    assert.equal(hasCapability(role, 'comms.manage'), true, role);
+  }
+  assert.equal(hasCapability('owner', 'comms.operate'), false);
+  assert.equal(hasCapability('reseller', 'comms.operate'), false);
+  assert.equal(hasCapability('superadmin', 'comms.operate'), true);
+});
+
 test('transitions require a reason and reject self-restriction', () => {
   assert.throws(
     () => assertAccountTransition(

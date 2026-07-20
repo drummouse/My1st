@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildRestrictionNotifications,
+  buildDesignApprovedNotifications,
   deliverNotification,
 } from '../api/_lib/notifications.js';
 import { changeAccountStatus } from '../api/_lib/accountAdministration.js';
@@ -78,4 +79,43 @@ test('configured provider marks delivery sent', async () => {
   );
   assert.deepEqual(result, { status: 'sent', error: null });
   assert.equal(delivered.length, 1);
+});
+
+test('a design-approved notice is only queued per channel the project actually has, signed with the resolved brand', () => {
+  const withBoth = buildDesignApprovedNotifications(
+    { id: 'p1', job_number: '26-180-ER', customer_name: 'Jim', customer_email: 'jim@example.com', customer_phone: '+17805550123' },
+    'IW-ABC123',
+    'https://example.com/?p=p1',
+    'Acme Roofing',
+  );
+  assert.deepEqual(withBoth.map((row) => row.channel), ['email', 'sms']);
+  assert.equal(withBoth[0].destination, 'jim@example.com');
+  assert.equal(withBoth[1].destination, '+17805550123');
+  for (const row of withBoth) {
+    assert.equal(row.supportReference, 'IW-ABC123');
+    assert.match(row.payload.message, /Dear Jim/);
+    assert.match(row.payload.message, /Best wishes,\nAcme Roofing team/);
+    assert.equal(row.payload.shareUrl, 'https://example.com/?p=p1');
+  }
+
+  const emailOnly = buildDesignApprovedNotifications(
+    { id: 'p2', customer_email: 'only@example.com' }, 'IW-DEF456', 'https://example.com/?p=p2', 'Acme Roofing',
+  );
+  assert.deepEqual(emailOnly.map((row) => row.channel), ['email']);
+  assert.match(emailOnly[0].payload.message, /^Hello, /);
+
+  const neither = buildDesignApprovedNotifications({ id: 'p3' }, 'IW-GHI789', 'https://example.com/?p=p3', 'Acme Roofing');
+  assert.deepEqual(neither, []);
+});
+
+test('deliverNotification resolves destination/identity from an explicit context, not a nonexistent row.destination column', async () => {
+  const delivered = [];
+  const result = await deliverNotification(
+    { channel: 'sms', payload: { message: 'hi' } },
+    { sms: async (payload, destination, identity) => delivered.push({ payload, destination, identity }) },
+    { destination: '+17805550199', identity: { brandName: 'Acme Roofing', replyTo: 'owner@acme.example' } },
+  );
+  assert.deepEqual(result, { status: 'sent', error: null });
+  assert.equal(delivered[0].destination, '+17805550199');
+  assert.equal(delivered[0].identity.brandName, 'Acme Roofing');
 });

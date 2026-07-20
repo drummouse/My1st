@@ -47,6 +47,8 @@ const BLANK_HOUSE = {
   jobNumber: '',
   customerName: '',
   address: '',
+  customerEmail: '',
+  customerPhone: '',
   layers: [],
   measurements: {
     soffitSqft: 0,

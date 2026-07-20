@@ -29,6 +29,7 @@ the code where that thing happens, not building a general dispatcher up front.
 | `address` | text | |
 | `design` | jsonb | Full design snapshot — see below |
 | `owner_id` | uuid | The contractor account this project belongs to; null on projects saved before accounts existed |
+| `customer_email`, `customer_phone` | text | Optional — entered in the House/Project panel. Only used to address the `design.approved` direct customer notice below; blank means that notice is simply never queued |
 | `approved_at` | timestamptz | Null until the customer clicks "Approve This Design" |
 | `approved_by_name` | text | Optional name the customer typed in when approving |
 | `created_at` / `updated_at` | timestamptz | |
@@ -75,6 +76,19 @@ Colors Library section.
 
 `id`, `project_id`, `kind` (`'file'|'photo'`), `file_name`, `url`, `mime_type`, `size_bytes`.
 
+### Sender identity (`sender_identities` table, one row per owner/reseller)
+
+`user_id`, `notify_mode` (`'self'` default, or `'platform'`), `display_name`, `contact_email`. See
+README's Communications section — there is no per-tenant phone number/domain here, just a
+notify-mode choice and the brand name/reply-to used when the platform sends on a tenant's behalf.
+
+### Notification (`notification_outbox` table)
+
+`id`, `channel` (`'in_app'|'email'|'sms'`), `template`, `payload` (jsonb — includes the message
+text and, for `design-approved`, `shareUrl`), `status` (`'pending'|'sent'|'failed'`), `to_email`,
+`to_phone`, `sender_user_id` (which tenant's brand/reply-to to send under — null for a platform
+account notice), `support_reference`.
+
 ## Commands (REST API surface)
 
 All routes are under `/api`. Public routes need no session; authenticated routes require the
@@ -93,6 +107,8 @@ All routes are under `/api`. Public routes need no session; authenticated routes
 | `/api/materials`, `/api/materials/:id` | GET/POST, PUT/DELETE | Same split as colors | Same `developer` write access as colors |
 | `/api/attachments?projectId=`, `/api/attachments/:id` | GET/POST, DELETE | GET is **public**; POST/DELETE require the project's owner | 15 MB/photo, 25 MB/file, 200 MB/project; a `developer` account can POST/DELETE on any owner's project |
 | `/api/upload` | POST | Authenticated | Vercel Blob client-upload token endpoint; `kind` is `logo`\|`photo`\|`file` |
+| `/api/comms?action=identity` | GET, PUT | Authenticated | An owner/reseller's own `sender_identities` row — notify-mode, display name, contact email |
+| `/api/comms?action=drain` | POST | Authenticated, `comms.operate` (superadmin only) | Delivery worker: sends up to `?limit=` (default 25) pending/failed `notification_outbox` rows via the platform's shared Twilio/Gmail credentials |
 
 Each of the above is implemented as a single Vercel serverless function per resource (an optional
 catch-all route dispatching on path + method internally) rather than one file per verb, to stay
@@ -106,7 +122,12 @@ the code when a second event is actually needed.
 
 | Event | Fires when | Delivery |
 | --- | --- | --- |
-| `design.approved` | A customer clicks "Approve This Design" on a `?p=` link (`api/projects/[[...id]].js`'s `approve` route) | POSTed as JSON to the owner's `notification_webhook_url` (Settings → Notifications), if set. Best-effort with a 5s timeout — a failing/slow webhook never changes the approval response the customer sees. |
+| `design.approved` | A customer clicks "Approve This Design" on a `?p=` link (`api/projects/[[...id]].js`'s `approve` route) | POSTed as JSON to the owner's `notification_webhook_url` (Settings → Notifications), if set — independent of, and in addition to, the direct customer notice below. Best-effort with a 5s timeout — a failing/slow webhook never changes the approval response the customer sees. |
+
+If the owning tenant's `notify_mode` is `'platform'` (Settings → Communications), the same
+approval also queues a direct email/SMS to the project's `customer_email`/`customer_phone` (skipped
+entirely for a `'self'` tenant, or if neither field is set) — see README's Communications section
+and `api/_lib/notifications.js`'s `buildDesignApprovedNotifications`.
 
 `design.approved` payload:
 

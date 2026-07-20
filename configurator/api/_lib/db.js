@@ -112,6 +112,50 @@ export function ensureSchema() {
           created_at timestamptz not null default now()
         )
       `;
+      // Widened for business-facing comms (a tenant notifying its own
+      // client, e.g. design.approved), not just platform account notices:
+      // user_id stays the "internal recipient" case (nullable now, since a
+      // business notice's recipient is a project's customer, not a `users`
+      // row), to_email/to_phone carry the actual destination for either
+      // case, and sender_user_id names whose sender identity (see
+      // sender_identities below) should send it — null means "the platform
+      // default identity," used for every existing account-notice call site
+      // unchanged.
+      await sql`alter table notification_outbox alter column user_id drop not null`;
+      await sql`alter table notification_outbox add column if not exists sender_user_id uuid references users(id)`;
+      await sql`alter table notification_outbox add column if not exists to_email text`;
+      await sql`alter table notification_outbox add column if not exists to_phone text`;
+
+      // One row per reseller/owner — their comms preference, not a
+      // dedicated sending account. No per-tenant Twilio number or email
+      // domain: every platform-sent notice rides the platform's single
+      // shared Twilio number and Gmail account (see commsDelivery.js), only
+      // the message signature/Reply-To vary by tenant. `notify_mode`:
+      // 'platform' — the platform (or, if this tenant has a reseller, the
+      // reseller's own brand) sends design-approved/etc. notices to this
+      // tenant's clients on their behalf; 'self' — the tenant handles that
+      // themselves, manually or via their own automation against
+      // `settings.notification_webhook_url`. Defaults to 'self' so nothing
+      // changes for an existing tenant until they explicitly opt in.
+      await sql`
+        create table if not exists sender_identities (
+          id uuid primary key default gen_random_uuid(),
+          user_id uuid not null references users(id),
+          notify_mode text not null default 'self',
+          display_name text,
+          contact_email text,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+      `;
+      await sql`create unique index if not exists sender_identities_user_id_key on sender_identities (user_id)`;
+      await sql`
+        do $$ begin
+          alter table sender_identities add constraint sender_identities_notify_mode_check
+            check (notify_mode in ('platform', 'self'));
+        exception when duplicate_object then null;
+        end $$
+      `;
 
       await sql`
         create table if not exists projects (
@@ -129,6 +173,12 @@ export function ensureSchema() {
       // already there.
       await sql`alter table projects add column if not exists approved_at timestamptz`;
       await sql`alter table projects add column if not exists approved_by_name text`;
+      // Optional customer contact, entered in the House/Project panel —
+      // lets the design.approved event notify the customer directly (via
+      // the owning tenant's own sender identity), not just the owner's
+      // configured webhook. Blank/absent just skips that notification.
+      await sql`alter table projects add column if not exists customer_email text`;
+      await sql`alter table projects add column if not exists customer_phone text`;
       // Multi-tenancy: which signed-up user this project belongs to. Nullable
       // so projects saved before accounts existed don't become orphaned by
       // the migration; ownerless rows just aren't returned by the

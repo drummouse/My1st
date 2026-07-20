@@ -41,6 +41,15 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
   const [profileStatus, setProfileStatus] = useState('');
   const [profileBusy, setProfileBusy] = useState(false);
 
+  // Communications (notify-mode preference) — same self-contained
+  // fetch/save shape as Company Profile above, but against /api/comms
+  // rather than /api/auth. Superadmin has no row (see commsIdentity.js's
+  // cascade); the block is hidden for that role rather than shown with
+  // nothing to do.
+  const [commsForm, setCommsForm] = useState({ notifyMode: 'self', displayName: '', contactEmail: '' });
+  const [commsStatus, setCommsStatus] = useState('');
+  const [commsBusy, setCommsBusy] = useState(false);
+
   useEffect(() => {
     fetch('/api/auth/me')
       .then((res) => {
@@ -49,6 +58,7 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
       })
       .then((u) => {
         setProfile({
+          role: u.role || 'owner',
           firstName: u.firstName || '', lastName: u.lastName || '', businessName: u.businessName || '',
           phone: u.phone || '', addressLine: u.addressLine || '', city: u.city || '',
           country: (u.regionCode || 'CA-AB').split('-')[0], regionCode: u.regionCode || 'CA-AB',
@@ -56,7 +66,39 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
         });
       })
       .catch((err) => console.error('Profile fetch error:', err));
+
+    fetch('/api/comms?action=identity')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!body?.identity) return;
+        setCommsForm({
+          notifyMode: body.identity.notify_mode || 'self',
+          displayName: body.identity.display_name || '',
+          contactEmail: body.identity.contact_email || '',
+        });
+      })
+      .catch((err) => console.error('Comms identity fetch error:', err));
   }, []);
+
+  const handleCommsSave = async () => {
+    setCommsBusy(true);
+    setCommsStatus('Saving…');
+    try {
+      const res = await fetch('/api/comms?action=identity', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commsForm),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      setCommsStatus('Saved.');
+    } catch (err) {
+      console.error('Comms identity save error:', err);
+      setCommsStatus(err.message || 'Could not save.');
+    }
+    setCommsBusy(false);
+    setTimeout(() => setCommsStatus(''), 4000);
+  };
 
   const handleProfileSave = async () => {
     setProfileBusy(true);
@@ -287,6 +329,79 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           <div className="export-buttons" style={{ marginTop: '0.5rem' }}>
             <button type="button" className="btn-secondary" onClick={handleProfileSave} disabled={profileBusy} style={{ width: '100%' }}>
               Save Company Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {profile && profile.role === 'reseller' && (
+        <div className="control-block">
+          <div className="field-label">Communications</div>
+          <div className="control-sublabel">
+            The brand name shown to the owner accounts you create — their password-reset and
+            account notices are signed with this name instead of the platform's.
+          </div>
+          <label className="field-label" htmlFor="comms-display-name">Display name</label>
+          <input
+            id="comms-display-name" type="text" className="control-select" value={commsForm.displayName}
+            onChange={(e) => setCommsForm((f) => ({ ...f, displayName: e.target.value }))}
+          />
+          {commsStatus && <div className="control-sublabel">{commsStatus}</div>}
+          <div className="export-buttons" style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn-secondary" onClick={handleCommsSave} disabled={commsBusy} style={{ width: '100%' }}>
+              Save Communications
+            </button>
+          </div>
+        </div>
+      )}
+
+      {profile && profile.role === 'owner' && (
+        <div className="control-block">
+          <div className="field-label">Communications</div>
+          <div className="control-sublabel">Who notifies your clients when a design is approved?</div>
+          <div className="settings-row-wide" style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
+            <label>
+              <input
+                type="radio" name="notify-mode" checked={commsForm.notifyMode === 'self'}
+                onChange={() => setCommsForm((f) => ({ ...f, notifyMode: 'self' }))}
+              /> I'll handle it
+            </label>
+            <label>
+              <input
+                type="radio" name="notify-mode" checked={commsForm.notifyMode === 'platform'}
+                onChange={() => setCommsForm((f) => ({ ...f, notifyMode: 'platform' }))}
+              /> Notify them for me
+            </label>
+          </div>
+          {commsForm.notifyMode === 'self' ? (
+            <div className="control-sublabel">
+              You'll notify clients yourself — manually, or automatically through the Notification
+              Webhook URL below (Integrations), which fires to your own CRM/automation on every
+              design approval.
+            </div>
+          ) : (
+            <>
+              <label className="field-label" htmlFor="comms-display-name">Display name (signs every message)</label>
+              <input
+                id="comms-display-name" type="text" className="control-select" value={commsForm.displayName}
+                onChange={(e) => setCommsForm((f) => ({ ...f, displayName: e.target.value }))}
+              />
+              <label className="field-label" htmlFor="comms-contact-email">Contact email (where replies land)</label>
+              <input
+                id="comms-contact-email" type="email" className="control-select" value={commsForm.contactEmail}
+                onChange={(e) => setCommsForm((f) => ({ ...f, contactEmail: e.target.value }))}
+              />
+              <div className="control-sublabel">
+                Clients get an email/text like "Dear &lt;client&gt;, your design has been approved…
+                Best wishes, {commsForm.displayName || 'your business'} team" — sent from the
+                platform's own number/mail account, replies routed to you.
+              </div>
+            </>
+          )}
+          {commsStatus && <div className="control-sublabel">{commsStatus}</div>}
+          <div className="export-buttons" style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn-secondary" onClick={handleCommsSave} disabled={commsBusy} style={{ width: '100%' }}>
+              Save Communications
             </button>
           </div>
         </div>
