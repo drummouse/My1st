@@ -5,10 +5,15 @@ import { capabilitiesForRole } from '../api/_lib/superadminPolicy.js';
 
 test('every Capture route authorizes server-side before any dispatch', async () => {
   const source = await readFile(new URL('../api/capture/index.js', import.meta.url), 'utf8');
-  const authorization = source.indexOf("requireCapability(req, res, 'capture.create')");
+  // Every action must map to an explicit capability; unknown actions 404
+  // before any authorization or dispatch.
+  const mapStart = source.indexOf('const capabilityByAction');
+  const authorization = source.indexOf('requireCapability(req, res, capability)');
   const firstDispatch = source.indexOf("action === 'sessions'");
-  assert.ok(authorization > -1, 'capture handler must call requireCapability');
+  assert.ok(mapStart > -1, 'capture handler must declare capabilityByAction');
+  assert.ok(authorization > -1, 'capture handler must call requireCapability with the mapped capability');
   assert.ok(firstDispatch > authorization, 'authorization must run before action dispatch');
+  assert.match(source, /sessions: 'capture\.create'/);
   assert.doesNotMatch(source, /req\.body\?\.capabilities|req\.headers\?\.role/);
 });
 

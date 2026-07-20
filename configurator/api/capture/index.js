@@ -5,11 +5,22 @@ import { createCaptureService, createNeonCaptureStore } from '../_lib/captureSer
 
 // IronWrap Capture API — one consolidated Vercel function (Hobby-plan
 // function cap; see api/projects/index.js for the pattern). Paths are mapped
-// to query params by vercel.json rewrites:
-//   /api/capture/sessions       -> ?action=sessions        list/create
-//   /api/capture/sessions/<id>  -> ?action=session&id=<id> read/update/archive
-// Every action requires the capture.create capability server-side before any
-// dispatch; ownership is enforced per-row inside captureService.js.
+// to query params by vercel.json rewrites. Every action names its required
+// capability here and is authorized server-side before any dispatch;
+// ownership/row scoping is enforced inside captureService.js.
+const capabilityByAction = {
+  sessions: 'capture.create',
+  session: 'capture.create',
+  assets: 'capture.create',
+  asset: 'capture.create',
+  validate: 'capture.create',
+  submit: 'capture.create',
+  'review.queue': 'capture.review',
+  'review.start': 'capture.review',
+  'review.decide': 'capture.review',
+  'review.comments': 'capture.review',
+};
+
 function methodNotAllowed(res, allowed) {
   res.setHeader('Allow', allowed);
   res.status(405).json({ error: 'Method not allowed' });
@@ -25,9 +36,11 @@ const ERROR_STATUS = {
 
 export default async function handler(req, res) {
   const action = String(req.query.action || 'sessions');
+  const capability = capabilityByAction[action];
+  if (!capability) return res.status(404).json({ error: 'Unknown Capture action' });
   try {
     await ensureSchema();
-    const actor = await requireCapability(req, res, 'capture.create');
+    const actor = await requireCapability(req, res, capability);
     if (!actor) return;
     const service = createCaptureService({ store: createNeonCaptureStore(sql) });
 
@@ -102,6 +115,48 @@ export default async function handler(req, res) {
         return res.status(204).end();
       }
       return methodNotAllowed(res, 'DELETE');
+    }
+
+    // /api/capture/review — permission-aware review queue.
+    if (action === 'review.queue') {
+      if (req.method === 'GET') {
+        return res.status(200).json({ sessions: await service.listReviewQueue(actor, req.query) });
+      }
+      return methodNotAllowed(res, 'GET');
+    }
+
+    // /api/capture/review/<id>/start — claim a submission for review.
+    if (action === 'review.start') {
+      if (req.method === 'POST') {
+        const { session } = await service.startReview(actor, String(req.query.id || ''));
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/review/<id>/decision — approve / request_changes / reject.
+    if (action === 'review.decide') {
+      if (req.method === 'POST') {
+        const { session } = await service.decideReview(
+          actor, String(req.query.id || ''), String(req.body?.decision || ''), req.body?.reason,
+        );
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/review/<id>/comments — reviewer/contributor thread.
+    if (action === 'review.comments') {
+      const id = String(req.query.id || '');
+      if (req.method === 'GET') {
+        const detail = await service.getSession(actor, id);
+        return res.status(200).json({ comments: detail.comments });
+      }
+      if (req.method === 'POST') {
+        const { comment } = await service.addComment(actor, id, req.body?.body);
+        return res.status(201).json({ comment });
+      }
+      return methodNotAllowed(res, 'GET, POST');
     }
 
     res.status(404).json({ error: 'Unknown Capture action' });

@@ -6,6 +6,7 @@ import { createUploadQueue } from '../lib/captureUploadQueue.js';
 // completeness the user sees is the completeness the server enforces.
 import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
+import CaptureReview from './CaptureReview.jsx';
 
 const PHOTO_PURPOSES = [
   { id: 'main', label: 'Main photo', hint: 'The whole product, straight on' },
@@ -96,7 +97,8 @@ const completenessFromForm = (open, form) => validateCompleteness({
 // Stage 1–3 Capture workspace: recoverable drafts, main/surface/label
 // photos with upload sync states, guided product metadata, shared
 // completeness validation, and submit/resubmit. Review arrives Stage 4.
-export default function CapturePanel() {
+export default function CapturePanel({ canReview = false }) {
+  const [mode, setMode] = useState('mine'); // 'mine' | 'review'
   const [sessions, setSessions] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -227,6 +229,39 @@ export default function CapturePanel() {
       setBusy(false);
     }
   };
+
+  const modeToggle = canReview ? (
+    <div className="export-buttons" role="tablist" aria-label="Capture workspace mode">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'mine'}
+        className={mode === 'mine' ? 'btn-primary' : 'btn-secondary'}
+        onClick={() => setMode('mine')}
+      >
+        My Captures
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'review'}
+        className={mode === 'review' ? 'btn-primary' : 'btn-secondary'}
+        onClick={() => setMode('review')}
+      >
+        Review Queue
+      </button>
+    </div>
+  ) : null;
+
+  if (mode === 'review' && canReview) {
+    return (
+      <div className="settings-panel">
+        <div className="control-label">Capture</div>
+        {modeToggle}
+        <CaptureReview />
+      </div>
+    );
+  }
 
   if (!sessions) {
     return (
@@ -460,6 +495,21 @@ export default function CapturePanel() {
           placeholder="Supplier yard, condition, anything the reviewer should know"
         />
 
+        {(open.comments || []).length > 0 && (
+          <>
+            <div className="field-label">Reviewer comments</div>
+            <ul className="capture-comment-list">
+              {open.comments.map((c) => (
+                <li key={c.id}>
+                  <span className="capture-comment-author">{c.authorLabel || 'Reviewer'}</span>
+                  {' · '}{new Date(c.createdAt).toLocaleString()}
+                  <div>{c.body}</div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
         <div className="field-label">Review &amp; submit</div>
         <div className="control-sublabel">
           Completeness: {completeness.score}% · Visibility: private to your company until reviewed.
@@ -516,6 +566,7 @@ export default function CapturePanel() {
       <div className="control-sublabel">
         Digitize a product for review. Drafts save to your account — start on one device, resume on another.
       </div>
+      {modeToggle}
       <div className="export-buttons">
         {CAPTURE_TYPES.map(({ id, label }) => (
           <button key={id} type="button" className="btn-primary" onClick={() => handleCreate(id)} disabled={busy}>

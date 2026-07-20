@@ -28,6 +28,10 @@ export const captureApi = {
   removeAsset: (id, assetId) => request(`/api/capture/sessions/${id}/assets/${assetId}`, { method: 'DELETE' }),
   validate: (id) => request(`/api/capture/sessions/${id}/validate`),
   submit: (id) => request(`/api/capture/sessions/${id}/submit`, { method: 'POST' }),
+  reviewQueue: (status) => request(`/api/capture/review${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  startReview: (id) => request(`/api/capture/review/${id}/start`, { method: 'POST' }),
+  decideReview: (id, decision, reason) => request(`/api/capture/review/${id}/decision`, { method: 'POST', body: { decision, reason } }),
+  addComment: (id, body) => request(`/api/capture/review/${id}/comments`, { method: 'POST', body: { body } }),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

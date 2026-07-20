@@ -1048,3 +1048,55 @@ body {
 }
 .capture-check-list li { margin: 0.15rem 0; }
 .capture-check-errors { color: #991b1b; font-weight: 600; }
+
+/* Capture (Stage 4): review workspace — images beside metadata on desktop,
+   stacked on mobile; comment thread; color chip. */
+.capture-review-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+  margin: 0.5rem 0;
+}
+@media (max-width: 860px) {
+  .capture-review-layout { grid-template-columns: 1fr; }
+}
+.capture-review-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.capture-review-table th {
+  text-align: left;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem 0.25rem 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+.capture-review-table td { padding: 0.25rem 0; color: #1c1f24; }
+.capture-comment-list {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+.capture-comment-list li {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  background: #fff;
+}
+.capture-comment-author { font-weight: 600; }
+.capture-color-chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  margin-right: 0.35rem;
+  vertical-align: text-bottom;
+}
