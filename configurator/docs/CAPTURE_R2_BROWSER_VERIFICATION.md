@@ -145,14 +145,44 @@ session-scoped, capability-gated route (`GET
 server-side with the existing `BLOB_READ_WRITE_TOKEN` (no new secret was
 needed or used); every Capture `<img>`/`<a>` now renders through this
 proxy. Unit-tested (owner/cross-tenant/foreign-session/missing-blob cases)
-and confirmed via `npm test`/`npm run build`/`git diff --check`. **Live
-re-verification of the real-upload checklist against the redeployed
-preview is recorded below, once available** — see the session's final
-report for the actual pass/fail outcome; do not assume success from this
-paragraph alone. Explicitly deferred (D-052, same root cause, different
-resource/authorization shape, out of this pass): logo/attachment uploads
-(shared store, public-facing pages), published-Library thumbnails, and
-Claude guidance's server-side thumbnail fetch.
+and confirmed via `npm test` (229/229), `npm run build`, `git diff --check`.
+Explicitly deferred (D-052, same root cause, different resource/
+authorization shape, out of this pass): logo/attachment uploads (shared
+store, public-facing pages), published-Library thumbnails, and Claude
+guidance's server-side thumbnail fetch.
+
+### Real end-to-end upload validation — RESULT: PASS (2026-07-20, commit `4006681`)
+
+Re-ran with a real Playwright browser, a real file, against the
+redeployed preview (`ironwrap-estimator`, deployment `CrFVTg3cPSJmD6DUJbqTSMNaE8pg` → `4006681386c5976990e9b27b2feb4fd9539a3c10`), same account/browser/viewport as the run record above.
+
+**21 of 22 automated checks passed outright.** The 22nd (proxy serves real
+image bytes) failed only because the test script's assertion never fired —
+the app's own UI legitimately doesn't render a captured view's `<img>`
+until that view is either evidence-complete or currently requested
+(`captureEvidence.js`'s documented `shotRequests` contract: lists only
+still-needed views), so no browser-triggered blob-proxy request happened
+during that particular flow. **Independently and definitively verified**
+by fetching the exact same authenticated route directly: `GET
+/api/capture/sessions/:id/assets/:assetId/blob` returned `200`,
+`content-type: image/jpeg`, and the response body — once a curl output
+artifact was stripped — was confirmed byte-for-byte identical to the
+original 64,617-byte source file (verified as a valid 1200×900 JPEG via
+PIL). Real, effective result: **22 of 22**.
+
+| Real-upload check | Result | Evidence |
+| --- | --- | --- |
+| 1. Real photo upload succeeds | ✅ pass | `/api/upload` → 200; asset finalize → 201 |
+| 2. The returned Blob reference is persisted correctly | ✅ pass | Asset URL is a real `https://*.private.blob.vercel-storage.com/...jpg` URL, stored on the row |
+| 3. Duplicate upload retry returns the existing accepted asset, no duplicate | ✅ pass | Same-checksum retry → `200`, `duplicate:true`, identical asset id, no second row |
+| 4. Asset replacement creates the new asset and preserves supersession lineage | ✅ pass | New asset created; old asset's `supersededBy` points at it; old asset's checksum/url untouched |
+| 5. Refresh and close/reopen restore the draft and upload state correctly | ✅ pass | Verified server-side (asset intact, same id/checksum/url) across both a page refresh and a genuine new-browser-process close+reopen |
+| 6. A deliberate upload failure produces the correct recoverable state | ✅ pass | All 3 automatic queue attempts failed (simulated) → "Upload failed — tap Retry" shown |
+| 7. Retrying after the deliberate failure succeeds, no duplicates | ✅ pass | Retry → real upload succeeds; exactly one non-superseded source asset for that view afterward |
+| 8. The R2 Library dry-run remains side-effect-free | ✅ pass | `/api/library/products` count unchanged across two dry-run calls against the real-upload session; session status stayed `draft` |
+| 9. Submission does not publish automatically | ✅ pass | Library product count unchanged across a real submit call |
+| 10. Existing tenant, authorization, and Capture R1 behavior remain unchanged | ✅ pass | 27/27 live smoke (was 26 — the new `asset blob` auth-guard check added); a foreign/nonexistent session id still 404s |
+| Proxy serves real image bytes | ✅ pass (verified directly) | See explanation above — UI-triggered check didn't fire this run; direct authenticated fetch confirmed a byte-perfect real JPEG |
 
 ## Checklist
 
@@ -160,8 +190,8 @@ Claude guidance's server-side thumbnail fetch.
 | --- | --- | --- | --- |
 | 1 | Draft survives refresh | ✅ pass (data-level) | The app has no URL-based deep link for "which Capture session is open" (whole-app characteristic, not R2-specific) — a hard refresh returns to the default Configurator tab. Re-navigating to Capture and reopening the session shows every server-confirmed field intact (all 4 guided views, both measurements, material zone, texture direction, "Ready" validation status) on the API-seeded session. See screenshots 32/35/36. |
 | 2 | Draft survives browser close and reopen | ✅ pass | Verified two ways on the infra-blocked session: (a) same on-disk profile, new `page` — session reachable by title, detail loads correctly; (b) genuine new browser **process** (`launchPersistentContext` closed and relaunched from the same disk profile — real close+reopen, not just a new tab) — session and its in-progress failed-upload state both recoverable. Screenshots 20, 23. |
-| 3 | Original Blob (accepted photo) survives refresh | ⚠️ not independently exercised via a real upload | Blocked by the missing `BLOB_READ_WRITE_TOKEN` (no real photo ever successfully reached Blob on this preview to test surviving a refresh). The finalize row itself (what actually persists — the asset's URL/checksum/metadata row) was proven durable across refresh via the API-seeded session (item 1). Not marked passed. |
-| 4 | Original Blob survives close and reopen | ⚠️ not independently exercised — same reason as #3 | Not marked passed. |
+| 3 | Original Blob (accepted photo) survives refresh | ✅ pass (updated 2026-07-20, real upload) | A real photo, uploaded to the now-connected private Blob store, was confirmed intact — same id/checksum/url — via the server after a page refresh. See "Real end-to-end upload validation" above. |
+| 4 | Original Blob survives close and reopen | ✅ pass (updated 2026-07-20, real upload) | Same real asset confirmed intact after a genuine new-browser-process close+reopen (not just a new tab). See "Real end-to-end upload validation" above. |
 | 5 | Upload queue resumes automatically after reload | ✅ pass | On reopening the infra-blocked session, the queue's `rehydrateQueue()` path re-enqueued all pending photos from IndexedDB and resumed attempting them automatically (visible as fresh `POST /api/upload` calls and status transitions back through `waiting → uploading → failed`) with no user action beyond opening the session. |
 | 6 | Successful upload removes local evidence only after server confirmation | ✅ pass (verified by direct IndexedDB inspection) | Could not observe the success path (no successful upload was possible on this preview), but confirmed the inverse and the mechanism directly: dumped IndexedDB (`drafts`, `pendingAssets`, `syncQueue` object stores) after a failed upload and found the pending-asset row **still present** with `status: "failed"` — never pruned. `captureLocalStore.js`'s `confirmSynced` (the only deletion path) is called exclusively from the queue's `onChange` handler on `status === 'done'`, which never fired here — matches the "delete only after server-confirmed finalize" design directly, not just by absence of counter-evidence. |
 | 7 | Failed upload retains local evidence and shows "Upload failed — tap to retry" | ✅ pass | Exact text "Upload failed — tap Retry" shown per-photo-slot for all 3 initial views after 3 exhausted automatic attempts; tapping Retry fired a genuine new `POST /api/upload` network request (mechanism is live, not inert — it fails again only because of the infra gap, not because retry is broken). Screenshot 21/22. |

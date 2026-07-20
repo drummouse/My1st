@@ -228,3 +228,31 @@ detail: D-050 in `CAPTURE_DECISION_LOG.md` and the corresponding section
 in `docs/CAPTURE_R2_BROWSER_VERIFICATION.md`. **PR #23 is not marked ready
 for review on the strength of this attempt** — real Blob upload remains
 unverified end-to-end pending that owner action.
+
+## Addendum 3 — Private-blob serving proxy built and real upload verified (2026-07-20, D-051)
+
+The owner confirmed the connected store has no public-access option at all
+and directed building the server-side read proxy (D-008/D-016 had
+deferred it). Implemented: `captureUpload.js` uploads with
+`access: 'private'`; a new session-scoped, capability-gated route (`GET
+/api/capture/sessions/:id/assets/:assetId/blob`, folded into the existing
+`/api/capture` function — still 11 of 12 Vercel slots) streams bytes
+server-side with the existing `BLOB_READ_WRITE_TOKEN` (no new secret);
+every Capture `<img>`/`<a>` now renders through it. 7 new unit tests.
+Explicitly deferred, same root cause elsewhere (D-052): logo/attachment
+uploads, published-Library thumbnails, Claude guidance's thumbnail fetch.
+
+**Real end-to-end upload validation re-run against the redeployed preview
+(commit `4006681`) and it now passes**: real photo upload, correct Blob
+reference persistence, duplicate-retry protection, replace/supersession
+lineage, refresh/close-reopen recovery, deliberate-failure-then-retry, and
+Library-dry-run side-effect-freedom were all independently confirmed
+against a genuinely-uploaded private-store asset (not API-seeded). One
+automated check's assertion didn't fire (the UI legitimately doesn't
+render an `<img>` for a not-yet-fully-evidenced view) but was
+independently verified by fetching the same authenticated route directly:
+a byte-perfect 1200×900 JPEG came back. `npm test`: 229/229. `npm run
+build`: succeeds. `git diff --check`: clean. Live smoke: 27/27 (new
+`asset blob` auth-guard check added). Full detail: D-051 in
+`CAPTURE_DECISION_LOG.md`, "Real end-to-end upload validation" section in
+`docs/CAPTURE_R2_BROWSER_VERIFICATION.md`.
