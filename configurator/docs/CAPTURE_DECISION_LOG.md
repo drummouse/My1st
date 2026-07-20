@@ -5,6 +5,13 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-20 — Scanner Slice R2 (Adaptive Profile Capture Technical Proof)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-037 | R2 is implemented on `claude/ironwrap-capture-r2-adaptive-profile`, cut fresh from the verified `claude/development` baseline (`038394b2…`), replacing the earlier placeholder branch `claude/scanner-flexible-tags-a6kigl` (which carried zero commits beyond baseline). Flexible tag vocabulary, `item_type`, and full geometry-/dimension-behavior columns are explicitly **out of R2 scope** per owner correction — Claude's semantic output may *suggest* tags/applications as advisory text, but R2 does not persist those suggestions into any new classification schema. That remains its own future authorized stage. | The old branch name asserted a scope decision (flexible tags) that was never authorized for R2; a correctly-named branch avoids that inference for anyone reading history later. | Renaming the existing branch in place (rejected: owner explicitly directed branch creation, not rename, and the old branch is preserved per "do not delete unless separately instructed"). |
+| D-038 | Local durability (`captureLocalStore.js`) uses an injectable storage-driver contract (`get/put/delete/getAll` per table) with two implementations: `createIndexedDbDriver` for real browsers, `createMemoryDriver` for unit tests — mirroring the injected-dependency pattern already used by `captureUploadQueue.js` (`performUpload`/`wait`). The only path that ever deletes local evidence is `confirmSynced`, called exclusively after a server-confirmed (committed) finalize response — never on a timer, never optimistically. Sync-state text (`saved_on_device`/`waiting_for_connection`/`uploading`/`upload_failed`/`synced`) is derived live from what's actually durable, never asserted from in-memory state. | Makes the §15/§17 "never display Saved when data exists only in temporary memory" rule true by construction instead of by convention, and keeps the queueing/rehydration/pruning logic fully unit-testable in Node without a browser or a fake-IndexedDB dependency. | A wrapper library (`idb`) (rejected: no new dependency needed for four methods); a single flat IndexedDB store instead of three (rejected: drafts/pending-assets/queue have different lifecycles and pruning rules). |
+
 ## 2026-07-20 — Scanner Slice R1 (guided Profile Geometry scan foundation)
 
 | # | Decision | Rationale | Alternatives considered |
