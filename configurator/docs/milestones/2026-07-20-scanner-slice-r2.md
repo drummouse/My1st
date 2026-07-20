@@ -118,7 +118,7 @@ Both documented in full in `docs/CAPTURE_R2_CLAUDE_PRIVACY_DECISION.md` and deci
 | R2.3 | `ironwrap-estimator` (commit `6844b73`) | (build succeeded; not independently re-run — no API-surface change since R2.2's 21/21) |
 | R2.4 | `ironwrap-estimator` (commit `f6a8091`) | 22/22 |
 | R2.5 | `ironwrap-estimator` (commit `2f6530f`) | 25/25 |
-| R2.6 | `ironwrap-estimator` (commit `6668c0d`) | to be recorded once the preview is READY — see PR #23 for the live result |
+| R2.6 | `ironwrap-estimator` (commit `6668c0d`) | 26/26 |
 
 All smoke runs are unauthenticated-401-guard checks (matching the existing 100%-guard-style smoke suite) plus app-shell/database-health checks — consistent with the pre-R2 smoke baseline.
 
@@ -164,3 +164,13 @@ Studio interface changes.
 
 None. Every slice landed within the authorized scope, zero new
 dependencies, zero new function slots, zero production changes.
+
+## Final status
+
+All six slices complete, pushed, and live-smoke-verified against the
+branch's Vercel preview (`ironwrap-estimator`, commit `6668c0d`, **26/26**
+smoke checks passing — confirming the full additive R2 schema/API surface,
+including `material-package/dry-run`, deployed cleanly with zero
+regressions to any existing endpoint). PR #23 remains a **draft** against
+`claude/development`; not merged, per the standing instruction to wait for
+explicit approval before any merge.
