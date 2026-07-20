@@ -144,6 +144,55 @@ test('evidence confidence is deterministic and bounded', () => {
   assert.equal(empty.confidence, 0);
 });
 
+test('R2.3: deterministic quality findings surface in evidence output additively, without touching confidence', () => {
+  const cleanAssets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]);
+  const withoutFindings = evaluateProfileEvidence({
+    fields: [calibrationField()], assets: cleanAssets, measurements: [confirmedMeasurement()],
+  });
+
+  const flaggedAssets = cleanAssets.map((a, i) => (i === 0 ? {
+    ...a,
+    captureMetadata: {
+      deterministicQuality: {
+        pipelineVersion: 1,
+        findings: [{ type: 'sharpness_estimate', severity: 'warning', value: 12 }],
+      },
+    },
+  } : a));
+  const withFindings = evaluateProfileEvidence({
+    fields: [calibrationField()], assets: flaggedAssets, measurements: [confirmedMeasurement()],
+  });
+
+  // Same coverage/measurements → identical R1 contract fields, quality
+  // findings never leak into them.
+  assert.equal(withFindings.phase, withoutFindings.phase);
+  assert.equal(withFindings.complete, withoutFindings.complete);
+  assert.equal(withFindings.confidence, withoutFindings.confidence, 'quality findings must never affect the deterministic evidence score');
+  assert.deepEqual(withFindings.shotRequests, withoutFindings.shotRequests);
+
+  // But the findings ARE surfaced, additively.
+  assert.equal(withoutFindings.assetQuality.length, 0);
+  assert.equal(withFindings.assetQuality.length, 1);
+  assert.equal(withFindings.assetQuality[0].findings[0].type, 'sharpness_estimate');
+  assert.equal(withFindings.qualitySummary.issueCount, 1);
+  assert.equal(withFindings.qualitySummary.hasPossibleDuplicates, false);
+});
+
+test('R2.3: possible-duplicate findings roll up into qualitySummary, and superseded assets are excluded', () => {
+  const assets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]).map((a, i) => (i === 0 ? {
+    ...a,
+    captureMetadata: {
+      deterministicQuality: { pipelineVersion: 1, findings: [{ type: 'possible_duplicate_indication', severity: 'info', value: 2 }] },
+    },
+  } : a));
+  const evidence = evaluateProfileEvidence({ fields: [calibrationField()], assets, measurements: [confirmedMeasurement()] });
+  assert.equal(evidence.qualitySummary.hasPossibleDuplicates, true);
+
+  const superseded = assets.map((a, i) => (i === 0 ? { ...a, supersededBy: 'newer-asset' } : a));
+  const evidenceAfterReplace = evaluateProfileEvidence({ fields: [calibrationField()], assets: superseded, measurements: [confirmedMeasurement()] });
+  assert.equal(evidenceAfterReplace.assetQuality.length, 0, 'a superseded asset\'s findings drop out once replaced');
+});
+
 test('profile_geometry completeness requires calibration, all views, and a measurement — not category', () => {
   const session = { captureType: 'profile_geometry', title: 'Standing seam 450', category: null };
   const incomplete = validateCompleteness({ session, fields: [], assets: [], measurements: [] });

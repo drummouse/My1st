@@ -89,12 +89,40 @@ const calibrationComplete = (fields) => {
     && Number(calibration.knownMeasurement?.value) > 0);
 };
 
+// R2.3: surfaces the deterministic per-asset quality findings that R2.2
+// already computes and stores at accept time (capture_metadata.
+// deterministicQuality) — additively, in the evidence output. This is
+// informational only: quality/duplicate findings never gate `phase`,
+// `complete`, or `shotRequests` (they're estimates/indications, not
+// certified results — §18), and never feed into `confidence` (R1's
+// contract, unchanged) — measurement/coverage confidence and quality
+// findings are kept as two separate signals on purpose.
+function collectAssetQuality(assets) {
+  return assets
+    .filter((a) => (a.classification || 'source') === 'source' && !(a.supersededBy ?? a.superseded_by))
+    .map((a) => {
+      const metadata = a.captureMetadata ?? a.capture_metadata ?? {};
+      const quality = metadata.deterministicQuality;
+      if (!quality) return null;
+      return {
+        assetId: a.id,
+        purpose: a.purpose,
+        pipelineVersion: quality.pipelineVersion,
+        findings: quality.findings || [],
+      };
+    })
+    .filter(Boolean);
+}
+
 // Evidence evaluation for one profile_geometry session. Returns:
 //   phase: 'calibration' | 'initial_views' | 'adaptive' | 'complete'
 //   complete: boolean
 //   shotRequests: ordered SHOT_GUIDES entries still needed (empty when none)
 //   needsCalibration: boolean
-//   confidence: 0..1 deterministic evidence score
+//   confidence: 0..1 deterministic evidence score (measurement/coverage only)
+//   assetQuality: per-asset deterministic quality findings (R2.2/R2.3,
+//     informational — never affects phase/complete/confidence above)
+//   qualitySummary: { issueCount, hasPossibleDuplicates } rollup of assetQuality
 export function evaluateProfileEvidence({ fields = [], assets = [], measurements = [] }) {
   const calibrated = calibrationComplete(fields);
   const missingInitial = PROFILE_INITIAL_VIEWS.filter((view) => !hasView(assets, view));
@@ -124,7 +152,15 @@ export function evaluateProfileEvidence({ fields = [], assets = [], measurements
     + Math.min(confirmedMeasurements, 2) * 0.1
   ).toFixed(2)));
 
-  return { phase, complete, shotRequests, needsCalibration: !calibrated, confidence };
+  const assetQuality = collectAssetQuality(assets);
+  const qualitySummary = {
+    issueCount: assetQuality.reduce((sum, a) => sum + a.findings.length, 0),
+    hasPossibleDuplicates: assetQuality.some((a) => a.findings.some((f) => f.type === 'possible_duplicate_indication')),
+  };
+
+  return {
+    phase, complete, shotRequests, needsCalibration: !calibrated, confidence, assetQuality, qualitySummary,
+  };
 }
 
 // Deterministic measured cross-section preview (Slice R1): a labelled SVG

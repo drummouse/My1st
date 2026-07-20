@@ -352,6 +352,12 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
               ? Object.values(SHOT_GUIDES).filter((g) => shotDone(g.view)).map(shotCard)
               : evidence.shotRequests.map(shotCard)}
           </div>
+          {evidence.qualitySummary.issueCount > 0 && (
+            <div className="control-sublabel" role="status">
+              {evidence.qualitySummary.issueCount} deterministic quality note{evidence.qualitySummary.issueCount === 1 ? '' : 's'}
+              {evidence.qualitySummary.hasPossibleDuplicates ? ' — including a possible duplicate view' : ''} — estimates only, not blocking.
+            </div>
+          )}
           {evidence.complete && (
             <div className="control-sublabel" role="status">All required views captured.</div>
           )}
