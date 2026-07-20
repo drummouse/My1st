@@ -54,6 +54,7 @@ function makeStore(session) {
     listAssets: async () => state.assets,
     listComments: async () => [],
     listMeasurements: async () => [],
+    listClaudeAnalyses: async () => [],
     getAsset: async (id) => state.assets.find((asset) => asset.id === id) || null,
     insertAsset: async (change) => {
       const row = { ...change, session_id: change.sessionId, owner_id: change.ownerId };

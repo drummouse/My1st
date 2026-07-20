@@ -69,6 +69,23 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     return next;
   };
 
+  // R2.4 — advisory only. The deterministic evidence gate above is
+  // completely unaffected by whatever this returns (or whether it's asked
+  // for at all): Claude may explain an unclear feature and suggest one
+  // additional shot, but it is never authoritative and never blocks
+  // capture. Capturing the suggested shot reuses the ordinary camera flow
+  // manually in R2 (no dedicated "capture this Claude shot" button yet —
+  // a known, documented R2 limitation).
+  const [claudeBusy, setClaudeBusy] = useState(false);
+  const latestClaudeAnalysis = (detail.claudeAnalyses || [])[0] || null;
+  const handleClaudeGuidance = () => {
+    setClaudeBusy(true);
+    captureApi.claudeGuidance(session.id)
+      .then(() => refresh())
+      .catch((err) => setStatus(err.message))
+      .finally(() => setClaudeBusy(false));
+  };
+
   const localStoreRef = useRef(null);
   if (!localStoreRef.current) localStoreRef.current = createBrowserLocalStore();
 
@@ -360,6 +377,32 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
           )}
           {evidence.complete && (
             <div className="control-sublabel" role="status">All required views captured.</div>
+          )}
+          {!evidence.needsCalibration && editable && (
+            <>
+              <button type="button" className="btn-secondary" disabled={busy || claudeBusy} onClick={handleClaudeGuidance}>
+                {claudeBusy ? 'Asking…' : 'Ask Claude for Guidance (optional)'}
+              </button>
+              {latestClaudeAnalysis && (
+                <div className="control-sublabel" role="status">
+                  {latestClaudeAnalysis.status === 'advisory' ? (
+                    <>
+                      {latestClaudeAnalysis.findings.reviewerSummary || 'No summary provided.'}
+                      {latestClaudeAnalysis.findings.unclearFeatures.length > 0 && (
+                        <> Unclear: {latestClaudeAnalysis.findings.unclearFeatures.map((f) => f.feature).join(', ')}.</>
+                      )}
+                      {latestClaudeAnalysis.findings.shotRequest && (
+                        <> Suggested shot — {latestClaudeAnalysis.findings.shotRequest.position}, {latestClaudeAnalysis.findings.shotRequest.angle},
+                          {' '}{latestClaudeAnalysis.findings.shotRequest.distance}. Why: {latestClaudeAnalysis.findings.shotRequest.reason}</>
+                      )}
+                      {' '}(advisory — deterministic evidence above remains the actual requirement.)
+                    </>
+                  ) : (
+                    <>Claude guidance unavailable ({latestClaudeAnalysis.status}) — deterministic guidance above is unaffected.</>
+                  )}
+                </div>
+              )}
+            </>
           )}
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={() => setPhase('setup')} disabled={busy}>

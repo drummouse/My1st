@@ -14,6 +14,7 @@ const capabilityByAction = {
   assets: 'capture.create',
   asset: 'capture.create',
   'asset.replace': 'capture.create',
+  'claude.guidance': 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
   calibration: 'capture.create',
@@ -135,6 +136,18 @@ export default async function handler(req, res) {
           actor, String(req.query.id || ''), String(req.query.assetId || ''), req.body || {},
         );
         return res.status(201).json({ asset, supersededAssetId });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/claude-guidance — R2.4: advisory Claude
+    // semantic guidance, kill-switched, timeout/failure-safe, always
+    // recorded as an immutable capture_claude_analyses row regardless of
+    // outcome. Never blocks capture completion.
+    if (action === 'claude.guidance') {
+      if (req.method === 'POST') {
+        const { analysis } = await service.requestGuidance(actor, String(req.query.id || ''));
+        return res.status(201).json({ analysis });
       }
       return methodNotAllowed(res, 'POST');
     }

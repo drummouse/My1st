@@ -122,6 +122,15 @@ await check('auth guard /api/capture evidence', '/api/capture/sessions/smoke-tes
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;
 });
+await check(
+  'auth guard /api/capture claude-guidance',
+  '/api/capture/sessions/smoke-test/claude-guidance',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
 await check('auth guard /api/library/products', '/api/library/products', (response) => {
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;

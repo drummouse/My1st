@@ -299,6 +299,27 @@ create table if not exists capture_measurements (
   created_at timestamptz not null default now()
 );
 create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id);
+
+-- Claude adaptive-guidance attempts (Scanner R2.4, D-044) — one immutable,
+-- append-only row per attempt. 'findings' only populated for
+-- status='advisory'; every other status carries a non-sensitive
+-- 'diagnostic' instead. No image bytes ever stored here.
+create table if not exists capture_claude_analyses (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  status text not null check (status in
+    ('advisory','disabled','unavailable','no_images_available','timeout','error','invalid')),
+  model text,
+  prompt_version text,
+  schema_version integer,
+  source_asset_ids jsonb not null default '[]'::jsonb,
+  findings jsonb,
+  diagnostic jsonb not null default '{}'::jsonb,
+  fulfilled_asset_id uuid references capture_assets(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id);
 create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
 
 create table if not exists library_migrations (

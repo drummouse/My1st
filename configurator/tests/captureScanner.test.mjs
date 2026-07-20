@@ -253,6 +253,7 @@ function makeStore(session) {
     listAssets: async () => [],
     listComments: async () => [],
     listMeasurements: async () => state.measurements,
+    listClaudeAnalyses: async () => [],
     upsertField: async (id, fieldKey, value) => { state.fields.push({ field_key: fieldKey, value }); },
     insertMeasurement: async (change) => { state.measurements.push(change); return { ...change, confirmed_at: 'now' }; },
     getMeasurement: async (id) => state.measurements.find((m) => m.id === id) || null,

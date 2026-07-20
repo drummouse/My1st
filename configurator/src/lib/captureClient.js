@@ -39,6 +39,7 @@ export const captureApi = {
   addMeasurement: (id, measurement) => request(`/api/capture/sessions/${id}/measurements`, { method: 'POST', body: measurement }),
   removeMeasurement: (id, measurementId) => request(`/api/capture/sessions/${id}/measurements/${measurementId}`, { method: 'DELETE' }),
   evidence: (id) => request(`/api/capture/sessions/${id}/evidence`),
+  claudeGuidance: (id) => request(`/api/capture/sessions/${id}/claude-guidance`, { method: 'POST' }),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

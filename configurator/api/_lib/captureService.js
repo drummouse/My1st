@@ -12,6 +12,13 @@ import {
 } from './capturePolicy.js';
 import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
 import { evaluateProfileEvidence } from './captureEvidence.js';
+import {
+  buildClaudeGuidanceRequest,
+  validateClaudeGuidanceResponse,
+  CLAUDE_GUIDANCE_PROMPT_VERSION,
+  CLAUDE_GUIDANCE_SCHEMA_VERSION,
+} from './captureClaudePolicy.js';
+import { requestClaudeGuidance as defaultRequestClaudeGuidance } from './captureClaudeClient.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -95,6 +102,27 @@ export function toCaptureComment(row) {
   };
 }
 
+// One Claude adaptive-guidance attempt (R2.4) — advisory, versioned,
+// provenance-tagged, and kept in its own namespace: `findings` is only ever
+// populated when `status === 'advisory'` (a validated, policy-passed Claude
+// response); every other status carries a non-sensitive `diagnostic`
+// instead, never the raw response or any image data.
+export function toCaptureClaudeAnalysis(row) {
+  return {
+    id: row.id,
+    sessionId: row.session_id ?? row.sessionId,
+    status: row.status,
+    model: row.model ?? null,
+    promptVersion: row.prompt_version ?? row.promptVersion ?? null,
+    schemaVersion: row.schema_version ?? row.schemaVersion ?? null,
+    sourceAssetIds: row.source_asset_ids ?? row.sourceAssetIds ?? [],
+    findings: row.findings ?? null,
+    diagnostic: row.diagnostic ?? {},
+    fulfilledAssetId: row.fulfilled_asset_id ?? row.fulfilledAssetId ?? null,
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
 // The statuses a reviewer's queue cares about (everything past draft that
 // is not archived). Draft content is private to the contributor until they
 // submit — it never appears in a queue.
@@ -120,7 +148,9 @@ function assertVisible(actor, row) {
   }
 }
 
-export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
+export function createCaptureService({
+  store, randomUUID = nodeRandomUUID, requestClaudeGuidance = defaultRequestClaudeGuidance,
+}) {
   const audit = (actor, action, targetId, reason, metadata = {}) => ({
     actorId: actor.id, action, targetType: 'capture_session', targetId, reason: reason || null, metadata,
   });
@@ -139,8 +169,9 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
     async getSession(actor, id) {
       const row = await store.getSession(id);
       assertVisible(actor, row);
-      const [fields, assets, comments, measurements] = await Promise.all([
+      const [fields, assets, comments, measurements, claudeAnalyses] = await Promise.all([
         store.listFields(id), store.listAssets(id), store.listComments(id), store.listMeasurements(id),
+        store.listClaudeAnalyses(id),
       ]);
       return {
         session: toCaptureSession(row),
@@ -148,6 +179,7 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
         assets: assets.map(toCaptureAsset),
         comments: comments.map(toCaptureComment),
         measurements: measurements.map(toCaptureMeasurement),
+        claudeAnalyses: claudeAnalyses.map(toCaptureClaudeAnalysis),
       };
     },
 
@@ -364,6 +396,81 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       const created = await store.insertAsset(change);
       await store.markSuperseded(oldAssetId, change.id);
       return { asset: toCaptureAsset(created ?? change), supersededAssetId: oldAssetId };
+    },
+
+    // Claude semantic adaptive guidance (R2.4). Advisory only — see §16 of
+    // the R2 authorization and docs/CAPTURE_R2_CLAUDE_PRIVACY_DECISION.md.
+    // Every attempt is recorded as its own immutable capture_claude_analyses
+    // row, whether it succeeds, is disabled/unavailable, times out, errors,
+    // or fails policy validation — this method NEVER throws on a Claude
+    // failure; deterministic guidance (captureEvidence.js) is completely
+    // unaffected either way, so a Claude outage can never block capture.
+    async requestGuidance(actor, sessionId) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      if (!EDITABLE_STATUSES.includes(row.status)) {
+        throw new CaptureValidationError('CAPTURE_SESSION_LOCKED',
+          `A ${row.status} capture cannot request guidance`, { status: row.status });
+      }
+      const [fields, assets, measurements] = await Promise.all([
+        store.listFields(sessionId), store.listAssets(sessionId), store.listMeasurements(sessionId),
+      ]);
+      const calibration = fields.find((f) => (f.field_key ?? f.fieldKey) === 'calibration')?.value ?? null;
+      const acceptedAssets = assets
+        .filter((a) => (a.classification || 'source') === 'source' && !(a.superseded_by ?? a.supersededBy))
+        .map(toCaptureAsset);
+      const sourceAssetIds = acceptedAssets.map((a) => a.id);
+
+      const claudeRequest = buildClaudeGuidanceRequest({
+        session: { id: sessionId }, acceptedAssets, calibration, measurementCount: measurements.length,
+      });
+      // Only ever sends the existing derived thumbnail, never the original
+      // (privacy decision §2-3) — an asset with no thumbnail is simply
+      // excluded, not substituted with the original.
+      const assetThumbnails = acceptedAssets.map((sourceAsset) => {
+        const thumb = assets.find((a) => (a.classification || 'source') === 'derived'
+          && (a.source_asset_id ?? a.sourceAssetId) === sourceAsset.id);
+        return thumb ? { assetId: sourceAsset.id, url: thumb.url, mediaType: thumb.mime_type ?? thumb.mimeType } : null;
+      }).filter(Boolean);
+
+      const outcome = await requestClaudeGuidance(claudeRequest, { assetThumbnails });
+
+      let status;
+      let model = null;
+      let findings = null;
+      let diagnostic = {};
+      if (!outcome.ok) {
+        status = outcome.reason;
+        diagnostic = outcome.error ? { error: String(outcome.error).slice(0, 300) } : {};
+      } else {
+        model = outcome.model;
+        try {
+          findings = validateClaudeGuidanceResponse(outcome.raw);
+          status = 'advisory';
+          diagnostic = { imageCount: outcome.imageCount };
+        } catch (err) {
+          // Policy-rejected — never persisted as findings, only the fact
+          // that it was rejected and why (§17: "Do not persist unvalidated
+          // Claude output").
+          status = 'invalid';
+          diagnostic = { code: err.code, message: String(err.message).slice(0, 300) };
+        }
+      }
+
+      const record = {
+        id: randomUUID(),
+        sessionId,
+        ownerId: rowOwner(row),
+        status,
+        model,
+        promptVersion: CLAUDE_GUIDANCE_PROMPT_VERSION,
+        schemaVersion: CLAUDE_GUIDANCE_SCHEMA_VERSION,
+        sourceAssetIds,
+        findings,
+        diagnostic,
+      };
+      const created = await store.insertClaudeAnalysis(record);
+      return { analysis: toCaptureClaudeAnalysis(created ?? record) };
     },
 
     // Server-truth completeness for a session — the client runs the same
@@ -739,6 +846,23 @@ export function createNeonCaptureStore(sql) {
     // exactly as originally accepted (D-039).
     async markSuperseded(assetId, supersededByAssetId) {
       await sql`update capture_assets set superseded_by = ${supersededByAssetId} where id = ${assetId}`;
+    },
+    // One immutable row per Claude guidance attempt (D-044) — append-only,
+    // no update path. `findings` is only ever populated for status
+    // 'advisory'; every other status stores a non-sensitive `diagnostic`
+    // instead, never the raw response or any image bytes.
+    async insertClaudeAnalysis(change) {
+      const query = sql`insert into capture_claude_analyses
+        (id, session_id, owner_id, status, model, prompt_version, schema_version, source_asset_ids, findings, diagnostic)
+        values (${change.id}, ${change.sessionId}, ${change.ownerId}, ${change.status}, ${change.model},
+                ${change.promptVersion}, ${change.schemaVersion}, ${JSON.stringify(change.sourceAssetIds || [])}::jsonb,
+                ${change.findings ? JSON.stringify(change.findings) : null}::jsonb,
+                ${JSON.stringify(change.diagnostic || {})}::jsonb)
+        returning *`;
+      return execute(query, change);
+    },
+    async listClaudeAnalyses(sessionId) {
+      return sql`select * from capture_claude_analyses where session_id = ${sessionId} order by created_at desc`;
     },
     async upsertField(sessionId, fieldKey, value) {
       const query = sql`insert into capture_fields (session_id, field_key, value)
