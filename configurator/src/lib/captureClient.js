@@ -50,6 +50,9 @@ export const captureApi = {
   saveTextureDirection: (id, textureDirection) => request(`/api/capture/sessions/${id}/texture-direction`, { method: 'POST', body: { textureDirection } }),
   evaluateStudioValidation: (id) => request(`/api/capture/sessions/${id}/studio-validation`, { method: 'POST' }),
   dryRunMaterialPackage: (id) => request(`/api/capture/sessions/${id}/material-package/dry-run`),
+  listTags: () => request('/api/capture/tags'),
+  createTag: (tag) => request('/api/capture/tags', { method: 'POST', body: { tag } }),
+  removeTag: (tagId) => request(`/api/capture/tags/${tagId}`, { method: 'DELETE' }),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

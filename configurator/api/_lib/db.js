@@ -522,6 +522,8 @@ export function ensureSchema() {
           submitted_snapshot jsonb,
           published_record_id uuid references library_records(id),
           published_version integer,
+          tags jsonb not null default '[]'::jsonb,
+          item_type text check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown')),
           submitted_at timestamptz,
           material_zone_state jsonb,
           texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
@@ -539,13 +541,21 @@ export function ensureSchema() {
       await sql`alter table capture_sessions add column if not exists studio_validation jsonb`;
       await sql`create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null`;
       await sql`create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status)`;
+      // Flexible classification (flexible-tags slice, deferred by D-035):
+      // additive, nullable — existing sessions default to an empty tag list
+      // and no item type. Fixes up capture_sessions rows created before
+      // these columns existed; the create-table literal above already
+      // carries them for fresh databases.
+      await sql`alter table capture_sessions add column if not exists tags jsonb not null default '[]'::jsonb`;
+      await sql`alter table capture_sessions add column if not exists item_type text
+        check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown'))`;
 
       await sql`
         create table if not exists capture_assets (
           id uuid primary key default gen_random_uuid(),
           session_id uuid not null references capture_sessions(id) on delete cascade,
           owner_id uuid not null references users(id),
-          purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right')),
+          purpose text not null,
           classification text not null default 'source' check (classification in ('source','derived')),
           source_asset_id uuid references capture_assets(id),
           url text not null,
@@ -602,8 +612,12 @@ export function ensureSchema() {
       // fresh databases.
       await sql`alter table capture_sessions drop constraint if exists capture_sessions_capture_type_check`;
       await sql`alter table capture_sessions add constraint capture_sessions_capture_type_check check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish'))`;
+      // Flexible-tags slice: shot purpose/label becomes an open vocabulary
+      // (spec §18) — drop the closed-list CHECK entirely rather than
+      // widening it again. capturePolicy.js's normalizeAssetInput still
+      // bounds and sanitizes the value; tables created by earlier stages
+      // carry the old CHECK, so this drop fixes those in place.
       await sql`alter table capture_assets drop constraint if exists capture_assets_purpose_check`;
-      await sql`alter table capture_assets add constraint capture_assets_purpose_check check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right'))`;
 
       // Real-world measurements with provenance (Slice R1; supersedes the
       // JSON-blob dimensions approach for scan sessions — D-010 revisited).
@@ -657,6 +671,22 @@ export function ensureSchema() {
       await sql`alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check`;
       await sql`alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
         ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'))`;
+
+      // Tenant-scoped tag vocabulary (flexible-tags slice, deferred by
+      // D-035): permissioned tag creation lives here; a session's own
+      // `tags` jsonb array (above) names which of these apply to it. No
+      // platform seed set in this slice — deferred, see decision log.
+      await sql`
+        create table if not exists capture_tags (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid not null references users(id),
+          tag text not null,
+          created_by uuid references users(id),
+          created_at timestamptz not null default now(),
+          unique (owner_id, tag)
+        )
+      `;
+      await sql`create index if not exists capture_tags_owner_id_idx on capture_tags (owner_id)`;
     })().catch((err) => {
       schemaReady = undefined;
       throw err;

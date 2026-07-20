@@ -258,6 +258,8 @@ create table if not exists capture_sessions (
   submitted_snapshot jsonb,
   published_record_id uuid references library_records(id),
   published_version integer,
+  tags jsonb not null default '[]'::jsonb,
+  item_type text check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown')),
   submitted_at timestamptz,
   -- R2.5: material-ready schematic proof — additive/nullable.
   material_zone_state jsonb,
@@ -269,11 +271,13 @@ create table if not exists capture_sessions (
 create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null;
 create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status);
 
+-- Shot purpose/label is an open vocabulary (flexible-tags slice, spec §18):
+-- no closed-list CHECK; api/_lib/capturePolicy.js bounds and sanitizes it.
 create table if not exists capture_assets (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references capture_sessions(id) on delete cascade,
   owner_id uuid not null references users(id),
-  purpose text not null check (purpose in ('main','front','back','edge','surface','label','packaging','profile','installed','other','left_end','right_end','top','bottom','iso_front_left','iso_front_right')),
+  purpose text not null,
   classification text not null default 'source' check (classification in ('source','derived')),
   source_asset_id uuid references capture_assets(id),
   url text not null,
@@ -352,6 +356,18 @@ create table if not exists capture_claude_analyses (
 );
 create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id);
 create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
+
+-- Tenant-scoped tag vocabulary (Scanner flexible-tags slice). No platform
+-- seed set in this slice — deferred, see CAPTURE_DECISION_LOG.md.
+create table if not exists capture_tags (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id),
+  tag text not null,
+  created_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  unique (owner_id, tag)
+);
+create index if not exists capture_tags_owner_id_idx on capture_tags (owner_id);
 
 create table if not exists library_migrations (
   id uuid primary key,
