@@ -209,3 +209,22 @@ A second pass, on the same branch, before PR #23 can be considered for
    before this addendum was written — see the release-readiness report in
    the session record / PR #23 description for exact counts and commit
    SHA.
+
+## Addendum 2 — Real Blob upload validation attempt (2026-07-20, later — D-050)
+
+The owner connected a real Vercel Blob store/`BLOB_READ_WRITE_TOKEN` to
+this preview, closing D-049's "token missing" gap. A real end-to-end
+upload was then attempted with a real browser and a real file. It still
+does not complete: the connected store is configured for **private**
+access, while `captureUpload.js` (unchanged R1 code, decision D-016)
+requires `access: 'public'`. Root-caused precisely via a raw authenticated
+`curl PUT` with a real client token, which returned Vercel's own error:
+`"Cannot use public access on a private store."` Not an application
+defect — no R2 (or R1) code changed as a result. Fixing it needs either an
+owner-side Vercel dashboard change (set the store's access mode to
+Public) or a scoped future decision to move Capture to a private-store/
+signed-URL-read architecture (a real change to D-016, out of R2). Full
+detail: D-050 in `CAPTURE_DECISION_LOG.md` and the corresponding section
+in `docs/CAPTURE_R2_BROWSER_VERIFICATION.md`. **PR #23 is not marked ready
+for review on the strength of this attempt** — real Blob upload remains
+unverified end-to-end pending that owner action.

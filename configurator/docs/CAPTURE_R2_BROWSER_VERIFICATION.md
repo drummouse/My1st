@@ -80,6 +80,60 @@ meaningful despite that:
    substitute for "real browser" testing of the parts that need it (marked
    below); it is a targeted workaround for the one infra-gated sub-step.
 
+### Follow-up: real Blob upload validation attempt (2026-07-20, later same day — D-050)
+
+The owner subsequently connected a real Vercel Blob store and
+`BLOB_READ_WRITE_TOKEN` to this preview. A fresh redeploy (commit `a394d7b`)
+confirmed the token itself now works — `/api/upload`'s token-generation step
+succeeds and correctly enforces session ownership. **A real end-to-end
+upload was then attempted (real browser, real file, real authenticated
+session) and it still fails**, on a different, more specific cause:
+
+```
+HTTP 400 (from https://vercel.com/api/blob, reached with a real,
+server-issued client token)
+{"error":{"code":"bad_request","message":"Cannot use public access on a
+private store. The store is configured with private access."}}
+```
+
+**Root cause, precisely identified:** the newly-connected Blob store's
+access mode is **private**. `captureUpload.js` (unchanged R1 code) requests
+`access: 'public'` on every upload — a deliberate architectural choice
+(decision D-016) so Capture never needs a signed-URL read proxy, which
+would cost the Vercel Hobby plan's last available serverless function slot.
+The browser itself reports this as a generic "blocked by CORS policy"
+error (Vercel's Blob endpoint appears not to attach CORS headers to this
+particular rejection response) — the true cause only surfaced via a raw
+authenticated `curl PUT` carrying a real client token straight to the Blob
+endpoint, bypassing the browser's CORS layer to see the actual JSON error
+body underneath.
+
+**This is not an application defect.** `api/upload.js`/`captureUpload.js`
+are the exact, unchanged, already-smoke-tested R1 upload path — nothing
+about R2 touches this code. It is a mismatch between the connected store's
+access-mode setting and the application's (intentional, documented)
+requirement for a public store.
+
+**Not fixed by this session, by design:** changing a Blob store's access
+mode is a Vercel dashboard setting this session's tools cannot reach
+(no Blob-store-settings write path is exposed), and switching the
+*application* to match a private store instead would mean building the
+signed-URL read-proxy D-008/D-016 explicitly deferred — a real
+architectural change, out of R2 scope, not something to decide
+unilaterally. Full detail: D-050 in `CAPTURE_DECISION_LOG.md`.
+
+**Consequence for this document:** the checklist below still reflects the
+D-049-era results (API-seeded downstream verification, real
+infra-triggered failed-upload testing). Items 1–4 (which specifically need
+a *successful* real upload) remain **not independently verified with a
+completed real upload** — this pass did not change that, it only replaced
+one blocker (missing token) with a more precise diagnosis of the next one
+(store access mode). PR #23 is not being marked ready for review on the
+strength of a real upload that still does not work end-to-end; see the
+session's final report for the owner action needed (change the connected
+store's access mode to "Public," or confirm a private-store architecture
+change should be scoped for a future stage).
+
 ## Checklist
 
 | # | Check | Result | Notes |
