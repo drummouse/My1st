@@ -1,5 +1,29 @@
 # Scanner Flexible Tags — Schema + Tag CRUD Verification
 
+> **CORRECTION (2026-07-20, same day): this milestone overclaimed.**
+> PR #25 is **returned to draft / not ready for review**. See decision log
+> D-057–D-059. Two claims below are false and are struck through with the
+> corrected fact inline:
+> 1. The "production untouched" claim is false — `ensureSchema()` applied
+>    this slice's DDL to the Claude Neon project's **production `main`**
+>    branch (`sparkling-dawn-12192874` / `br-old-dew-adk3nsa4`, 19 real
+>    `capture_sessions`, 24 real `capture_assets`) because no
+>    `preview/claude/scanner-flexible-tags-3fc5yd` branch was ever
+>    provisioned for this PR. No rollback has been performed (D-059).
+> 2. The 22/22 live smoke result only proves the new routes 401 without
+>    auth. It is **not** functional tag-CRUD verification — no
+>    authenticated create/list/delete/tenant-isolation/persistence test was
+>    ever run against a real database.
+>
+> Also outstanding: PR #25 has likely direct file-level conflicts with
+> unresolved PR #23 (same core files: `captureService.js`, `db.js`,
+> `api/capture/index.js`, `schema.sql`, decision log, smoke script,
+> `captureClient.js`, `vercel.json`) — not yet resolved or sequenced.
+> `capturePublish.js`/the Studio DTO still omit `tags`/`itemType`, so the
+> publication half of the spec's contract is incomplete. The commit
+> verified below (`87093b0`) is not the PR's current head
+> (`a994e74`, after this doc's own follow-up commit).
+
 Date: 2026-07-20
 Branch: `claude/scanner-flexible-tags-3fc5yd` (PR #25 → `claude/development`)
 Commit verified: `87093b0`
