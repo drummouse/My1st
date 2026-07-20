@@ -106,6 +106,14 @@ await check(
   },
 );
 await check(
+  'auth guard /api/capture asset blob',
+  '/api/capture/sessions/smoke-test/assets/smoke-test/blob',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+);
+await check(
   'auth guard /api/capture submit',
   '/api/capture/sessions/smoke-test/submit',
   (response) => {

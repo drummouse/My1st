@@ -13,6 +13,7 @@ const capabilityByAction = {
   session: 'capture.create',
   assets: 'capture.create',
   asset: 'capture.create',
+  'asset.blob': 'capture.create',
   'asset.replace': 'capture.create',
   'claude.guidance': 'capture.create',
   materialZone: 'capture.create',
@@ -129,6 +130,26 @@ export default async function handler(req, res) {
         return res.status(204).end();
       }
       return methodNotAllowed(res, 'DELETE');
+    }
+
+    // /api/capture/sessions/<id>/assets/<assetId>/blob — D-051: streams a
+    // Capture asset's bytes server-side. The connected Blob store is
+    // private-only (no public-access mode), so this is the read-side
+    // counterpart to captureUpload.js's access: 'private' uploads —
+    // authorized the same way every other Capture route is (owner or
+    // superadmin), then fetched with the platform's own credentials.
+    if (action === 'asset.blob') {
+      if (req.method === 'GET') {
+        const { stream, contentType } = await service.getAssetBlob(
+          actor, String(req.query.id || ''), String(req.query.assetId || ''),
+        );
+        res.setHeader('Content-Type', contentType || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        const { Readable } = await import('node:stream');
+        Readable.fromWeb(stream).pipe(res);
+        return;
+      }
+      return methodNotAllowed(res, 'GET');
     }
 
     // /api/capture/sessions/<id>/assets/<assetId>/replace — R2.2: preserve

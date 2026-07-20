@@ -23,6 +23,7 @@ import {
 import { requestClaudeGuidance as defaultRequestClaudeGuidance } from './captureClaudeClient.js';
 import { evaluateFlatWallValidation } from './captureStudioValidation.js';
 import { buildR2PackageManifest, validateR2PackageDryRun } from './captureMaterialPackage.js';
+import { getPrivateBlob as defaultGetPrivateBlob } from './captureBlobAccess.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -158,6 +159,7 @@ function assertVisible(actor, row) {
 
 export function createCaptureService({
   store, randomUUID = nodeRandomUUID, requestClaudeGuidance = defaultRequestClaudeGuidance,
+  getPrivateBlob = defaultGetPrivateBlob,
 }) {
   const audit = (actor, action, targetId, reason, metadata = {}) => ({
     actorId: actor.id, action, targetType: 'capture_session', targetId, reason: reason || null, metadata,
@@ -189,6 +191,23 @@ export function createCaptureService({
         measurements: measurements.map(toCaptureMeasurement),
         claudeAnalyses: claudeAnalyses.map(toCaptureClaudeAnalysis),
       };
+    },
+
+    // Streams a Capture asset's bytes server-side (D-051): the connected
+    // Blob store is private-only, so a stored asset URL is no longer
+    // directly fetchable by anyone holding it — every read is gated by the
+    // same owner-or-superadmin visibility rule every other Capture route
+    // already uses, then fetched with the platform's own credentials.
+    async getAssetBlob(actor, sessionId, assetId) {
+      const row = await store.getSession(sessionId);
+      assertVisible(actor, row);
+      const asset = await store.getAsset(assetId);
+      if (!asset || (asset.session_id ?? asset.sessionId) !== sessionId) {
+        throw new CaptureValidationError('CAPTURE_ASSET_NOT_FOUND', 'Asset not found');
+      }
+      const blob = await getPrivateBlob(asset.url);
+      if (!blob) throw new CaptureValidationError('CAPTURE_ASSET_NOT_FOUND', 'Asset not found');
+      return { stream: blob.stream, contentType: blob.blob.contentType };
     },
 
     // Calibration setup (Slice R1): validated evidence saved as the

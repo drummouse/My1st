@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { captureApi, newClientRef } from '../lib/captureClient.js';
+import { captureApi, captureAssetBlobUrl, newClientRef } from '../lib/captureClient.js';
 import { uploadCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
 // Shared verbatim with the server's submit gate (pure ESM, D-021) — the
@@ -379,8 +379,8 @@ export default function CapturePanel({ canReview = false }) {
                 <div className="capture-photo-slot-title">{label}</div>
                 {source ? (
                   <>
-                    <a href={source.url} target="_blank" rel="noreferrer">
-                      <img className="capture-photo-thumb" src={(thumb || source).url} alt={`${label} — opens full size`} />
+                    <a href={captureAssetBlobUrl(open.session.id, source.id)} target="_blank" rel="noreferrer">
+                      <img className="capture-photo-thumb" src={captureAssetBlobUrl(open.session.id, (thumb || source).id)} alt={`${label} — opens full size`} />
                     </a>
                     {lowRes && <div className="control-sublabel">⚠ Low resolution — consider retaking closer or in better light.</div>}
                     {editable && (

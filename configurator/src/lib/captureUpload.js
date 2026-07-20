@@ -81,8 +81,13 @@ export async function makeThumbnail(blob) {
 }
 
 async function uploadToBlob(sessionId, fileName, blob) {
+  // The connected Blob store is private-only (no public-access mode) — a
+  // stored asset's URL is not directly fetchable by anyone holding it.
+  // Reads go through the authenticated, session-scoped proxy route instead
+  // (api/_lib/captureBlobAccess.js's getPrivateBlob, via
+  // /api/capture/sessions/:id/assets/:assetId/blob).
   const result = await upload(fileName, blob, {
-    access: 'public',
+    access: 'private',
     handleUploadUrl: '/api/upload',
     clientPayload: JSON.stringify({ kind: 'capture', sessionId }),
   });

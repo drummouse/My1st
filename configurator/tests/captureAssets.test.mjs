@@ -249,6 +249,60 @@ test('asset routes are rewritten onto the consolidated function and smoke-guarde
   assert.match(smoke, /auth guard \/api\/capture asset finalize/);
 });
 
+test('D-051: getAssetBlob streams a private asset for its owner, refuses cross-tenant/missing/foreign-session access', async () => {
+  const store = makeStore();
+  store.state.assets = [{ id: 'a1', session_id: 's1', owner_id: 'user-a', purpose: 'main', classification: 'source', url: BLOB_URL }];
+  const fakeStream = { locked: false };
+  let seenUrl;
+  const getPrivateBlob = async (url) => {
+    seenUrl = url;
+    return { stream: fakeStream, blob: { contentType: 'image/jpeg' } };
+  };
+  const service = createCaptureService({ store, getPrivateBlob });
+
+  const result = await service.getAssetBlob(OWNER, 's1', 'a1');
+  assert.equal(result.stream, fakeStream);
+  assert.equal(result.contentType, 'image/jpeg');
+  assert.equal(seenUrl, BLOB_URL, 'the exact stored asset URL is passed through to the private-blob read');
+
+  await assert.rejects(service.getAssetBlob(OTHER, 's1', 'a1'), { code: 'CAPTURE_SESSION_NOT_FOUND' });
+  await assert.rejects(service.getAssetBlob(OWNER, 's1', 'missing'), { code: 'CAPTURE_ASSET_NOT_FOUND' });
+
+  // An asset id that exists but belongs to a DIFFERENT session must not be
+  // servable through this session's URL, even for the same owner.
+  store.state.assets.push({ id: 'a2', session_id: 'other-session', owner_id: 'user-a', purpose: 'main', classification: 'source', url: BLOB_URL });
+  await assert.rejects(service.getAssetBlob(OWNER, 's1', 'a2'), { code: 'CAPTURE_ASSET_NOT_FOUND' });
+
+  // A blob the store token can't find (e.g. deleted at the provider) is a
+  // clean 404, not a crash.
+  const missingBlobService = createCaptureService({ store, getPrivateBlob: async () => null });
+  await assert.rejects(missingBlobService.getAssetBlob(OWNER, 's1', 'a1'), { code: 'CAPTURE_ASSET_NOT_FOUND' });
+});
+
+test('D-051: the asset.blob route is capability-mapped, rewritten ahead of the generic asset rewrite, and smoke-guarded', async () => {
+  const route = await readFile(new URL('../api/capture/index.js', import.meta.url), 'utf8');
+  assert.match(route, /'asset\.blob': 'capture\.create'/);
+  assert.match(route, /getAssetBlob/);
+
+  const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const sources = config.rewrites.map((rule) => rule.source);
+  assert.ok(sources.includes('/api/capture/sessions/:id/assets/:assetId/blob'));
+  assert.ok(
+    sources.indexOf('/api/capture/sessions/:id/assets/:assetId/blob')
+      < sources.indexOf('/api/capture/sessions/:id/assets/:assetId'),
+    'the /blob rewrite must precede the generic /:assetId rewrite',
+  );
+
+  const smoke = await readFile(new URL('../scripts/smoke-test.mjs', import.meta.url), 'utf8');
+  assert.match(smoke, /auth guard \/api\/capture asset blob/);
+});
+
+test('D-051: capture uploads request private access — the connected Blob store has no public-access mode', async () => {
+  const source = await readFile(new URL('../src/lib/captureUpload.js', import.meta.url), 'utf8');
+  assert.match(source, /access:\s*'private'/);
+  assert.doesNotMatch(source, /access:\s*'public'/);
+});
+
 test('R2.2: asset.replace is capability-mapped, precedes the generic asset rewrite, and is smoke-guarded', async () => {
   const route = await readFile(new URL('../api/capture/index.js', import.meta.url), 'utf8');
   assert.match(route, /'asset\.replace': 'capture\.create'/);

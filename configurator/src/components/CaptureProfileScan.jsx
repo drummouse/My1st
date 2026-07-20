@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { captureApi } from '../lib/captureClient.js';
+import { captureApi, captureAssetBlobUrl } from '../lib/captureClient.js';
 import { uploadCaptureImage, replaceCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
 import { createCaptureLocalStore, createIndexedDbDriver, createMemoryDriver } from '../lib/captureLocalStore.js';
@@ -251,7 +251,8 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
   const thumbFor = (view) => {
     const source = currentSourceFor(view);
     const thumb = source && (detail.assets || []).find((a) => a.classification === 'derived' && a.sourceAssetId === source.id);
-    return (thumb || source)?.url || null;
+    const shown = thumb || source;
+    return shown ? captureAssetBlobUrl(session.id, shown.id) : null;
   };
 
   const pendingCount = queueItems.filter((i) => i.job.sessionId === session.id && i.status !== 'done').length;

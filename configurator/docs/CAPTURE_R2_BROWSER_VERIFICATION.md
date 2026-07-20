@@ -134,6 +134,26 @@ session's final report for the owner action needed (change the connected
 store's access mode to "Public," or confirm a private-store architecture
 change should be scoped for a future stage).
 
+### Follow-up 2: private-blob serving proxy implemented (D-051)
+
+The owner confirmed the connected store has no public-access option at all
+and directed building the read proxy D-008/D-016 had deferred. Implemented:
+`captureUpload.js` now uploads with `access: 'private'`; a new
+session-scoped, capability-gated route (`GET
+/api/capture/sessions/:id/assets/:assetId/blob`, folded into the existing
+`/api/capture` function — no new Vercel slot) streams asset bytes
+server-side with the existing `BLOB_READ_WRITE_TOKEN` (no new secret was
+needed or used); every Capture `<img>`/`<a>` now renders through this
+proxy. Unit-tested (owner/cross-tenant/foreign-session/missing-blob cases)
+and confirmed via `npm test`/`npm run build`/`git diff --check`. **Live
+re-verification of the real-upload checklist against the redeployed
+preview is recorded below, once available** — see the session's final
+report for the actual pass/fail outcome; do not assume success from this
+paragraph alone. Explicitly deferred (D-052, same root cause, different
+resource/authorization shape, out of this pass): logo/attachment uploads
+(shared store, public-facing pages), published-Library thumbnails, and
+Claude guidance's server-side thumbnail fetch.
+
 ## Checklist
 
 | # | Check | Result | Notes |

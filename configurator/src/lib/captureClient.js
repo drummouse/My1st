@@ -18,6 +18,12 @@ async function request(path, { method = 'GET', body } = {}) {
   return result;
 }
 
+// The connected Blob store is private-only — an asset's stored `url` is not
+// directly fetchable. Every <img>/<a> that displays a Capture asset routes
+// through this authenticated, session-scoped proxy instead (D-051); the
+// browser's session cookie rides along automatically (same-origin).
+export const captureAssetBlobUrl = (sessionId, assetId) => `/api/capture/sessions/${sessionId}/assets/${assetId}/blob`;
+
 export const captureApi = {
   list: (status) => request(`/api/capture/sessions${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   create: (input) => request('/api/capture/sessions', { method: 'POST', body: input }),
