@@ -45,7 +45,7 @@ async function handleIdentity(req, res, actor) {
 // Draining is on-demand (superadmin-triggered, or an external scheduler
 // hitting this route) — the Hobby plan has no built-in cron slot to spare,
 // same constraint every other Capture/Library worker in this repo has
-// accepted. Each channel's provider (Gmail SMTP, Twilio SMS) simply throws
+// accepted. Each channel's provider (SendGrid, Twilio SMS) simply throws
 // "not configured" until the platform's own shared credentials are set as
 // env vars, so rows stay pending/failed harmlessly until then.
 async function handleDrain(req, res) {

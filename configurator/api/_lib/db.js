@@ -129,7 +129,7 @@ export function ensureSchema() {
       // One row per reseller/owner — their comms preference, not a
       // dedicated sending account. No per-tenant Twilio number or email
       // domain: every platform-sent notice rides the platform's single
-      // shared Twilio number and Gmail account (see commsDelivery.js), only
+      // shared Twilio number and SendGrid sender (see commsDelivery.js), only
       // the message signature/Reply-To vary by tenant. `notify_mode`:
       // 'platform' — the platform (or, if this tenant has a reseller, the
       // reseller's own brand) sends design-approved/etc. notices to this

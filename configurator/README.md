@@ -410,7 +410,7 @@ SuperAdmin now has a capability-checked Platform Library for versioned products,
   existing `notification_webhook_url`), or **"Notify them for me"** (`'platform'` — the platform
   sends, signed "Dear `<client>`, `<message>` Best wishes, `<Brand>` team" by email and SMS). There
   is no per-tenant phone number or sending domain: every platform-sent notice rides one shared
-  Twilio number and Gmail account (env-configured; unset until Configurator's own business
+  Twilio number and SendGrid sender (env-configured; unset until Configurator's own business
   accounts exist — see "Not yet built" below); only the signature and, for email, the Reply-To vary
   — the owner's own name, or their reseller's if they have one, resolved by `commsIdentity.js`'s
   cascade so a reseller's white-labeled owners never see "IronWrap 3D Configurator" in a message
@@ -458,10 +458,10 @@ npm run build      # production build to dist/
 ## Not yet built (Phase 2, per brief)
 
 - Communications delivery is wired but unconfigured — `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/
-  `PLATFORM_DEFAULT_PHONE` (SMS) and `GMAIL_SENDER_USER`/`GMAIL_SENDER_APP_PASSWORD` (email) are
-  all unset until Configurator's own business phone number/Gmail account exist; every queued
-  notice simply stays `pending`/`failed` in `notification_outbox` until those env vars are added,
-  with no code changes needed at that point.
+  `PLATFORM_DEFAULT_PHONE` (SMS) and `SENDGRID_API_KEY`/`SENDGRID_FROM_EMAIL` (email) are all
+  unset until Configurator's own Twilio/SendGrid accounts exist; every queued notice simply
+  stays `pending`/`failed` in `notification_outbox` until those env vars are added, with no
+  code changes needed at that point.
 - Live QuickBooks pricing via Make.com — the Make.com/QuickBooks/Claude
   agent side of this (separate from the configurator app) is built and the
   read tools are verified live; wiring it into the configurator's own

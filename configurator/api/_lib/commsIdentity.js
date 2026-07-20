@@ -8,7 +8,7 @@ const PLATFORM_BRAND_NAME = () => process.env.PLATFORM_DEFAULT_FROM_NAME || 'Iro
 // reseller's name in the signature; a reseller itself (and any owner with
 // no reseller) sees the platform's own fixed brand name, since there's
 // nothing above them to white-label from. Every send still rides the one
-// shared platform Twilio number/Gmail account — only the text changes.
+// shared platform Twilio number/SendGrid sender — only the text changes.
 export async function resolveAccountNoticeBrand(recipientUser) {
   if (recipientUser?.reseller_id) {
     const [identity] = await sql`select display_name from sender_identities where user_id = ${recipientUser.reseller_id}`;

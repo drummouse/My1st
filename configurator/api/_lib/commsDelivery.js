@@ -1,14 +1,17 @@
-import nodemailer from 'nodemailer';
-
 // Every platform-sent notice — account notices and a tenant's own opted-in
-// client notices alike — rides ONE shared platform Twilio number and Gmail
-// account (env-configured). Only the message text (brand signature) and,
-// for email, the Reply-To vary by tenant. There is no per-tenant phone
+// client notices alike — rides ONE shared platform Twilio number and
+// SendGrid sender (env-configured). Only the message text (brand signature)
+// and, for email, the Reply-To vary by tenant. There is no per-tenant phone
 // number or sending domain (see decision log) — a tenant who wants their
 // own must handle it themselves via the existing notification_webhook_url
-// integration path ('self' notify_mode), not through this module.
+// integration path ('self' notify_mode), not through this module. Both
+// providers are called via plain fetch — no SDK, no new dependency (see
+// decision log for the Gmail->SendGrid reversal: one vendor, no domain
+// needed yet via SendGrid's single-sender verification, and it drops the
+// one dependency the earlier Gmail-SMTP design added).
 
 const TWILIO_API = 'https://api.twilio.com/2010-04-01';
+const SENDGRID_API = 'https://api.sendgrid.com/v3/mail/send';
 
 function twilioAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -35,13 +38,27 @@ async function sendTwilioSms({ to, body }) {
   return res.json();
 }
 
-let transporter;
-function getTransporter() {
-  const user = process.env.GMAIL_SENDER_USER;
-  const pass = process.env.GMAIL_SENDER_APP_PASSWORD;
-  if (!user || !pass) return null;
-  if (!transporter) transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
-  return transporter;
+async function sendGridEmail({ to, subject, text, fromName, replyTo }) {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) throw new Error('SENDGRID_API_KEY not configured');
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+  if (!fromEmail) throw new Error('SENDGRID_FROM_EMAIL not configured');
+  if (!to) throw new Error('No destination email address');
+  const res = await fetch(SENDGRID_API, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: fromEmail, name: fromName },
+      ...(replyTo ? { reply_to: { email: replyTo } } : {}),
+      subject: subject || 'Notification',
+      content: [{ type: 'text/plain', value: text || '' }],
+    }),
+  });
+  if (!res.ok) {
+    const text2 = await res.text().catch(() => '');
+    throw new Error(`SendGrid send failed: HTTP ${res.status} ${text2}`);
+  }
 }
 
 // The provider-neutral adapter map notifications.js's deliverNotification()
@@ -55,18 +72,15 @@ export function buildDeliverers() {
     // notifications list); there's nothing further to deliver.
     in_app: async () => {},
     email: async (payload, destination, identity) => {
-      const transport = getTransporter();
-      if (!transport) throw new Error('GMAIL_SENDER_USER/GMAIL_SENDER_APP_PASSWORD not configured');
-      if (!destination) throw new Error('No destination email address');
       const brandName = (typeof identity === 'string' ? identity : identity?.brandName)
         || process.env.PLATFORM_DEFAULT_FROM_NAME || 'IronWrap 3D Configurator';
       const replyTo = typeof identity === 'object' ? identity?.replyTo : undefined;
-      await transport.sendMail({
-        from: `"${brandName}" <${process.env.GMAIL_SENDER_USER}>`,
+      await sendGridEmail({
         to: destination,
-        replyTo: replyTo || undefined,
-        subject: payload?.subject || 'Notification',
-        text: payload?.message || '',
+        subject: payload?.subject,
+        text: payload?.message,
+        fromName: brandName,
+        replyTo,
       });
     },
     sms: async (payload, destination) => {
