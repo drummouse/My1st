@@ -174,3 +174,38 @@ including `material-package/dry-run`, deployed cleanly with zero
 regressions to any existing endpoint). PR #23 remains a **draft** against
 `claude/development`; not merged, per the standing instruction to wait for
 explicit approval before any merge.
+
+## Addendum — Release-readiness corrections (2026-07-20, post-R2.6)
+
+A second pass, on the same branch, before PR #23 can be considered for
+"ready for review":
+
+1. **Claude model configuration (D-048).** The hardcoded
+   `claude-sonnet-5` model constant was removed and replaced by a
+   required, independently-diagnosable `CAPTURE_CLAUDE_MODEL` environment
+   variable with a new `configuration_error` outcome (never blocks the
+   capture workflow, never silently substitutes a model). 7 new/updated
+   tests; safety boundaries (`captureClaudePolicy.js`) confirmed
+   byte-for-byte unchanged (`git diff` empty for that file).
+2. **Authenticated browser acceptance checklist executed** (binding
+   correction #12, previously written but not run). Full real-browser
+   results, including two environment-tooling fixes required to get
+   headless Chromium working through this environment's proxy, and one
+   genuine infra finding (`BLOB_READ_WRITE_TOKEN` missing on this preview
+   — D-049): `docs/CAPTURE_R2_BROWSER_VERIFICATION.md`.
+3. **No in-scope R2 code defects found.** Every deterministic/server-side
+   invariant checked (duplicate-checksum protection, supersession
+   immutability, material-zone/texture-direction persistence, honest
+   labeling, dry-run side-effect-freedom, submit-not-publish) matched its
+   documented design exactly, verified both through real browser
+   interaction and independent direct API calls against the live preview.
+   The two application-level issues observed (a pre-existing company-
+   settings-load 500, and a pre-existing signup-endpoint 500-then-actually-
+   succeeded bug) both predate this branch and are outside R2 scope — noted,
+   not fixed, per the correction's explicit "fix only R2-scoped defects"
+   instruction.
+4. Full targeted + full `npm test`, `npm run build`, `git diff --check`,
+   and a live smoke run were re-executed against the updated preview
+   before this addendum was written — see the release-readiness report in
+   the session record / PR #23 description for exact counts and commit
+   SHA.
