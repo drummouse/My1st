@@ -46,6 +46,8 @@ For Library Core, use the OneDrive subject folder:
 | Capture Stage 4 review workspace verification | Automated checks complete; review-loop walkthrough pending | `configurator/docs/milestones/2026-07-19-capture-stage4-review.md` |
 | Capture Studio contract (DTO + pinning) | Active | `configurator/docs/CAPTURE_STUDIO_CONTRACT.md` |
 | Capture Stage 5 publication verification | Automated checks complete; publish walkthrough pending | `configurator/docs/milestones/2026-07-20-capture-stage5-library-publication.md` |
+| Scanner UX revision impact assessment | Approved plan (Slice R1 authorized) | `configurator/docs/superpowers/specs/2026-07-20-scanner-ux-revision-impact.md` |
+| Scanner Slice R1 verification | Automated checks complete; phone walkthrough pending | `configurator/docs/milestones/2026-07-20-scanner-slice-r1.md` |
 
 ## Completion Rule
 
