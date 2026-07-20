@@ -8,6 +8,7 @@ import {
   normalizeDraftPatch,
   validateCompleteness,
 } from './capturePolicy.js';
+import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
 
 export function toCaptureSession(row) {
   if (!row) return null;
@@ -317,6 +318,78 @@ export function createCaptureService({ store, randomUUID = nodeRandomUUID }) {
       });
     },
 
+    // Publish an approved capture as a tenant-private Library product.
+    // Deliberately two steps so a failed Library write retries without
+    // re-review: approved -> publishing (audited claim), then the record
+    // insert + publishing -> published atomically. Idempotent throughout —
+    // an existing record for this session (external_reference) is reused,
+    // and publishing a published session returns the stored result.
+    async publishSession(actor, id) {
+      let row = await store.getSession(id);
+      assertVisible(actor, row);
+
+      if (row.status === 'published') {
+        const existing = await store.findLibraryRecordByReference(captureExternalReference(id));
+        return {
+          session: toCaptureSession(row),
+          product: existing ? toStudioProduct(existing, existing.details || {}) : null,
+          alreadyPublished: true,
+        };
+      }
+
+      // Claim (or re-claim for retry) — both transitions are audited and
+      // capability-checked by the state machine.
+      const claim = assertTransition(actor.role, row.status, 'publishing');
+      await store.transaction(async () => {
+        const updated = await store.updateSessionStatus(id, row.status, 'publishing');
+        await store.appendAudit(audit(actor, claim.audit, id, null, claim.metadata));
+        row = updated ?? { ...row, status: 'publishing' };
+      });
+
+      const [fields, assets] = await Promise.all([store.listFields(id), store.listAssets(id)]);
+      const detail = {
+        session: toCaptureSession(row),
+        fields: fields.map(toCaptureField),
+        assets: assets.map(toCaptureAsset),
+      };
+
+      let record = await store.findLibraryRecordByReference(captureExternalReference(id));
+      const finish = assertTransition(actor.role, 'publishing', 'published');
+      const result = await store.transaction(async () => {
+        if (!record) {
+          const publication = buildLibraryPublication(detail);
+          record = await store.insertLibraryPublication({
+            id: randomUUID(),
+            version: 1,
+            createdBy: actor.id,
+            ...publication.record,
+          }, publication.details);
+        }
+        const recordVersion = Number(record.version || 1);
+        const updated = await store.updateSessionPublished(id, record.id, recordVersion);
+        await store.appendAudit(audit(actor, finish.audit, id, null, {
+          ...finish.metadata, recordId: record.id, recordVersion,
+        }));
+        return {
+          session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
+          product: toStudioProduct(record, record.details || {}),
+          alreadyPublished: false,
+        };
+      });
+      return result;
+    },
+
+    // Studio-readable published products: approved, active, tenant-scoped
+    // Library records (any source, not only capture) as the Studio DTO.
+    async listPublishedProducts(actor, filters = {}) {
+      const rows = await store.listPublishedLibraryProducts({
+        tenantId: actor.id,
+        includeAllTenants: actor.role === 'superadmin',
+        limit: Math.min(100, Math.max(1, Number(filters.limit) || 50)),
+      });
+      return rows.map((row) => toStudioProduct(row, row.details || {}));
+    },
+
     async archiveSession(actor, id, reason) {
       return this.transitionSession(actor, id, 'archived', reason);
     },
@@ -426,6 +499,48 @@ export function createNeonCaptureStore(sql) {
         values (${change.id}, ${change.sessionId}, ${change.authorId}, ${change.body})
         returning *`;
       return execute(query, change);
+    },
+    async findLibraryRecordByReference(externalReference) {
+      const [row] = await sql`select r.*,
+          (select row_to_json(d) from library_product_details d where d.record_id = r.id) as details
+        from library_records r where r.external_reference = ${externalReference}`;
+      return row || null;
+    },
+    async insertLibraryPublication(change, details) {
+      const query = sql`insert into library_records
+        (id, record_type, scope, tenant_id, name, code, description, lifecycle_status, review_status,
+         quality_level, version, source_type, external_reference, thumbnail_url, metadata, created_by, updated_by)
+        values (${change.id}, ${change.recordType}, ${change.scope}, ${change.tenantId}, ${change.name},
+                ${change.code}, ${change.description}, ${change.lifecycleStatus}, ${change.reviewStatus},
+                ${change.qualityLevel}, ${change.version}, ${change.sourceType}, ${change.externalReference},
+                ${change.thumbnailUrl}, ${JSON.stringify(change.metadata || {})}::jsonb, ${change.createdBy}, ${change.createdBy})
+        returning *`;
+      if (pendingQueries) {
+        pendingQueries.push(query);
+        pendingQueries.push(sql`insert into library_product_details (record_id, unit, price, application_metadata)
+          values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
+          on conflict (record_id) do nothing`);
+        return { ...change, details };
+      }
+      const row = await query;
+      await sql`insert into library_product_details (record_id, unit, price, application_metadata)
+        values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
+        on conflict (record_id) do nothing`;
+      return { ...(row[0] || change), details };
+    },
+    async updateSessionPublished(id, recordId, recordVersion) {
+      const query = sql`update capture_sessions set status = 'published',
+          published_record_id = ${recordId}, published_version = ${recordVersion}, updated_at = now()
+        where id = ${id} and status = 'publishing' returning *`;
+      return execute(query, null);
+    },
+    async listPublishedLibraryProducts({ tenantId, includeAllTenants, limit }) {
+      return sql`select r.*,
+          (select row_to_json(d) from library_product_details d where d.record_id = r.id) as details
+        from library_records r
+        where r.record_type = 'product' and r.review_status = 'approved' and r.lifecycle_status = 'active'
+          and (r.scope = 'global' or ${Boolean(includeAllTenants)} or r.tenant_id = ${tenantId})
+        order by r.updated_at desc limit ${limit}`;
     },
     async listAssets(sessionId) {
       return sql`select * from capture_assets where session_id = ${sessionId} order by created_at`;

@@ -19,6 +19,8 @@ const capabilityByAction = {
   'review.start': 'capture.review',
   'review.decide': 'capture.review',
   'review.comments': 'capture.review',
+  'review.publish': 'capture.publish.tenant',
+  'library.products': 'library.read',
 };
 
 function methodNotAllowed(res, allowed) {
@@ -157,6 +159,24 @@ export default async function handler(req, res) {
         return res.status(201).json({ comment });
       }
       return methodNotAllowed(res, 'GET, POST');
+    }
+
+    // /api/capture/review/<id>/publish — approved -> tenant-private Library
+    // record; safe to retry, idempotent once published.
+    if (action === 'review.publish') {
+      if (req.method === 'POST') {
+        const result = await service.publishSession(actor, String(req.query.id || ''));
+        return res.status(200).json(result);
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/library/products — Studio-readable approved products (DTO).
+    if (action === 'library.products') {
+      if (req.method === 'GET') {
+        return res.status(200).json({ products: await service.listPublishedProducts(actor, req.query) });
+      }
+      return methodNotAllowed(res, 'GET');
     }
 
     res.status(404).json({ error: 'Unknown Capture action' });

@@ -1100,3 +1100,13 @@ body {
   margin-right: 0.35rem;
   vertical-align: text-bottom;
 }
+
+/* Capture (Stage 5): published Library list thumbnail. */
+.capture-library-thumb {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}

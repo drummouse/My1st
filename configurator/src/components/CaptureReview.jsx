@@ -242,12 +242,32 @@ export default function CaptureReview() {
                 </div>
               </>
             )}
-            {!['submitted', 'in_review'].includes(session.status) && (
+            {['approved', 'publishing'].includes(session.status) && (
+              <>
+                <div className="control-sublabel">
+                  {session.status === 'publishing'
+                    ? 'A previous publication attempt did not finish — publishing again is safe.'
+                    : 'Approved. Publishing creates a company-private Library product with a stable ID and version.'}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy}
+                  onClick={() => act(() => captureApi.publish(session.id))}
+                >
+                  {session.status === 'publishing' ? 'Retry Publish' : 'Publish to Library'}
+                </button>
+              </>
+            )}
+            {session.status === 'published' && (
               <div className="control-sublabel">
-                {session.status === 'approved'
-                  ? 'Approved — publication to the Library arrives with Stage 5.'
-                  : 'No decision available in this status.'}
+                Published to the Library — product <code>{session.publishedRecordId}</code>,
+                version {session.publishedVersion}. Studio selections pin this exact version;
+                future Library changes are offered as explicit upgrades, never applied silently.
               </div>
+            )}
+            {!['submitted', 'in_review', 'approved', 'publishing', 'published'].includes(session.status) && (
+              <div className="control-sublabel">No decision available in this status.</div>
             )}
           </div>
         </div>

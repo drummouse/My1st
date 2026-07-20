@@ -32,6 +32,8 @@ export const captureApi = {
   startReview: (id) => request(`/api/capture/review/${id}/start`, { method: 'POST' }),
   decideReview: (id, decision, reason) => request(`/api/capture/review/${id}/decision`, { method: 'POST', body: { decision, reason } }),
   addComment: (id, body) => request(`/api/capture/review/${id}/comments`, { method: 'POST', body: { body } }),
+  publish: (id) => request(`/api/capture/review/${id}/publish`, { method: 'POST' }),
+  libraryProducts: () => request('/api/library/products'),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

@@ -94,6 +94,48 @@ const completenessFromForm = (open, form) => validateCompleteness({
   assets: open.assets || [],
 });
 
+// Minimal Studio-readable consumer of the published Library (Stage 5): the
+// same /api/library/products DTO a Studio selector will use, showing each
+// product's stable ID and immutable version. Selecting in Studio stores
+// this DTO snapshot + {productId, version} — the pin contract.
+function LibraryProducts() {
+  const [products, setProducts] = useState(null);
+  useEffect(() => {
+    captureApi.libraryProducts()
+      .then(({ products: rows }) => setProducts(rows))
+      .catch((err) => { console.error('Library products error:', err); setProducts([]); });
+  }, []);
+  if (!products) return <div className="control-sublabel">Loading published Library products…</div>;
+  return (
+    <div>
+      <div className="field-label">Published Library (Studio-readable)</div>
+      {products.length === 0 ? (
+        <div className="control-sublabel">Nothing published yet — approve and publish a capture first.</div>
+      ) : (
+        <ul className="capture-list">
+          {products.map((product) => (
+            <li key={product.productId} className="capture-item">
+              <span className="capture-item-title">
+                {product.thumbnailUrl && (
+                  <img className="capture-library-thumb" src={product.thumbnailUrl} alt="" aria-hidden="true" />
+                )}
+                {product.name}
+                <span className="capture-status">v{product.version}</span>
+              </span>
+              <span className="control-sublabel">
+                {product.category || 'no category'}
+                {product.manufacturer ? ` · ${product.manufacturer}` : ''}
+                {product.sku ? ` · ${product.sku}` : ''}
+                {' · '}id {product.productId.slice(0, 8)}…
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // Stage 1–3 Capture workspace: recoverable drafts, main/surface/label
 // photos with upload sync states, guided product metadata, shared
 // completeness validation, and submit/resubmit. Review arrives Stage 4.
@@ -259,6 +301,7 @@ export default function CapturePanel({ canReview = false }) {
         <div className="control-label">Capture</div>
         {modeToggle}
         <CaptureReview />
+        <LibraryProducts />
       </div>
     );
   }
