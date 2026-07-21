@@ -457,11 +457,10 @@ npm run build      # production build to dist/
 
 ## Not yet built (Phase 2, per brief)
 
-- Communications delivery is wired but unconfigured — `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/
-  `PLATFORM_DEFAULT_PHONE` (SMS) and `SENDGRID_API_KEY`/`SENDGRID_FROM_EMAIL` (email) are all
-  unset until Configurator's own Twilio/SendGrid accounts exist; every queued notice simply
-  stays `pending`/`failed` in `notification_outbox` until those env vars are added, with no
-  code changes needed at that point.
+- Communications delivery (SMS via Twilio, email via SendGrid) is live and
+  verified — see `docs/COMMUNICATIONS_RUNBOOK.md` for the outbox lifecycle,
+  the external scheduled-drain contract (`COMMS_SCHEDULER_SECRET`, a
+  Make.com POST every 5 minutes), and recipient validation.
 - Live QuickBooks pricing via Make.com — the Make.com/QuickBooks/Claude
   agent side of this (separate from the configurator app) is built and the
   read tools are verified live; wiring it into the configurator's own

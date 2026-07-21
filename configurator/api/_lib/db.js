@@ -125,6 +125,14 @@ export function ensureSchema() {
       await sql`alter table notification_outbox add column if not exists sender_user_id uuid references users(id)`;
       await sql`alter table notification_outbox add column if not exists to_email text`;
       await sql`alter table notification_outbox add column if not exists to_phone text`;
+      // Scheduled-drain support (D-066/D-067): claimed_at records when a row
+      // was atomically claimed by a drain invocation (observability only —
+      // the actual lease/reclaim mechanism reuses next_attempt_at, see
+      // api/comms/index.js); error_category distinguishes a permanent
+      // recipient/provider rejection from a transient one worth retrying,
+      // separate from the free-text last_error message.
+      await sql`alter table notification_outbox add column if not exists claimed_at timestamptz`;
+      await sql`alter table notification_outbox add column if not exists error_category text`;
 
       // One row per reseller/owner — their comms preference, not a
       // dedicated sending account. No per-tenant Twilio number or email

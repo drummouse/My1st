@@ -66,7 +66,9 @@ create table if not exists notification_outbox (
   created_at timestamptz not null default now(),
   sender_user_id uuid references users(id),
   to_email text,
-  to_phone text
+  to_phone text,
+  claimed_at timestamptz,
+  error_category text
 );
 
 -- A reseller/owner's comms preference — not a dedicated sending account.
