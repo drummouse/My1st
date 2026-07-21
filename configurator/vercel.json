@@ -5,6 +5,7 @@
     { "source": "/api/superadmin/library", "destination": "/api/superadmin?action=library.records" },
     { "source": "/api/superadmin/tenants/:id/:sub", "destination": "/api/superadmin?action=tenants&id=:id&sub=:sub" },
     { "source": "/api/superadmin/:action", "destination": "/api/superadmin?action=:action" },
+    { "source": "/api/comms/:action", "destination": "/api/comms?action=:action" },
     { "source": "/api/capture/sessions", "destination": "/api/capture?action=sessions" },
     { "source": "/api/capture/sessions/:id/assets/:assetId/replace", "destination": "/api/capture?action=asset.replace&id=:id&assetId=:assetId" },
     { "source": "/api/capture/sessions/:id/assets/:assetId/blob", "destination": "/api/capture?action=asset.blob&id=:id&assetId=:assetId" },

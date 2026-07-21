@@ -11,6 +11,8 @@ export async function saveOrUpdateProject(design, currentProjectId) {
       jobNumber: design.house.jobNumber,
       customerName: design.house.customerName,
       address: design.house.address,
+      customerEmail: design.house.customerEmail,
+      customerPhone: design.house.customerPhone,
       design,
     }),
   });

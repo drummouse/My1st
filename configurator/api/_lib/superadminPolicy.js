@@ -15,6 +15,7 @@ const ROLE_CAPABILITIES = {
     'capture.review',
     'capture.publish.tenant',
     'library.read',
+    'comms.manage',
   ],
   reseller: [
     'users.create',
@@ -26,6 +27,7 @@ const ROLE_CAPABILITIES = {
     'catalog.read',
     'catalog.write',
     'skins.manage',
+    'comms.manage',
   ],
   superadmin: [
     'capture.create',
@@ -49,6 +51,8 @@ const ROLE_CAPABILITIES = {
     'skins.manage',
     'platform.audit.read',
     'platform.diagnostics.read',
+    'comms.manage',
+    'comms.operate',
   ],
 };
 

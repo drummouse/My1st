@@ -403,6 +403,22 @@ SuperAdmin now has a capability-checked Platform Library for versioned products,
   operations; it cannot enter or impersonate a contractor tenant. See
   [`docs/SUPERADMIN_OPERATIONS.md`](docs/SUPERADMIN_OPERATIONS.md) for bootstrap, privacy,
   restriction, password-reset, delivery, verification, and rollback procedures.
+- **Communications** (`SettingsPanel.jsx`'s Communications block, `api/comms/index.js`,
+  `api/_lib/{commsIdentity,commsDelivery}.js`) — a per-owner choice of who notifies their own
+  project customers when a design is approved: **"I'll handle it"** (`notify_mode: 'self'`, the
+  default — nothing changes; the owner notifies manually or wires their own automation through the
+  existing `notification_webhook_url`), or **"Notify them for me"** (`'platform'` — the platform
+  sends, signed "Dear `<client>`, `<message>` Best wishes, `<Brand>` team" by email and SMS). There
+  is no per-tenant phone number or sending domain: every platform-sent notice rides one shared
+  Twilio number and SendGrid sender (env-configured; unset until Configurator's own business
+  accounts exist — see "Not yet built" below); only the signature and, for email, the Reply-To vary
+  — the owner's own name, or their reseller's if they have one, resolved by `commsIdentity.js`'s
+  cascade so a reseller's white-labeled owners never see "IronWrap 3D Configurator" in a message
+  their own client receives. The same cascade also brands the platform's existing account-lifecycle
+  notices (password reset, account restricted — `notification_outbox`, previously built but never
+  actually wired to a delivery provider) with a reseller's name for the owner accounts it created.
+  `api/comms/index.js`'s `drain` action (superadmin-only, on-demand — the Hobby plan has no spare
+  cron slot) is the delivery worker; it's the 12th and last available Vercel function slot.
 
 ## Known simplification
 
@@ -441,6 +457,11 @@ npm run build      # production build to dist/
 
 ## Not yet built (Phase 2, per brief)
 
+- Communications delivery is wired but unconfigured — `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/
+  `PLATFORM_DEFAULT_PHONE` (SMS) and `SENDGRID_API_KEY`/`SENDGRID_FROM_EMAIL` (email) are all
+  unset until Configurator's own Twilio/SendGrid accounts exist; every queued notice simply
+  stays `pending`/`failed` in `notification_outbox` until those env vars are added, with no
+  code changes needed at that point.
 - Live QuickBooks pricing via Make.com — the Make.com/QuickBooks/Claude
   agent side of this (separate from the configurator app) is built and the
   read tools are verified live; wiring it into the configurator's own

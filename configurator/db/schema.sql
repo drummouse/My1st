@@ -53,7 +53,7 @@ create table if not exists superadmin_audit_events (
 
 create table if not exists notification_outbox (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references users(id),
+  user_id uuid references users(id),
   channel text not null,
   template text not null,
   payload jsonb not null,
@@ -63,8 +63,26 @@ create table if not exists notification_outbox (
   last_error text,
   sent_at timestamptz,
   support_reference text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  sender_user_id uuid references users(id),
+  to_email text,
+  to_phone text
 );
+
+-- A reseller/owner's comms preference — not a dedicated sending account.
+-- 'platform' sends ride the platform's one shared Twilio number/Gmail
+-- account; only the message signature/Reply-To vary by tenant. See
+-- api/_lib/db.js's ensureSchema() for the full rationale.
+create table if not exists sender_identities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  notify_mode text not null default 'self' check (notify_mode in ('platform', 'self')),
+  display_name text,
+  contact_email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists sender_identities_user_id_key on sender_identities (user_id);
 
 create table if not exists projects (
   id uuid primary key default gen_random_uuid(),
@@ -79,6 +97,8 @@ create table if not exists projects (
 alter table projects add column if not exists approved_at timestamptz;
 alter table projects add column if not exists approved_by_name text;
 alter table projects add column if not exists owner_id uuid references users(id);
+alter table projects add column if not exists customer_email text;
+alter table projects add column if not exists customer_phone text;
 
 create index if not exists projects_updated_at_idx on projects (updated_at desc);
 create index if not exists projects_owner_id_idx on projects (owner_id);
