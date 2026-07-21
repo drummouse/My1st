@@ -22,6 +22,8 @@
     { "source": "/api/capture/sessions/:id/evidence", "destination": "/api/capture?action=evidence&id=:id" },
     { "source": "/api/capture/sessions/:id/validate", "destination": "/api/capture?action=validate&id=:id" },
     { "source": "/api/capture/sessions/:id/submit", "destination": "/api/capture?action=submit&id=:id" },
+    { "source": "/api/capture/tags/:tagId", "destination": "/api/capture?action=tag&tagId=:tagId" },
+    { "source": "/api/capture/tags", "destination": "/api/capture?action=tags" },
     { "source": "/api/library/products", "destination": "/api/capture?action=library.products" },
     { "source": "/api/capture/review/:id/publish", "destination": "/api/capture?action=review.publish&id=:id" },
     { "source": "/api/capture/review/:id/start", "destination": "/api/capture?action=review.start&id=:id" },

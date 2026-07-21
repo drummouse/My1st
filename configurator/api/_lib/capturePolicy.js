@@ -22,17 +22,31 @@ export const CAPTURE_CATEGORIES = Object.freeze([
 // Editable = the contributor may still change draft content. Every other
 // status is read-only for the contributor until a reviewer hands it back.
 export const EDITABLE_STATUSES = Object.freeze(['draft', 'changes_requested']);
-// Declared now (and enforced in the schema's CHECK constraints) so Stage 2's
-// asset rows and Stage 3+'s machine-suggested fields land on a contract that
-// already exists; nothing in Stage 1 writes them yet.
+// Reference list of well-known shot labels (used by the Profile Geometry
+// guided/adaptive views and shown as suggestions); the flexible-tags slice
+// widens the database CHECK to an open vocabulary (spec §18), so this list
+// is documentation only — normalizeAssetInput no longer restricts `purpose`
+// to these values, just to a safe, bounded shape.
 export const ASSET_PURPOSES = Object.freeze([
   'main', 'front', 'back', 'edge', 'surface', 'label', 'packaging', 'profile', 'installed', 'other',
   // Profile Geometry shot views (Slice R1) — adaptive capture stores each
   // guided view under its position label.
   'left_end', 'right_end', 'top', 'bottom', 'iso_front_left', 'iso_front_right',
 ]);
+export const MAX_ASSET_PURPOSE_LENGTH = 60;
+const ASSET_PURPOSE_PATTERN = /^[a-z0-9](?:[a-z0-9 _-]*[a-z0-9])?$/;
 export const MEASUREMENT_METHODS = Object.freeze(['manual', 'ruler', 'marker', 'inferred']);
 export const MEASUREMENT_FEATURES_MAX = 60;
+// Flexible tags (deferred by D-035, implemented in this slice): a tenant's
+// tag vocabulary and a session's item-type classification. Tags stay a
+// lowercase, bounded, punctuation-light string — the same shape whether it
+// names a vocabulary entry or one entry in a session's `tags` array.
+export const MAX_TAG_LENGTH = 40;
+export const MAX_TAGS_PER_SESSION = 25;
+const TAG_PATTERN = /^[a-z0-9](?:[a-z0-9 _-]*[a-z0-9])?$/;
+export const ITEM_TYPES = Object.freeze([
+  'profile', 'commercial_product', 'custom_object', 'assembly', 'decorative', 'unknown',
+]);
 export const FIELD_SOURCES = Object.freeze(['manual', 'barcode', 'ocr', 'ai', 'imported', 'reviewer']);
 export const ASSET_CLASSIFICATIONS = Object.freeze(['source', 'derived']);
 // Single source of truth for what a capture image may be — api/upload.js
@@ -344,8 +358,25 @@ function normalizeRequestedPose(pose) {
 // Vercel Blob (never an arbitrary external host), and a derived asset
 // (thumbnail, crop) must name the source it came from so originals are
 // never silently replaced.
+// Open-vocabulary shot purpose/label (widened from the closed ASSET_PURPOSES
+// enum, spec §18): still bounded and sanitized, just no longer restricted to
+// a fixed set of view names.
+function normalizePurpose(value) {
+  const result = clean(value).toLowerCase();
+  if (!result) {
+    throw new CaptureValidationError('CAPTURE_ASSET_PURPOSE_INVALID', 'A shot purpose/label is required');
+  }
+  if (result.length > MAX_ASSET_PURPOSE_LENGTH) {
+    throw new CaptureValidationError('CAPTURE_ASSET_PURPOSE_INVALID', `Purpose must be ${MAX_ASSET_PURPOSE_LENGTH} characters or fewer`);
+  }
+  if (!ASSET_PURPOSE_PATTERN.test(result)) {
+    throw new CaptureValidationError('CAPTURE_ASSET_PURPOSE_INVALID', 'Purpose may only contain letters, digits, spaces, hyphens, and underscores');
+  }
+  return result;
+}
+
 export function normalizeAssetInput(input = {}) {
-  const purpose = enumValue(input.purpose, ASSET_PURPOSES, '', 'CAPTURE_ASSET_PURPOSE_INVALID');
+  const purpose = normalizePurpose(input.purpose);
   const classification = enumValue(input.classification, ASSET_CLASSIFICATIONS, 'source', 'CAPTURE_ASSET_CLASSIFICATION_INVALID');
   const sourceAssetId = clean(input.sourceAssetId) || null;
   if (classification === 'derived' && !sourceAssetId) {
@@ -400,13 +431,41 @@ export function normalizeAssetInput(input = {}) {
   };
 }
 
-// Draft-content patch (title/category/step plus free-form field values).
-// Only keys present in the patch are touched; `fields` upserts by key.
+// A single tag/vocabulary-entry value: lowercase, bounded, punctuation-light.
+export function normalizeTagValue(value) {
+  const result = clean(value).toLowerCase();
+  if (!result) throw new CaptureValidationError('CAPTURE_TAG_INVALID', 'A tag is required');
+  if (result.length > MAX_TAG_LENGTH) {
+    throw new CaptureValidationError('CAPTURE_TAG_INVALID', `Tags must be ${MAX_TAG_LENGTH} characters or fewer`);
+  }
+  if (!TAG_PATTERN.test(result)) {
+    throw new CaptureValidationError('CAPTURE_TAG_INVALID', 'Tags may only contain letters, digits, spaces, hyphens, and underscores');
+  }
+  return result;
+}
+
+// New capture_tags vocabulary entry (one tag, owned by the actor's tenant).
+export function normalizeTagInput(input = {}) {
+  return { tag: normalizeTagValue(input.tag) };
+}
+
+// Draft-content patch (title/category/step/tags/item type plus free-form
+// field values). Only keys present in the patch are touched; `fields`
+// upserts by key.
 export function normalizeDraftPatch(input = {}) {
   const patch = {};
   if ('title' in input) patch.title = clean(input.title).slice(0, 200) || null;
   if ('category' in input) patch.category = enumValue(input.category, CAPTURE_CATEGORIES, null, 'CAPTURE_CATEGORY_INVALID');
   if ('currentStep' in input) patch.currentStep = clean(input.currentStep).slice(0, 60) || null;
+  if ('itemType' in input) patch.itemType = enumValue(input.itemType, ITEM_TYPES, null, 'CAPTURE_ITEM_TYPE_INVALID');
+  if ('tags' in input) {
+    const tags = input.tags;
+    if (!Array.isArray(tags)) throw new CaptureValidationError('CAPTURE_TAGS_INVALID', 'tags must be an array of strings');
+    if (tags.length > MAX_TAGS_PER_SESSION) {
+      throw new CaptureValidationError('CAPTURE_TAGS_INVALID', `A capture may carry at most ${MAX_TAGS_PER_SESSION} tags`);
+    }
+    patch.tags = [...new Set(tags.map((tag) => normalizeTagValue(tag)))];
+  }
   if ('fields' in input) {
     const fields = input.fields;
     if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {

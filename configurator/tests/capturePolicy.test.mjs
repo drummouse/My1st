@@ -5,10 +5,15 @@ import {
   CAPTURE_TYPES,
   CAPTURE_CATEGORIES,
   EDITABLE_STATUSES,
+  ITEM_TYPES,
+  MAX_TAG_LENGTH,
+  MAX_TAGS_PER_SESSION,
   allowedTransitions,
   assertTransition,
   normalizeCreateInput,
   normalizeDraftPatch,
+  normalizeTagInput,
+  normalizeTagValue,
 } from '../api/_lib/capturePolicy.js';
 
 test('capture status vocabulary is exactly the documented state machine', () => {
@@ -98,4 +103,28 @@ test('draft patches only touch provided keys and validate fields', () => {
     { fieldKey: 'notes', value: 'seen at supplier yard' },
     { fieldKey: 'sku', value: null },
   ]);
+});
+
+test('a single tag value is normalized to a lowercase, bounded, punctuation-light string', () => {
+  assert.equal(normalizeTagValue('  Standing Seam  '), 'standing seam');
+  assert.equal(normalizeTagValue('gutter_5in'), 'gutter_5in');
+  assert.throws(() => normalizeTagValue(''), { code: 'CAPTURE_TAG_INVALID' });
+  assert.throws(() => normalizeTagValue('x'.repeat(MAX_TAG_LENGTH + 1)), { code: 'CAPTURE_TAG_INVALID' });
+  assert.throws(() => normalizeTagValue('roofing/siding'), { code: 'CAPTURE_TAG_INVALID' });
+  assert.deepEqual(normalizeTagInput({ tag: ' Trim ' }), { tag: 'trim' });
+});
+
+test('draft patches accept item type and a deduplicated, bounded tags array', () => {
+  for (const itemType of ITEM_TYPES) {
+    assert.equal(normalizeDraftPatch({ itemType }).itemType, itemType);
+  }
+  assert.throws(() => normalizeDraftPatch({ itemType: 'spaceship' }), { code: 'CAPTURE_ITEM_TYPE_INVALID' });
+
+  const patch = normalizeDraftPatch({ tags: ['Roofing', 'roofing', ' Gutter '] });
+  assert.deepEqual(patch.tags, ['roofing', 'gutter']);
+  assert.throws(() => normalizeDraftPatch({ tags: 'roofing' }), { code: 'CAPTURE_TAGS_INVALID' });
+  assert.throws(
+    () => normalizeDraftPatch({ tags: Array.from({ length: MAX_TAGS_PER_SESSION + 1 }, (_, i) => `tag-${i}`) }),
+    { code: 'CAPTURE_TAGS_INVALID' },
+  );
 });

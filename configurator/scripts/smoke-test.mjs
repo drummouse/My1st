@@ -170,6 +170,19 @@ await check('auth guard /api/capture material-package dry-run', '/api/capture/se
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;
 });
+await check('auth guard /api/capture/tags', '/api/capture/tags', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/capture/tags create',
+  '/api/capture/tags',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
 await check('auth guard /api/library/products', '/api/library/products', (response) => {
   if (response.status !== 401) return `expected 401, received ${response.status}`;
   return true;

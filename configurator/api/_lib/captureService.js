@@ -10,6 +10,7 @@ import {
   normalizeMeasurementInput,
   normalizeMaterialZoneState,
   normalizeTextureDirection,
+  normalizeTagInput,
   validateCompleteness,
 } from './capturePolicy.js';
 import { buildLibraryPublication, captureExternalReference, toStudioProduct } from './capturePublish.js';
@@ -44,6 +45,8 @@ export function toCaptureSession(row) {
     materialZoneState: row.material_zone_state ?? row.materialZoneState ?? null,
     textureDirection: row.texture_direction ?? row.textureDirection ?? null,
     studioValidation: row.studio_validation ?? row.studioValidation ?? null,
+    tags: row.tags ?? [],
+    itemType: row.item_type ?? row.itemType ?? null,
     createdAt: row.created_at ?? row.createdAt ?? null,
     updatedAt: row.updated_at ?? row.updatedAt ?? null,
   };
@@ -100,6 +103,16 @@ export function toCaptureMeasurement(row) {
   };
 }
 
+export function toCaptureTag(row) {
+  return {
+    id: row.id,
+    ownerId: row.owner_id ?? row.ownerId,
+    tag: row.tag,
+    createdBy: row.created_by ?? row.createdBy ?? null,
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  };
+}
+
 export function toCaptureComment(row) {
   return {
     id: row.id,
@@ -148,13 +161,16 @@ const REVIEW_DECISIONS = Object.freeze({
 const rowOwner = (row) => row.owner_id ?? row.ownerId;
 
 // Ownership is enforced here (the policy module checks capabilities only).
-// A session outside the actor's tenant is reported as not-found, never as
+// A row outside the actor's tenant is reported as not-found, never as
 // forbidden — same information-hiding stance as Library Core.
-function assertVisible(actor, row) {
-  if (!row) throw new CaptureValidationError('CAPTURE_SESSION_NOT_FOUND', 'Capture session not found');
-  if (actor.role !== 'superadmin' && rowOwner(row) !== actor.id) {
-    throw new CaptureValidationError('CAPTURE_SESSION_NOT_FOUND', 'Capture session not found');
+function assertOwned(actor, row, code, message) {
+  if (!row || (actor.role !== 'superadmin' && rowOwner(row) !== actor.id)) {
+    throw new CaptureValidationError(code, message);
   }
+}
+
+function assertVisible(actor, row) {
+  assertOwned(actor, row, 'CAPTURE_SESSION_NOT_FOUND', 'Capture session not found');
 }
 
 export function createCaptureService({
@@ -269,6 +285,34 @@ export function createCaptureService({
         throw new CaptureValidationError('CAPTURE_MEASUREMENT_NOT_FOUND', 'Measurement not found');
       }
       await store.deleteMeasurement(measurementId);
+      return { removed: true };
+    },
+
+    // Tenant-scoped tag vocabulary (flexible-tags slice, deferred by
+    // D-035). Listing follows the same row-scoping as everything else
+    // (superadmin sees every tenant's vocabulary); creation and removal are
+    // always scoped to the actor's own tenant.
+    async listTags(actor) {
+      const rows = await store.listTags({ ownerId: actor.id, includeAllOwners: actor.role === 'superadmin' });
+      return rows.map(toCaptureTag);
+    },
+
+    // Idempotent by (owner, tag): re-adding an existing vocabulary entry
+    // returns it instead of erroring, mirroring createSession's clientRef
+    // reuse.
+    async createTag(actor, input) {
+      const { tag } = normalizeTagInput(input);
+      const change = { id: randomUUID(), ownerId: actor.id, tag, createdBy: actor.id };
+      const created = await store.insertTag(change);
+      if (created) return { tag: toCaptureTag(created), created: true };
+      const existing = await store.getTagByValue(actor.id, tag);
+      return { tag: toCaptureTag(existing), created: false };
+    },
+
+    async removeTag(actor, tagId) {
+      const row = await store.getTag(tagId);
+      assertOwned(actor, row, 'CAPTURE_TAG_NOT_FOUND', 'Capture tag not found');
+      await store.deleteTag(tagId);
       return { removed: true };
     },
 
@@ -817,6 +861,8 @@ export function createNeonCaptureStore(sql) {
           title = case when ${'title' in patch} then ${patch.title ?? null} else title end,
           category = case when ${'category' in patch} then ${patch.category ?? null} else category end,
           current_step = case when ${'currentStep' in patch} then ${patch.currentStep ?? null} else current_step end,
+          item_type = case when ${'itemType' in patch} then ${patch.itemType ?? null} else item_type end,
+          tags = case when ${'tags' in patch} then ${JSON.stringify(patch.tags ?? [])}::jsonb else tags end,
           updated_at = now()
         where id = ${id} returning *`;
       return execute(query, null);
@@ -867,6 +913,29 @@ export function createNeonCaptureStore(sql) {
     },
     async deleteMeasurement(id) {
       await sql`delete from capture_measurements where id = ${id}`;
+    },
+    async listTags({ ownerId, includeAllOwners }) {
+      return sql`select * from capture_tags
+        where (${Boolean(includeAllOwners)} or owner_id = ${ownerId})
+        order by tag`;
+    },
+    async getTag(id) {
+      const [row] = await sql`select * from capture_tags where id = ${id}`;
+      return row || null;
+    },
+    async getTagByValue(ownerId, tag) {
+      const [row] = await sql`select * from capture_tags where owner_id = ${ownerId} and tag = ${tag}`;
+      return row || null;
+    },
+    async insertTag(change) {
+      const query = sql`insert into capture_tags (id, owner_id, tag, created_by)
+        values (${change.id}, ${change.ownerId}, ${change.tag}, ${change.createdBy})
+        on conflict (owner_id, tag) do nothing
+        returning *`;
+      return execute(query, null);
+    },
+    async deleteTag(id) {
+      await sql`delete from capture_tags where id = ${id}`;
     },
     async listComments(sessionId) {
       return sql`select c.*, coalesce(u.business_name, u.company_name, u.email) as author_label

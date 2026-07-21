@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { normalizeAssetInput, CAPTURE_IMAGE_TYPES, MAX_CAPTURE_IMAGE_BYTES } from '../api/_lib/capturePolicy.js';
+import { normalizeAssetInput, CAPTURE_IMAGE_TYPES, MAX_CAPTURE_IMAGE_BYTES, MAX_ASSET_PURPOSE_LENGTH } from '../api/_lib/capturePolicy.js';
 import { createCaptureService } from '../api/_lib/captureService.js';
 
 const BLOB_URL = 'https://abc123.public.blob.vercel-storage.com/capture-x7.jpg';
@@ -21,7 +21,13 @@ test('asset input is validated: purpose, URL host, type, size, dimensions', () =
   assert.equal(asset.classification, 'source');
   assert.equal(asset.url, BLOB_URL);
 
-  assert.throws(() => normalizeAssetInput(validInput({ purpose: 'selfie' })), { code: 'CAPTURE_ASSET_PURPOSE_INVALID' });
+  // Purpose is an open vocabulary (flexible-tags slice, spec §18): any
+  // sanitized shot label is accepted, not just the closed legacy set.
+  assert.equal(normalizeAssetInput(validInput({ purpose: 'selfie' })).purpose, 'selfie');
+  assert.equal(normalizeAssetInput(validInput({ purpose: '  Cut Edge  ' })).purpose, 'cut edge');
+  assert.throws(() => normalizeAssetInput(validInput({ purpose: '' })), { code: 'CAPTURE_ASSET_PURPOSE_INVALID' });
+  assert.throws(() => normalizeAssetInput(validInput({ purpose: 'x'.repeat(MAX_ASSET_PURPOSE_LENGTH + 1) })), { code: 'CAPTURE_ASSET_PURPOSE_INVALID' });
+  assert.throws(() => normalizeAssetInput(validInput({ purpose: 'main; drop table capture_assets' })), { code: 'CAPTURE_ASSET_PURPOSE_INVALID' });
   assert.throws(() => normalizeAssetInput(validInput({ url: 'https://evil.example/image.jpg' })), { code: 'CAPTURE_ASSET_URL_INVALID' });
   assert.throws(() => normalizeAssetInput(validInput({ url: 'http://abc.public.blob.vercel-storage.com/x.jpg' })), { code: 'CAPTURE_ASSET_URL_INVALID' });
   assert.throws(() => normalizeAssetInput(validInput({ mimeType: 'application/pdf' })), { code: 'CAPTURE_ASSET_TYPE_INVALID' });

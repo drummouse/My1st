@@ -26,6 +26,8 @@ const capabilityByAction = {
   measurements: 'capture.create',
   measurement: 'capture.create',
   evidence: 'capture.create',
+  tags: 'capture.create',
+  tag: 'capture.create',
   'review.queue': 'capture.review',
   'review.start': 'capture.review',
   'review.decide': 'capture.review',
@@ -42,6 +44,7 @@ function methodNotAllowed(res, allowed) {
 const ERROR_STATUS = {
   CAPTURE_SESSION_NOT_FOUND: 404,
   CAPTURE_ASSET_NOT_FOUND: 404,
+  CAPTURE_TAG_NOT_FOUND: 404,
   CAPTURE_TRANSITION_INVALID: 409,
   CAPTURE_SESSION_LOCKED: 409,
   CAPTURE_NOT_AUTHORIZED: 403,
@@ -251,6 +254,28 @@ export default async function handler(req, res) {
         return res.status(200).json(await service.evaluateEvidence(actor, String(req.query.id || '')));
       }
       return methodNotAllowed(res, 'GET');
+    }
+
+    // /api/capture/tags — tenant-scoped tag vocabulary (flexible-tags
+    // slice, deferred by D-035).
+    if (action === 'tags') {
+      if (req.method === 'GET') {
+        return res.status(200).json({ tags: await service.listTags(actor) });
+      }
+      if (req.method === 'POST') {
+        const { tag, created } = await service.createTag(actor, req.body || {});
+        return res.status(created ? 201 : 200).json({ tag, created });
+      }
+      return methodNotAllowed(res, 'GET, POST');
+    }
+
+    // /api/capture/tags/<tagId> — remove a vocabulary entry.
+    if (action === 'tag') {
+      if (req.method === 'DELETE') {
+        await service.removeTag(actor, String(req.query.tagId || ''));
+        return res.status(204).end();
+      }
+      return methodNotAllowed(res, 'DELETE');
     }
 
     // /api/capture/review — permission-aware review queue.
