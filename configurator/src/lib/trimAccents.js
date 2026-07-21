@@ -8,6 +8,8 @@ import {
 export const STANDARD_TRIM_KINDS = Object.freeze([
   'soffit',
   'fascia',
+  'gutters',
+  'downspouts',
   'garage_doors',
   'other_trims',
 ]);
@@ -15,6 +17,8 @@ export const STANDARD_TRIM_KINDS = Object.freeze([
 export const TRIM_KIND_LABELS = Object.freeze({
   soffit: 'Soffit',
   fascia: 'Fascia',
+  gutters: 'Gutters',
+  downspouts: 'Downspouts',
   garage_doors: 'Garage Doors',
   other_trims: 'Other Trims',
 });
@@ -27,6 +31,7 @@ const STANDARD_DEFINITIONS = Object.freeze([
     measurementKey: 'soffitSqft',
     colorKey: 'soffit',
     lockKey: 'soffit',
+    serviceKey: 'soffit',
     canonicalUnit: 'square_feet',
   }),
   Object.freeze({
@@ -35,6 +40,25 @@ const STANDARD_DEFINITIONS = Object.freeze([
     measurementKey: 'fasciaLf',
     colorKey: 'fascia',
     lockKey: 'fascia',
+    serviceKey: 'fascia',
+    canonicalUnit: 'linear_feet',
+  }),
+  Object.freeze({
+    id: 'gutters',
+    kind: 'gutters',
+    measurementKey: 'gutterLf',
+    colorKey: 'gutters',
+    lockKey: 'gutters',
+    serviceKey: 'gutters',
+    canonicalUnit: 'linear_feet',
+  }),
+  Object.freeze({
+    id: 'downspouts',
+    kind: 'downspouts',
+    measurementKey: 'downspoutLf',
+    colorKey: 'downspouts',
+    lockKey: 'downspouts',
+    serviceKey: 'downspouts',
     canonicalUnit: 'linear_feet',
   }),
   Object.freeze({
@@ -43,6 +67,7 @@ const STANDARD_DEFINITIONS = Object.freeze([
     measurementKey: 'garageDoorCappingLf',
     colorKey: 'garageDoorCapping',
     lockKey: 'garageDoorCapping',
+    serviceKey: 'garageDoorCapping',
     canonicalUnit: 'linear_feet',
   }),
   Object.freeze({
@@ -51,6 +76,7 @@ const STANDARD_DEFINITIONS = Object.freeze([
     measurementKey: 'capFlashingLf',
     colorKey: 'capFlashing',
     lockKey: 'capFlashing',
+    serviceKey: 'capFlashing',
     canonicalUnit: 'linear_feet',
   }),
 ]);
@@ -84,6 +110,7 @@ export function createTrimAccent({
   colorId = '',
   quantity = 0,
   canonicalUnit,
+  selected = true,
   locked = false,
   customLabel,
 } = {}) {
@@ -99,6 +126,7 @@ export function createTrimAccent({
     colorId: String(colorId ?? ''),
     quantity: finiteQuantity(quantity),
     canonicalUnit: requireCanonicalUnit(canonicalUnit),
+    selected: selected === true,
     locked: locked === true,
   };
   if (customLabel !== undefined) record.customLabel = String(customLabel);
@@ -118,6 +146,7 @@ export function createAdditionalTrimAccent({
   colorId = '',
   quantity = 0,
   canonicalUnit = 'linear_feet',
+  selected = true,
   locked = false,
 } = {}) {
   return createTrimAccent({
@@ -128,12 +157,15 @@ export function createAdditionalTrimAccent({
     colorId,
     quantity,
     canonicalUnit,
+    selected,
     locked,
     customLabel,
   });
 }
 
-function legacyStandardRecord(definition, { measurements = {}, accessoryColors = {}, lockedServices = {} }) {
+function legacyStandardRecord(definition, {
+  measurements = {}, accessoryColors = {}, lockedServices = {}, services = {},
+}) {
   return createTrimAccent({
     id: definition.id,
     kind: definition.kind,
@@ -142,6 +174,7 @@ function legacyStandardRecord(definition, { measurements = {}, accessoryColors =
     colorId: accessoryColors[definition.colorKey] ?? '',
     quantity: measurements[definition.measurementKey] ?? 0,
     canonicalUnit: definition.canonicalUnit,
+    selected: services[definition.serviceKey] === true,
     locked: lockedServices[definition.lockKey] === true,
   });
 }
@@ -172,9 +205,10 @@ export function normalizeTrimAccents({
   measurements = {},
   accessoryColors = {},
   lockedServices = {},
+  services = {},
 } = {}) {
   const explicit = Array.isArray(trimAccents) ? trimAccents : [];
-  const legacy = { measurements, accessoryColors, lockedServices };
+  const legacy = { measurements, accessoryColors, lockedServices, services };
   const standards = STANDARD_DEFINITIONS.map((definition) => {
     const fallback = legacyStandardRecord(definition, legacy);
     const record = explicitStandardRecord(explicit, definition);

@@ -6,7 +6,7 @@
 
 function parsePoints(doc) {
   const points = {};
-  doc.querySelectorAll('POINT').forEach((el) => {
+  Array.from(doc.getElementsByTagName('POINT')).forEach((el) => {
     const id = el.getAttribute('id');
     const [x, y, z] = el.getAttribute('data').split(',').map(Number);
     points[id] = [x, y, z];
@@ -16,7 +16,7 @@ function parsePoints(doc) {
 
 function parseLines(doc) {
   const lines = {};
-  doc.querySelectorAll('LINE').forEach((el) => {
+  Array.from(doc.getElementsByTagName('LINE')).forEach((el) => {
     const [p1, p2] = el.getAttribute('path').split(',');
     lines[el.getAttribute('id')] = {
       p1,
@@ -133,15 +133,23 @@ function findOuterLoopDoors(lineIds, lines) {
  */
 export function parseAppliCadXML(xmlText, defaultType = 'Roof') {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-  const parserError = doc.querySelector('parsererror');
+  return parseAppliCadDocument(doc, defaultType);
+}
+
+// The geometry parser consumes only standards-based DOM methods shared by
+// browsers and the server XML implementation. Keeping document construction
+// outside this function lets API code use a real Node-compatible parser
+// without shipping a Node parser into the browser bundle.
+export function parseAppliCadDocument(doc, defaultType = 'Roof') {
+  const parserError = doc.getElementsByTagName('parsererror')[0];
   if (parserError) throw new Error('Invalid RoofRuler XML: ' + parserError.textContent);
 
   const points = parsePoints(doc);
   const lines = parseLines(doc);
 
   const faces = [];
-  doc.querySelectorAll('FACE').forEach((faceEl) => {
-    const polyEl = faceEl.querySelector('POLYGON');
+  Array.from(doc.getElementsByTagName('FACE')).forEach((faceEl) => {
+    const polyEl = faceEl.getElementsByTagName('POLYGON')[0];
     if (!polyEl) return;
     const pathTokens = polyEl.getAttribute('path').split(',');
     const resolvedLoops = resolveLoops(pathTokens, lines, points);

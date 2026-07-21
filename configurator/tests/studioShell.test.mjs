@@ -75,14 +75,11 @@ test('Settings exposes one company-level measurement system selector', async () 
 
 test('App gates the top-bar Expert control with effective entitlement and preference', async () => {
   const app = await readApp();
-  const topBar = await readComponent('StudioTopBar');
 
   assert.match(app, /canShowExpertControl\(\{[\s\S]*?role:\s*currentUser\?\.role[\s\S]*?entitled:\s*companySettings\?\.expertModeEntitled[\s\S]*?tenantPreference:\s*companySettings\?\.show_expert_mode[\s\S]*?\}\)/);
   assert.match(app, /tenantEntitlement:\s*companySettings\?\.expertModeEntitled === true/);
-  assert.match(app, /canShowExpert=\{showExpertControl\}/);
-  assert.match(topBar, /canShowExpert/);
-  assert.match(topBar, /\{canShowExpert && \([\s\S]*?Expert mode/);
-  assert.doesNotMatch(topBar, /canUseExpert/);
+  assert.match(app, /\{showExpertControl && workspaceState\.mode === 'sales' && \([\s\S]*?requestExpert\(\);[\s\S]*?Expert mode/);
+  assert.doesNotMatch(app, /canUseExpert/);
 });
 
 test('Studio top bar exposes the active project through an accessible actions disclosure', async () => {
@@ -113,27 +110,31 @@ test('Studio top bar exposes the active project through an accessible actions di
 });
 
 test('Studio project menu executes shared App actions and explains unavailable operations', async () => {
-  const topBar = await readComponent('StudioTopBar');
   const app = await readApp();
+  const topBar = await readFile(new URL('../src/components/workspaces/WorkspaceTopBar.jsx', import.meta.url), 'utf8');
   const projectsPanel = await readComponent('ProjectsPanel');
 
-  assert.match(app, /const handleOpenProjectTools = \(\) => \{[\s\S]*?setActiveSection\('configurator'\);[\s\S]*?setExpertRequested\(false\);[\s\S]*?setActiveStudioStep\('project'\);[\s\S]*?setMobileInspectorOpen\(true\);[\s\S]*?\};/);
+  assert.match(app, /const handleOpenProjectTools = \(\) => \{[\s\S]*?setActiveSection\('configurator'\);[\s\S]*?returnToSales\(\);[\s\S]*?setActiveStudioStep\('project'\);[\s\S]*?setMobileInspectorOpen\(true\);[\s\S]*?\};/);
   assert.match(app, /const handleSaveProject = async \(\) => \{[\s\S]*?saveOrUpdateProject\(design, currentProjectId\)[\s\S]*?setOwnerProjectId\(saved\.id\)[\s\S]*?markDesignPersisted\(design\)[\s\S]*?downloadProjectFile\(/);
-  assert.match(app, /projectLabel=\{house\.jobNumber \|\| 'Untitled project'\}/);
-  assert.match(app, /projectStatus=\{projectSaveStatus\}/);
+  assert.match(app, /label: `\$\{house\.jobNumber \|\| 'Untitled project'\} · \$\{projectSaveStatus\}`/);
   assert.doesNotMatch(app, /projectStatus=\{currentProjectId \? 'Saved' : 'Not saved'\}/);
-  assert.match(app, /projectActions=\{\{[\s\S]*?onNew: handleNewProject,[\s\S]*?onOpen: handleOpenProjectTools,[\s\S]*?onSave: handleSaveProject,[\s\S]*?onShare: handleExportHtml,[\s\S]*?canOpen: projectOperations\.canOpen,[\s\S]*?canSave: projectOperations\.canSave,[\s\S]*?canShare: projectOperations\.canShare,[\s\S]*?status:/);
+  assert.match(app, /menu: \([\s\S]*?closeProjectMenuAndRun\(handleOpenProjectTools\)[\s\S]*?closeProjectMenuAndRun\(handleSaveProject\)[\s\S]*?closeProjectMenuAndRun\(handleExportHtml\)/);
+  assert.match(app, /disabled=\{projectActionBusy \|\| !projectOperations\.canOpen\}/);
+  assert.match(app, /disabled=\{projectActionBusy \|\| !projectOperations\.canSave\}/);
+  assert.match(app, /disabled=\{projectActionBusy \|\| !projectOperations\.canShare\}/);
+  assert.match(app, /actions=\{\{[\s\S]*?busy: projectActionBusy,[\s\S]*?onNew: handleNewProject/);
   assert.match(app, /onSaveProject=\{handleSaveProject\}/);
   assert.match(projectsPanel, /onSaveProject/);
   assert.match(projectsPanel, /return onSaveProject\(\);/);
   assert.doesNotMatch(projectsPanel, /saveOrUpdateProject/);
 
-  assert.match(topBar, />New Project<\/button>/);
-  assert.match(topBar, /onClick=\{\(\) => runProjectAction\(onNew\)\} disabled=\{projectActionBusy\}/);
-  assert.match(topBar, /onClick=\{\(\) => runProjectAction\(onOpen\)\} disabled=\{projectActionBusy \|\| !canOpen\}/);
-  assert.match(topBar, /disabled=\{projectActionBusy \|\| !canSave\}/);
-  assert.match(topBar, /disabled=\{projectActionBusy \|\| !canShare\}/);
-  assert.match(topBar, /\{projectMenuOpen && \([\s\S]*?<\/div>\s*\)\}\s*<\/div>\s*\{projectActionStatus && <p[^>]*role="status"[^>]*>\{projectActionStatus\}<\/p>\}/);
+  assert.match(topBar, /actions\.onNew/);
+  assert.match(topBar, /disabled=\{projectBusy\}/);
+  assert.match(topBar, /\{config\.menu\}/);
+  assert.match(topBar, /focusProjectMenuBoundary/);
+  assert.match(topBar, /moveProjectMenuFocus/);
+  assert.match(app, /onMenuClose: setProjectMenuOpen/);
+  assert.match(app, /\{projectActionStatus && <span role="status" aria-live="polite">\{projectActionStatus\}<\/span>\}/);
   assert.match(app, /const handleNewProject = \(\) => \{\s*if \(projectActionBusy\) return;/);
   assert.match(app, /showTimedProjectActionStatus\('Could not reach the Projects database[^']*'\);\s*return null;/);
   assert.doesNotMatch(app, /showTimedProjectActionStatus\('Could not reach the Projects database[^']*'\);\s*throw error;/);
@@ -167,9 +168,9 @@ test('saved facet overrides survive project application and only removed-layer o
 test('every startup share format rejects an unapplied design before assigning project identity', async () => {
   const app = await readApp();
 
-  assert.match(app, /const restoredDesign = applyDesignSnapshot\(window\.__IRONWRAP_DESIGN__, true\);\s*if \(!restoredDesign\) throw new Error\('Shared design is unavailable\.'\);/);
-  assert.match(app, /const restoredDesign = applyDesignSnapshot\(row\.design, true\);\s*if \(!restoredDesign\) throw new Error\('Shared project design is unavailable\.'\);\s*setCurrentProjectId\(projectId\);/);
-  assert.match(app, /return requireAppliedDesign\(\s*applyDesignSnapshot\(sharedPayload\.design, true\),\s*'Shared design link is unavailable\.'\s*\);/);
+  assert.match(app, /const restoredDesign = requireAppliedDesign\(\s*applyDesignSnapshot\(loaded\.design, true\),\s*'Shared design is unavailable\.',\s*\);/);
+  assert.match(app, /if \(loaded\.projectId\) \{\s*setCurrentProjectId\(loaded\.projectId\);\s*markDesignPersisted\(restoredDesign\);/);
+  assert.equal((app.match(/loadPublicDesignEntry\(entry,/g) || []).length, 1);
 });
 
 test('ProjectsPanel lifts Open and Delete into the shared project operation lock', async () => {
@@ -455,16 +456,26 @@ test('Studio shell keeps estimate navigation in the mobile layout without coveri
   assert.doesNotMatch(mobileLayout, /\.studio-shell-estimate\s*\{[^}]*display:\s*none/s);
 });
 
-test('App integrates the Studio shell with customer-first mode resolution and protected behavior', async () => {
+test('App integrates the three workspace shells with customer-first mode resolution and protected behavior', async () => {
   const source = await readApp();
+  const controller = await readFile(new URL('../src/hooks/useWorkspaceController.js', import.meta.url), 'utf8');
 
-  assert.match(source, /import \{[^}]*\bresolveStudioMode\b[^}]*\} from '\.\/lib\/studioMode\.js';/);
-  assert.match(source, /import \{ STUDIO_STEPS,[^}]+\} from '\.\/lib\/studioSteps\.js';/);
-  assert.match(source, /import StudioShell from '\.\/components\/StudioShell\.jsx';/);
+  assert.match(source, /import useWorkspaceController from '\.\/hooks\/useWorkspaceController\.js';/);
+  assert.match(controller, /resolveStudioMode/);
+  assert.match(source, /import \{ STUDIO_STEPS \} from '\.\/lib\/studioSteps\.js';/);
+  for (const shell of ['SalesModeShell', 'ExpertWorkspaceShell', 'ShowroomModeShell']) {
+    assert.match(source, new RegExp(`import ${shell}`));
+  }
+  assert.doesNotMatch(source, /import StudioShell|<StudioShell/);
 
-  assert.match(source, /useState\(getInitialCustomerContext\)/);
+  assert.match(source, /const \[isCustomerView, setIsCustomerView\] = useState\(\(\) => Boolean\(initialPublicEntryRef\.current\.kind\)\)/);
+  assert.equal((source.match(/parsePublicDesignEntry\(/g) || []).length, 1);
+  assert.match(
+    controller,
+    /resolveStudioMode\(\{[\s\S]*?tenantEntitlement,[\s\S]*?showExpertMode,/s,
+  );
 
-  assert.match(source, /platformContent=\{canViewPlatform && <PlatformConsole/);
+  assert.match(source, /activeSection === 'platform' && canViewPlatform/);
   for (const handler of [
     'handleExportHtml',
     'handleExportPdf',
@@ -477,39 +488,31 @@ test('App integrates the Studio shell with customer-first mode resolution and pr
 
 test('App gives Accents and Services distinct control semantics', async () => {
   const source = await readApp();
-  const panel = await readComponent('ServicesPanel');
-  const trimRow = await readComponent('TrimAccentRow');
+  const [trims, extras, trimRow] = await Promise.all([
+    readComponent('TrimsPanel'),
+    readComponent('ExtrasServicesPanel'),
+    readComponent('TrimAccentRow'),
+  ]);
 
-  assert.equal((source.match(/<ServicesPanel/g) || []).length, 3, 'Accents, Services, and Expert each compose one scoped panel');
-  assert.equal((source.match(/section="accents"/g) || []).length, 1);
-  assert.equal((source.match(/section="services"/g) || []).length, 1);
+  assert.equal((source.match(/<TrimsPanel/g) || []).length, 1);
+  assert.equal((source.match(/<ExtrasServicesPanel/g) || []).length, 1);
+  assert.doesNotMatch(source, /<ServicesPanel|section="accents"|section="services"/);
 
   const accents = source.match(/const accentsContent = \(([\s\S]*?)\n  \);/)?.[1];
   assert.ok(accents, 'Accents step content should be explicit');
-  assert.match(accents, /section="accents"/);
+  assert.match(accents, /trimsContent/);
   assert.match(accents, /<PhotoOverlayControl/);
 
-  const services = source.match(/const servicesContent = \(([\s\S]*?)\n  \);/)?.[1];
-  assert.ok(services, 'Services step content should be explicit');
-  assert.match(services, /section="services"/);
-  assert.doesNotMatch(services, /PhotoOverlayControl/);
+  assert.match(source, /const servicesContent = extrasServicesContent;/);
 
-  assert.match(panel, /const showServiceControls = section !== 'accents';/);
-  assert.match(panel, /const showAccentControls = section !== 'services';/);
-  assert.match(panel, /\{showAccentControls && \(/);
-  assert.match(panel, /trimAccents\.map\(\(record\) => \(/);
-  assert.match(panel, /<TrimAccentRow/);
-  assert.match(panel, /Add Additional/);
-  assert.match(panel, /\{services\.gutters && \(/);
-  assert.match(panel, /\{services\.downspouts && \(/);
-  assert.doesNotMatch(panel, /\{showServiceControls && services\.(?:gutters|downspouts) && \(/);
-  assert.match(panel, /colorId=\{showAccentControls \? accessoryColors\.gutters : undefined\}/);
-  assert.match(panel, /colorId !== undefined && <ColorPickerButton/);
-  assert.match(panel, /qty=\{showServiceControls \? displayLinearQuantity\(measurements\.gutterLf\) : undefined\}/);
-  assert.match(panel, /showToggle=\{showServiceControls\}/);
-  assert.match(panel, /\{showServiceControls && \(/);
-  assert.match(panel, /\{showServiceControls && customServiceLines\.length > 0 && \(/);
-  assert.match(panel, /\{showServiceControls && !isCustomerView && !readOnlyQuantities && \(/);
+  assert.match(trims, /trimRecords\.map\(\(record\) => \(/);
+  assert.match(trims, /<TrimAccentRow/);
+  assert.match(trims, /Add Additional/);
+  assert.match(trims, /Eavestrough profile/);
+  assert.match(trims, /Downspout type/);
+  assert.match(extras, /filter\(\(\[key\]\) => !isTrimServiceKey\(key\)\)/);
+  assert.match(extras, /customServiceLines\.length > 0/);
+  assert.match(extras, /<OptionalServiceRow/);
   assert.match(trimRow, />Product</);
   assert.match(trimRow, />Profile</);
   assert.match(trimRow, />Color</);
@@ -517,7 +520,7 @@ test('App gives Accents and Services distinct control semantics', async () => {
   assert.match(trimRow, />Lock</);
 });
 
-test('Projects and attachments stay in one stable inspector location across Project, Review, and Expert', async () => {
+test('Projects and attachments stay in one shared inspector node across Project, Review, and Expert', async () => {
   const source = await readApp();
 
   assert.equal((source.match(/<ProjectsPanel/g) || []).length, 1);
@@ -525,14 +528,14 @@ test('Projects and attachments stay in one stable inspector location across Proj
   assert.equal((source.match(/data-project-panels/g) || []).length, 1);
   assert.doesNotMatch(source, /auxiliaryContent=\{[\s\S]*?<AttachmentsPanel/);
 
-  const inspector = source.match(/inspector=\{configuratorActive \? \(([\s\S]*?)\n        \) : null\}/)?.[1];
-  assert.ok(inspector, 'configurator inspector should own the stable panel host');
+  const inspector = source.match(/const sharedInspector = \(([\s\S]*?)\n  \);/)?.[1];
+  assert.ok(inspector, 'shared inspector should own the stable panel host');
   assert.ok(
-    inspector.indexOf('data-project-panels') < inspector.indexOf("{studioMode === 'sales' ? ("),
+    inspector.indexOf('data-project-panels') < inspector.indexOf('{activeControlContent}'),
     'stateful project panels must be mounted outside the mode-specific content branch',
   );
-  assert.match(source, /hidden=\{studioMode === 'sales' && !\['project', 'review'\]\.includes\(activeStudioStep\)\}/);
-  assert.match(source, /onOpen: handleOpenProjectTools/);
+  assert.match(source, /hidden=\{!configuratorActive \|\| \(workspaceState\.mode === 'sales' && !\['project', 'review'\]\.includes\(activeStudioStep\)\)\}/);
+  assert.match(source, /closeProjectMenuAndRun\(handleOpenProjectTools\)/);
 });
 
 test('clickable Studio file labels keep semantic 44px targets while their inputs stay hidden', async () => {
@@ -558,13 +561,13 @@ test('App bounds malformed XML recovery and surfaces safe load notices', async (
   assert.match(source, /parseStudioLayers\(house\.layers, parseAppliCadXML\)/);
   assert.doesNotMatch(source, /house\.layers\.map\(\(l\) => \(\{[^}]*parseAppliCadXML\(l\.xml\)/s);
   assert.match(source, /const xmlRecoveryMessage = parseFailures\.length/);
-  assert.match(source, /error=\{xmlRecoveryMessage\}/);
+  assert.match(source, /error=\{configuratorActive \? xmlRecoveryMessage : ''\}/);
   assert.match(source, /recoveryLabel="Review project imports"/);
-  assert.match(source, /onRetry=\{parseFailures\.length \? handleOpenProjectTools : undefined\}/);
+  assert.match(source, /onRetry=\{configuratorActive && parseFailures\.length \? handleOpenProjectTools : undefined\}/);
   assert.match(source, /notice=\{shellNotice\}/);
   for (const notice of [
     'shared design',
-    'shared project',
+    'public design',
     'saved project',
     'account settings',
   ]) assert.match(source, new RegExp(`showLoadNotice\\([^\\n]+${notice}`, 'i'));
@@ -590,13 +593,10 @@ test('Viewer3D gives all five camera shortcuts unique short visible and accessib
   assert.doesNotMatch(source, />Elevation View<\/button>|>Top View<\/button>/);
 });
 
-test('App hides the authenticated brand switch while retaining brand state, assets, and design capture', async () => {
+test('App hides the legacy brand switch while retaining brand state, assets, and design capture', async () => {
   const source = await readApp();
-  const authenticatedNav = source.match(/\{!isCustomerView && \(\s*<nav[\s\S]*?<\/nav>\s*\)\}/)?.[0];
-
-  assert.ok(authenticatedNav, 'authenticated navigation should remain present');
-  assert.doesNotMatch(authenticatedNav, /<BrandToggle/);
-  assert.equal((source.match(/<BrandToggle/g) || []).length, 1, 'customer view keeps the existing brand switch');
+  assert.doesNotMatch(source, /<BrandToggle|import BrandToggle/);
+  assert.match(source, /navigation=\{applicationNavigation\}/);
   assert.match(source, /const \[brandId, setBrandId\] = useState\('ironwrap'\);/);
   assert.match(source, /const brand = BRANDS\[brandId\];/);
   assert.match(source, /captureDesignState\(\{[\s\S]*?\bbrandId,/);
@@ -635,21 +635,22 @@ test('desktop Model Positioning and Front use opposite bounded bottom-edge regio
   assert.match(desktopFrontRule || '', /transform:\s*none/);
 });
 
-test('authenticated mobile navigation scrolls without shrinking touch targets', async () => {
-  const css = await readIndexCss();
-  const navRule = css.match(/\.app-nav\s*\{([^}]*)\}/)?.[1];
-  const tabRule = css.match(/\.app-nav-tab\s*\{([^}]*)\}/)?.[1];
+test('authenticated application navigation stays compact and outside the legacy tab shell', async () => {
+  const source = await readApp();
+  const topBar = await readFile(new URL('../src/components/workspaces/WorkspaceTopBar.jsx', import.meta.url), 'utf8');
 
-  assert.match(navRule || '', /overflow-x:\s*auto/);
-  assert.match(navRule || '', /flex-wrap:\s*nowrap/);
-  assert.match(tabRule || '', /min-height:\s*44px/);
-  assert.match(tabRule || '', /flex:\s*0 0 auto/);
-  assert.match(css, /\[data-interface-design-placeholder\]\s*\{[^}]*flex:\s*0 0 auto/s);
+  assert.match(source, /import WorkspaceTopBar/);
+  assert.match(source, /<WorkspaceTopBar/);
+  assert.match(source, /navigation=\{applicationNavigation\}/);
+  assert.match(topBar, /<nav aria-label="Workspace navigation" className="workspace-topbar-navigation">/);
+  assert.match(topBar, /\{navigation\}/);
+  assert.doesNotMatch(source, /className="app-nav"|className=\{`app-nav-tab/);
+  assert.doesNotMatch(source, /<StudioTopBar|import StudioTopBar/);
 });
 
 test('App exposes only an inactive capability-protected Interface Design placeholder', async () => {
   const source = await readApp();
-  const placeholder = source.match(/\{canViewPlatform && \(\s*<div[^>]*data-interface-design-placeholder[\s\S]*?<\/div>\s*\)\}/)?.[0];
+  const placeholder = source.match(/\{canViewPlatform && \(\s*<span[^>]*data-interface-design-placeholder[\s\S]*?<\/span>\s*\)\}/)?.[0];
 
   assert.ok(placeholder, 'Interface Design placeholder should be guarded by canViewPlatform');
   assert.match(placeholder, /Import Interface Design/);

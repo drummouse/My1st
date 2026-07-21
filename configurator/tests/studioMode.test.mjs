@@ -30,6 +30,27 @@ test('expert and platform entry are exact capability checks', () => {
   assert.equal(canOpenPlatform(['platform.diagnostics.read']), true);
 });
 
+test('Studio Expert requests require the tenant preference as well as entitlement', () => {
+  assert.equal(
+    resolveStudioMode({
+      expertRequested: true,
+      role: 'owner',
+      tenantEntitlement: true,
+      showExpertMode: false,
+    }),
+    'sales',
+  );
+  assert.equal(
+    resolveStudioMode({
+      expertRequested: true,
+      role: 'owner',
+      tenantEntitlement: true,
+      showExpertMode: true,
+    }),
+    'expert',
+  );
+});
+
 test('SuperAdmin entitlement is hardwired and tenants default off', () => {
   assert.equal(resolveExpertEntitlement({ role: 'superadmin', tenantEntitlement: false }), true);
   assert.equal(resolveExpertEntitlement({ role: 'owner', tenantEntitlement: false }), false);

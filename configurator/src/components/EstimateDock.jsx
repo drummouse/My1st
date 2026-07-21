@@ -1,11 +1,11 @@
 import StudioButton from './ui/StudioButton.jsx';
 import StudioPanel from './ui/StudioPanel.jsx';
 
-export default function EstimateDock({ estimate, activeStep, onPrevious, onNext, atFirstStep, atLastStep, children }) {
+export default function EstimateDock({ estimate, activeStep, onPrevious, onNext, atFirstStep, atLastStep = false, nextReady = true, nextLabel = 'Next Step', className = '', children }) {
   return (
     <StudioPanel
       as="aside"
-      className="estimate-dock"
+      className={`estimate-dock estimate-dock-compact ${className}`.trim()}
       aria-label="Estimate and step navigation"
       data-estimate-available={Boolean(estimate)}
     >
@@ -15,8 +15,8 @@ export default function EstimateDock({ estimate, activeStep, onPrevious, onNext,
           Previous
         </StudioButton>
         <span className="estimate-dock-active-step" aria-live="polite">{activeStep}</span>
-        <StudioButton aria-label="Next step" disabled={atLastStep} onClick={onNext} variant="primary">
-          Next
+        <StudioButton aria-label="Next step" disabled={atLastStep || !nextReady} onClick={onNext} variant="primary">
+          {nextLabel}
         </StudioButton>
       </nav>
     </StudioPanel>

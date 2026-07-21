@@ -30,6 +30,9 @@ export default defineConfig({
     react(),
     localSnapshotTemplate,
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
       manifest: {
@@ -47,9 +50,13 @@ export default defineConfig({
           { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         // Texture photos push individual assets past Workbox's 2MB default.
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // Workbox generateSW uses @rollup/plugin-terser, whose worker pool
+        // cannot start in runtimes where os.cpus() is empty. injectManifest
+        // uses Vite's supported worker build and keeps production PWA output.
+        minify: 'esbuild',
       },
     }),
   ],

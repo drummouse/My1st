@@ -83,7 +83,7 @@ body {
   height: 100dvh; /* mobile browsers: 100vh ignores the collapsing address bar and clips the bottom */
 }
 
-.app-header {
+.legacy-app-shell .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -94,12 +94,12 @@ body {
   border-bottom: 3px solid var(--brand-accent);
 }
 
-.app-header-brand { display: flex; align-items: center; gap: 0.7rem; }
-.app-header-logo { height: 32px; max-width: 140px; object-fit: contain; }
+.legacy-app-shell .app-header-brand { display: flex; align-items: center; gap: 0.7rem; }
+.legacy-app-shell .app-header-logo { height: 32px; max-width: 140px; object-fit: contain; }
 .app-title { font-size: 1.1rem; font-weight: 700; }
-.app-subtitle { font-size: 0.8rem; color: #a8b1bd; }
-.app-header-actions { display: flex; align-items: center; gap: 0.6rem; }
-.app-header-actions .btn-secondary { margin-top: 0; }
+.legacy-app-shell .app-subtitle { font-size: 0.8rem; color: #a8b1bd; }
+.legacy-app-shell .app-header-actions { display: flex; align-items: center; gap: 0.6rem; }
+.legacy-app-shell .app-header-actions .btn-secondary { margin-top: 0; }
 
 .brand-toggle { display: flex; gap: 0.4rem; }
 .brand-toggle-btn {
@@ -768,7 +768,7 @@ body {
 .export-buttons { display: flex; gap: 0.6rem; }
 .export-buttons .btn-primary, .export-buttons .btn-secondary { flex: 1 1 0; margin-top: 0; text-align: center; }
 
-.app-nav {
+.legacy-app-shell .app-nav {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.3rem;
@@ -779,7 +779,7 @@ body {
   background: #eef0f3;
   border-bottom: 1px solid #dde1e6;
 }
-.app-nav-tab {
+.legacy-app-shell .app-nav-tab {
   flex: 0 0 auto;
   min-height: 44px;
   padding: 0.4rem 0.9rem;
@@ -790,7 +790,7 @@ body {
   font-size: 0.84rem;
   cursor: pointer;
 }
-.app-nav-tab.active { background: #fff; border-color: #d1d5db; color: #1f2937; font-weight: 600; }
+.legacy-app-shell .app-nav-tab.active { background: #fff; border-color: #d1d5db; color: #1f2937; font-weight: 600; }
 
 [data-interface-design-placeholder] {
   flex: 0 0 auto;

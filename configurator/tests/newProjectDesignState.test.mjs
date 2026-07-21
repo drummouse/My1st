@@ -16,7 +16,7 @@ test('New Project uses current account defaults and catalog values without freez
     ...initialSettings,
     default_roof_color_id: 'current-roof-color',
     default_wall_color_id: 'current-wall-color',
-    default_services: { roof: false, wall: true },
+    default_services: { roof: false, wall: true, soffit: true, gutters: true },
     default_locked_services: { roof: false, wall: true },
     default_accessory_colors: { soffit: 'current-accessory' },
   };
@@ -58,7 +58,10 @@ test('New Project uses current account defaults and catalog values without freez
   });
   assert.equal(nextNewProject.roofColorId, 'current-roof-color');
   assert.equal(nextNewProject.wallColorId, 'current-wall-color');
-  assert.deepEqual(nextNewProject.services, updatedSettings.default_services);
+  assert.deepEqual(nextNewProject.services, { roof: false, wall: true });
+  for (const key of ['soffit', 'fascia', 'gutters', 'downspouts', 'garageDoorCapping', 'capFlashing']) {
+    assert.equal(key in nextNewProject.services, false);
+  }
   assert.deepEqual(nextNewProject.lockedServices, updatedSettings.default_locked_services);
   assert.deepEqual(nextNewProject.accessoryColors, updatedSettings.default_accessory_colors);
   assert.deepEqual(nextNewProject.customServiceLines, [{
