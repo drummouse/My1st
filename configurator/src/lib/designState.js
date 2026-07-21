@@ -1,4 +1,5 @@
-import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './trimAccents.js';
+import { normalizeTrimServiceBoundary } from './trimServiceBoundary.js';
+import { buildSelectedCatalogSnapshot } from './catalogSnapshot.js';
 
 export const DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD = 'per_unit';
 
@@ -70,19 +71,9 @@ export function normalizeCustomServiceLines(lines) {
 // (viewerMode, selectedFacet) and the photo overlay (a local preview aid,
 // not part of the design itself).
 export function captureDesignState(state) {
-  const trimAccents = normalizeTrimAccents({
-    trimAccents: state.trimAccents,
-    measurements: state.measurements,
-    accessoryColors: state.accessoryColors,
-    lockedServices: state.lockedServices,
-  });
-  const legacyTrimState = state.trimAccents === undefined
-    ? {
-        measurements: state.measurements,
-        accessoryColors: state.accessoryColors,
-        lockedServices: state.lockedServices,
-      }
-    : syncTrimAccentsToLegacy(trimAccents, state);
+  const boundary = normalizeTrimServiceBoundary(state);
+  const { trimAccents, extraServices } = boundary;
+  const legacyTrimState = boundary.compatibility.legacyTrimState;
   return {
     version: 2,
     brandId: state.brandId,
@@ -99,7 +90,7 @@ export function captureDesignState(state) {
     wallProductId: state.wallProductId,
     wallProfile: state.wallProfile,
     wallColorId: state.wallColorId,
-    services: state.services,
+    services: extraServices,
     lockedServices: legacyTrimState.lockedServices,
     gutterOptionId: state.gutterOptionId,
     downspoutOptionId: state.downspoutOptionId,
@@ -112,6 +103,14 @@ export function captureDesignState(state) {
     trimAccents,
     uniformFinish: state.uniformFinish,
     facetOverrides: state.facetOverrides,
+    // A versioned, selected-only catalog snapshot freezes custom material
+    // pricing and the color metadata needed to reopen or share the design if
+    // an account library row is later edited or removed.
+    catalogSnapshot: buildSelectedCatalogSnapshot({
+      existing: state.catalogSnapshot,
+      materialIds: (state.catalogSnapshot?.materials || []).map((row) => row.id),
+      colorIds: (state.catalogSnapshot?.colors || []).map((row) => row.id),
+    }),
     // Resolved custom-service selections (name/price/etc. copied from the
     // owner's catalog at save time, not just a catalog id) — so a shared
     // link still shows/prices them correctly even if the owner later edits
@@ -155,15 +154,19 @@ export function normalizeDesignState(snapshot, fallbackState) {
     'accessoryColors',
     'trimAccents',
     'facetOverrides',
+    'catalogSnapshot',
     'customServiceLines',
     'pricingSettings',
   ]) {
     if (hasLegacyValue(snapshot, key)) merged[key] = snapshot[key];
   }
-  // A pre-Task-6 snapshot has no canonical trim collection. Do not retain
-  // fallback trim records here: captureDesignState must derive them from the
-  // legacy measurements/colors/locks that came from this snapshot.
-  if (!hasLegacyValue(snapshot, 'trimAccents')) merged.trimAccents = undefined;
+  // A pre-Task-6 snapshot has no canonical trim collection. When it still
+  // carries legacy service flags, derive canonical selection from those
+  // flags. Sparse snapshots without either shape inherit the stable
+  // fallback's canonical selection, matching the prior defaulting behavior.
+  if (!hasLegacyValue(snapshot, 'trimAccents') && hasLegacyValue(snapshot, 'services')) {
+    merged.trimAccents = undefined;
+  }
   if (hasLegacyValue(snapshot, 'house') && typeof snapshot.house === 'object') {
     merged.house = { ...fallbackState.house };
     for (const key of ['jobNumber', 'customerName', 'address', 'layers']) {
@@ -240,6 +243,7 @@ export function applyDesignState(snapshot, setters) {
     ['accessoryColors', 'setAccessoryColors'],
     ['trimAccents', 'setTrimAccents'],
     ['facetOverrides', 'setFacetOverrides'],
+    ['catalogSnapshot', 'setCatalogSnapshot'],
     ['customServiceLines', 'setCustomServiceLines'],
     ['pricingSettings', 'setPricingSettings'],
   ];
@@ -249,10 +253,10 @@ export function applyDesignState(snapshot, setters) {
   }
   for (const [key, setter] of fields) {
     if (!hasOwn(snapshot, key)) continue;
-    // trimAccents is additive: older embedders may still provide the complete
-    // pre-Task-6 setter contract. Keep that one new setter optional without
+    // Additive fields are optional for older embedders that still provide the
+    // complete pre-addition setter contract. Keep these setters optional without
     // weakening the required-setter behavior for every established field.
-    if (key === 'trimAccents' && typeof setters[setter] !== 'function') continue;
+    if (['trimAccents', 'catalogSnapshot'].includes(key) && typeof setters[setter] !== 'function') continue;
     setters[setter](snapshot[key]);
   }
   if (hasOwn(snapshot, 'manualDiscount') && typeof snapshot.manualDiscount === 'number') {

@@ -1,3 +1,5 @@
+import { displayMeasurement, measurementFromDisplay, unitPriceToDisplay } from '../lib/units.js';
+
 const pricingMethodLabel = (method) => {
   if (method === 'per_unit') return 'Per unit';
   return String(method || 'per_unit').replaceAll('_', ' ');
@@ -14,9 +16,12 @@ export default function OptionalServiceRow({
   showSelection = true,
   showQuantity = true,
   showLock = true,
+  unitSystem = 'imperial',
 }) {
   const customerLocked = isCustomerView && service.locked;
   const update = (patch) => onChange?.({ ...service, ...patch });
+  const displayQuantity = displayMeasurement(service.quantity, service.unit, unitSystem);
+  const displayUnitPrice = unitPriceToDisplay(service.unitPrice, service.unit, unitSystem);
 
   return (
     <div className="service-row optional-service-row" data-pricing-method={service.pricingMethod}>
@@ -61,18 +66,20 @@ export default function OptionalServiceRow({
               min="0"
               step="1"
               className="service-qty"
-              value={service.quantity}
+              value={displayQuantity.value}
               disabled={!service.selected || readOnlyQuantity || customerLocked}
-              aria-label={`${service.name} quantity in ${service.unit}`}
-              onChange={(event) => update({ quantity: Number(event.target.value) || 0 })}
+              aria-label={`${service.name} quantity in ${displayQuantity.unit}`}
+              onChange={(event) => update({
+                quantity: measurementFromDisplay(Number(event.target.value) || 0, service.unit, unitSystem),
+              })}
             />
-            <span className="service-unit">{service.unit}</span>
+            <span className="service-unit">{displayQuantity.unit}</span>
           </span>
         </label>
       )}
       <div className="optional-service-field">
         <span>Unit price</span>
-        <span>${service.unitPrice.toFixed(2)}/{service.unit}</span>
+        <span>${displayUnitPrice.toFixed(2)}/{displayQuantity.unit}</span>
       </div>
 
       {linkUrl && <a href={linkUrl} target="_blank" rel="noreferrer" className="service-note">Link</a>}

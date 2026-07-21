@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import Viewer3D from './components/Viewer3D.jsx';
-import BrandToggle from './components/BrandToggle.jsx';
 import ColorPickerButton from './components/ColorPickerButton.jsx';
 import ProductSelector from './components/ProductSelector.jsx';
-import ServicesPanel, { ServiceRow } from './components/ServicesPanel.jsx';
+import ExtrasServicesPanel, { ServiceRow } from './components/ExtrasServicesPanel.jsx';
+import TrimsPanel from './components/TrimsPanel.jsx';
 import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
@@ -17,13 +17,14 @@ import MaterialsPanel from './components/MaterialsPanel.jsx';
 import AttachmentsPanel from './components/AttachmentsPanel.jsx';
 import FacetInspector from './components/FacetInspector.jsx';
 import PlatformConsole from './components/PlatformConsole.jsx';
-import StudioShell from './components/StudioShell.jsx';
-import StudioTopBar from './components/StudioTopBar.jsx';
-import GuidedStepRail from './components/GuidedStepRail.jsx';
-import ViewerWorkspace from './components/ViewerWorkspace.jsx';
 import ContextInspector from './components/ContextInspector.jsx';
-import EstimateDock from './components/EstimateDock.jsx';
 import SalesStepContent from './components/SalesStepContent.jsx';
+import SalesModeShell from './components/workspaces/SalesModeShell.jsx';
+import ExpertWorkspaceShell, { ExpertSurfaceInspector } from './components/workspaces/ExpertWorkspaceShell.jsx';
+import ShowroomModeShell, { buildShowroomMaterials, buildShowroomViewModel } from './components/workspaces/ShowroomModeShell.jsx';
+import ViewerStage from './components/workspaces/ViewerStage.jsx';
+import WorkspaceTopBar from './components/workspaces/WorkspaceTopBar.jsx';
+import useWorkspaceController from './hooks/useWorkspaceController.js';
 import { parseAppliCadXML, facetKey, collectOpenings, roofSqft, wallSqft } from './lib/roofRulerParser.js';
 import { buildFacetLabelMap, labelOpenings } from './lib/facetLabels.js';
 import { calculateEstimate } from './lib/pricingEngine.js';
@@ -31,19 +32,25 @@ import { buildEstimateText, downloadTextFile } from './lib/exportEstimate.js';
 import { buildEstimatePdf } from './lib/exportPdf.js';
 import { captureDesignState, applyDesignState, createStableDesignNormalizer, decodeDesignFromUrl } from './lib/designState.js';
 import { normalizeCustomServiceLines } from './lib/designState.js';
-import { createDesignRuntime, resolveSharedDesignPayload } from './lib/designRuntime.js';
+import { createDesignRuntime } from './lib/designRuntime.js';
 import { buildAccountDefaultDesignSnapshot, buildNewProjectDesignSnapshot } from './lib/newProjectDesignState.js';
 import { createDeferredDesignApplication, createInitialEditRestore, designFingerprint, getDesignPersistenceState, getProjectOperationState, getProjectSaveStatus, requireAppliedDesign } from './lib/studioDesignState.js';
 import { defaultProjectName, downloadProjectFile, saveOrUpdateProject } from './lib/projects.js';
 import { replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
-import { getInitialCustomerContext } from './lib/customerContext.js';
-import { canShowExpertControl, resolveStudioMode } from './lib/studioMode.js';
+import { parsePublicDesignEntry } from './lib/customerContext.js';
+import { loadPublicDesignEntry } from './lib/publicProjectLoader.js';
+import { buildSelectedCatalogSnapshot, mergeCatalogSnapshots } from './lib/catalogSnapshot.js';
+import { buildStandaloneSharePayload, resolveShowroomShareTarget } from './lib/publicShare.js';
+import { applySurfaceEdit } from './lib/surfaceOverrides.js';
+import { displayMeasurement } from './lib/units.js';
+import { canShowExpertControl } from './lib/studioMode.js';
 import { parseStudioLayers } from './lib/studioRecovery.js';
-import { STUDIO_STEPS, nextStudioStep, previousStudioStep } from './lib/studioSteps.js';
+import { STUDIO_STEPS } from './lib/studioSteps.js';
 import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './lib/trimAccents.js';
+import { projectExtrasOnly } from './lib/trimServiceBoundary.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
-import { colorById, setExtraColors } from './data/colors.js';
+import { allColors, colorById, setExtraColors } from './data/colors.js';
 import { BRANDS } from './data/brands.js';
 import { SAMPLE_HOUSE } from './data/sampleHouse.js';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from './data/defaults.js';
@@ -63,7 +70,7 @@ const NAV_SECTIONS = [
 // so allRoofProducts()/allWallProducts() in data/pricing.js can treat a
 // custom material exactly like a baseline one everywhere it's looked up.
 function toMaterialProduct(m) {
-  return { id: m.id, label: m.name, pricePerSqft: Number(m.price_per_sqft) };
+  return { id: m.id, label: m.name, pricePerSqft: Number(m.price_per_sqft ?? m.pricePerSqft) };
 }
 
 // Maps a colors-table row (snake_case, DB shape) to the plain
@@ -71,7 +78,7 @@ function toMaterialProduct(m) {
 // so allColors() in data/colors.js can treat a custom color exactly like a
 // baseline one everywhere it's looked up (swatch rendering, formatColorLabel).
 function toColorEntry(c) {
-  return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: c.thumbnail_url || undefined };
+  return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: c.thumbnail_url || c.thumbnail || undefined };
 }
 
 // Shared by every plain "fetch JSON, bail on non-2xx" call in this file —
@@ -90,6 +97,40 @@ function extractProductOverrides(overrides) {
     if (val?.productId) result[key] = val.productId;
   });
   return result;
+}
+
+export function AppWorkspace({
+  workspaceState,
+  viewerStage,
+  salesViewModel,
+  expertViewModel,
+  showroomViewModel,
+}) {
+  let shell;
+  if (workspaceState.mode === 'showroom') {
+    shell = <ShowroomModeShell key="workspace-shell" {...showroomViewModel} embedded viewerStage={null} />;
+  } else if (workspaceState.mode === 'expert') {
+    shell = <ExpertWorkspaceShell key="workspace-shell" {...expertViewModel} embedded viewerStage={null} />;
+  } else {
+    shell = <SalesModeShell key="workspace-shell" {...salesViewModel} embedded viewerStage={null} />;
+  }
+
+  const safeStateClass = workspaceState.mode === 'showroom' && showroomViewModel.status !== 'ready'
+    ? ' showroom-safe-state-workspace'
+    : '';
+  return (
+    <div className={`workspace-root app-workspace-layout ${workspaceState.mode}-workspace${safeStateClass}`} data-studio-skin="ironwrap">
+      {shell}
+      <div className="app-workspace-persistent-viewer" key="persistent-viewer">
+        {viewerStage}
+      </div>
+    </div>
+  );
+}
+
+export function openWorkspaceNavigation(mode, event, documentRoot = document) {
+  event.preventDefault();
+  documentRoot.getElementById(`${mode}-navigation-drawer`)?.showPopover?.();
 }
 
 export default function App({ currentUser = null }) {
@@ -118,9 +159,8 @@ export default function App({ currentUser = null }) {
     measurements: house.measurements,
     accessoryColors: DEFAULT_ACCESSORY_COLORS,
     lockedServices: DEFAULT_LOCKED_SERVICES,
+    services: DEFAULT_SERVICES,
   }));
-  const [viewerMode, setViewerMode] = useState('normal'); // 'normal' | 'minimized' | 'maximized'
-
   const [uniformFinish, setUniformFinish] = useState(true);
   const [facetOverrides, setFacetOverrides] = useState({}); // key -> { productId?, colorId? }
   const [selectedFacet, setSelectedFacet] = useState(null); // { key, faceId, role, layerId, sizeSf, pitch, orientation }
@@ -136,10 +176,12 @@ export default function App({ currentUser = null }) {
   }
   const cancelInitialEditRestore = () => initialEditRestoreRef.current.cancel();
   const [approvedAt, setApprovedAt] = useState(null);
+  const [publicQuoteTotal, setPublicQuoteTotal] = useState(null);
   const [approveBusy, setApproveBusy] = useState(false);
   const [activeSection, setActiveSection] = useState('configurator');
-  const [activeStudioStep, setActiveStudioStep] = useState('project');
-  const [expertRequested, setExpertRequested] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [showroomSelectedCategory, setShowroomSelectedCategory] = useState('roof');
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(true);
   const [shellNotice, setShellNotice] = useState('');
   const [projectActionStatus, setProjectActionStatus] = useState('');
@@ -172,9 +214,16 @@ export default function App({ currentUser = null }) {
   // roof/wall color pickers can look up "does the selected material
   // restrict which colors apply" (Phase 10's material↔color linking).
   const [materialsCatalog, setMaterialsCatalog] = useState([]);
+  const [colorsCatalog, setColorsCatalog] = useState([]);
+  const [catalogSnapshot, setCatalogSnapshot] = useState(null);
+  const [catalogRenderVersion, setCatalogRenderVersion] = useState(0);
   const applyMaterialsCatalog = (rows) => {
-    setMaterialsCatalog(rows);
-    setExtraMaterials({ roof: rows.filter((m) => m.kind === 'roof').map(toMaterialProduct), wall: rows.filter((m) => m.kind === 'wall').map(toMaterialProduct) });
+    const catalogRows = Array.isArray(rows) ? rows : [];
+    setMaterialsCatalog(catalogRows);
+  };
+  const applyColorsCatalog = (rows) => {
+    const catalogRows = (Array.isArray(rows) ? rows : []).map(toColorEntry);
+    setColorsCatalog(catalogRows);
   };
   // Once a design has been saved or loaded, this freezes the GST/discount
   // rates it was quoted at — see designState.js's pricingSettings comment.
@@ -209,13 +258,36 @@ export default function App({ currentUser = null }) {
   // manual/override discount field gets locked (they can still explore
   // colors/profiles and see any automatic package-deal discounts
   // recalculate live).
-  const [isCustomerView, setIsCustomerView] = useState(getInitialCustomerContext);
-  const studioMode = resolveStudioMode({
-    isCustomerView,
+  const initialPublicEntryRef = useRef(null);
+  if (!initialPublicEntryRef.current) {
+    initialPublicEntryRef.current = parsePublicDesignEntry({
+      search: window.location.search,
+      embeddedDesign: window.__IRONWRAP_DESIGN__ || null,
+    });
+  }
+  const [isCustomerView, setIsCustomerView] = useState(() => Boolean(initialPublicEntryRef.current.kind));
+  const [publicEntryState, setPublicEntryState] = useState(initialPublicEntryRef.current);
+  const {
+    activeExpertTool,
+    activeStudioStep,
+    cancelPresentation,
+    enterPresentationMode,
+    exitPresentationMode,
+    requestExpert,
+    returnToSales,
+    setActiveExpertTool,
+    setActiveStudioStep,
+    workspaceSecurityContext,
+    workspaceState,
+  } = useWorkspaceController({
     activeSection,
-    role: currentUser?.role || null,
+    authenticated: Boolean(currentUser),
     capabilities,
-    expertRequested,
+    currentProjectId,
+    publicShowroom: isCustomerView,
+    role: currentUser?.role || null,
+    selectedFacet,
+    showExpertMode: companySettings?.show_expert_mode === true,
     tenantEntitlement: companySettings?.expertModeEntitled === true,
   });
 
@@ -258,16 +330,58 @@ export default function App({ currentUser = null }) {
     );
   }
 
+  const activeCatalogSnapshot = useMemo(() => buildSelectedCatalogSnapshot({
+    existing: catalogSnapshot,
+    materials: materialsCatalog,
+    colors: colorsCatalog,
+    materialIds: [
+      roofProductId,
+      wallProductId,
+      ...Object.values(facetOverrides).map((override) => override?.productId),
+    ],
+    colorIds: [
+      roofColorId,
+      wallColorId,
+      ...Object.values(facetOverrides).map((override) => override?.colorId),
+      ...trimAccents.map((record) => record.colorId),
+    ],
+  }), [
+    catalogSnapshot, colorsCatalog, facetOverrides, materialsCatalog, roofColorId,
+    roofProductId, trimAccents, wallColorId, wallProductId,
+  ]);
+  const effectiveMaterialsCatalog = useMemo(() => mergeCatalogSnapshots(
+    materialsCatalog, activeCatalogSnapshot.materials,
+  ), [activeCatalogSnapshot.materials, materialsCatalog]);
+  const effectiveColorsCatalog = useMemo(() => mergeCatalogSnapshots(
+    colorsCatalog, activeCatalogSnapshot.colors,
+  ), [activeCatalogSnapshot.colors, colorsCatalog]);
+
+  // Legacy catalog consumers remain module-backed, but the authoritative
+  // source/version is React state. The version update guarantees all memoized
+  // consumers rerender after a catalog or frozen snapshot changes.
+  useEffect(() => {
+    const pricedRows = effectiveMaterialsCatalog.filter((material) => Number.isFinite(Number(
+      material.price_per_sqft ?? material.pricePerSqft,
+    )));
+    setExtraMaterials({
+      roof: pricedRows.filter((material) => material.kind !== 'wall').map(toMaterialProduct),
+      wall: pricedRows.filter((material) => material.kind === 'wall').map(toMaterialProduct),
+    });
+    setExtraColors(effectiveColorsCatalog.map(toColorEntry));
+    setCatalogRenderVersion((version) => version + 1);
+  }, [effectiveColorsCatalog, effectiveMaterialsCatalog]);
+
   const currentDesignSnapshot = useMemo(
     () => captureDesignState({
       brandId, house, roofProductId, roofProfile, roofColorId,
       wallProductId, wallProfile, wallColorId, services, lockedServices, gutterOptionId, downspoutOptionId,
       measurements, manualDiscount, layerOffsets, accessoryColors, trimAccents,
       uniformFinish, facetOverrides, customServiceLines,
+      catalogSnapshot: activeCatalogSnapshot,
       pricingSettings: effectivePricingSettings,
     }),
     [
-      accessoryColors, brandId, companySettings, customServiceLines, downspoutOptionId,
+      accessoryColors, activeCatalogSnapshot, brandId, companySettings, customServiceLines, downspoutOptionId,
       facetOverrides, gutterOptionId, house, layerOffsets, lockedServices, manualDiscount,
       measurements, pricingSettings, roofColorId, roofProductId, roofProfile, services, trimAccents,
       uniformFinish, wallColorId, wallProductId, wallProfile,
@@ -298,6 +412,7 @@ export default function App({ currentUser = null }) {
   const markDesignPersisted = (design) => {
     if (!design?.pricingSettings && !isCustomerView) return;
     if (design?.pricingSettings) setPricingSettings(design.pricingSettings);
+    if (design?.catalogSnapshot) setCatalogSnapshot(design.catalogSnapshot);
     setPersistedDesignFingerprint(designFingerprint(design));
   };
   const persistence = getDesignPersistenceState({
@@ -350,6 +465,7 @@ export default function App({ currentUser = null }) {
       setTrimAccents,
       setUniformFinish,
       setFacetOverrides,
+      setCatalogSnapshot,
       setPricingSettings,
       setCustomServiceLines,
     });
@@ -364,77 +480,38 @@ export default function App({ currentUser = null }) {
     return normalizedDesign;
   };
 
-  // Standalone HTML exports embed a frozen design as
-  // window.__IRONWRAP_DESIGN__ before this bundle runs; load it once on
-  // mount so the exported file opens showing that customer's exact design.
+  // Resolve the public entry once, then run exactly the selected loader. An
+  // embedded export takes precedence over ?p=, which takes precedence over
+  // legacy ?d=; failures never fall through to a lower-precedence payload.
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.__IRONWRAP_DESIGN__) {
-      try {
-        const restoredDesign = applyDesignSnapshot(window.__IRONWRAP_DESIGN__, true);
-        if (!restoredDesign) throw new Error('Shared design is unavailable.');
-        // Present since the HTML export flow (handleExportHtml) saves the
-        // design as a project and embeds its id, precisely so this exported
-        // file's "Approve This Design" button (which needs a project id to
-        // POST to) shows up the same way a ?p= link's does.
-        if (window.__IRONWRAP_DESIGN__.projectId) {
-          setCurrentProjectId(window.__IRONWRAP_DESIGN__.projectId);
-          markDesignPersisted(restoredDesign);
-        }
-      } catch (error) {
-        showLoadNotice('Failed to load embedded shared design:', 'We couldn’t open the shared design. The current design is still available.', error);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Shareable links carry the whole design in a ?d= query param — decode
-  // and load it once on mount if present.
-  useEffect(() => {
-    const encoded = new URLSearchParams(window.location.search).get('d');
-    if (!encoded) return;
-    decodeDesignFromUrl(encoded)
-      .then((snapshot) => {
-        const sharedPayload = resolveSharedDesignPayload(snapshot);
-        setDesignRuntime(sharedPayload.runtime);
-        return requireAppliedDesign(
-          applyDesignSnapshot(sharedPayload.design, true),
-          'Shared design link is unavailable.'
-        );
-      })
-      .catch((error) => showLoadNotice('Failed to load shared design link:', 'We couldn’t open the shared design. The current design is still available.', error));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Project links (?p=<id>) reference a design saved to the Projects
-  // database rather than embedding it directly — load it once on mount if
-  // present.
-  useEffect(() => {
-    const projectId = new URLSearchParams(window.location.search).get('p');
-    if (!projectId) return;
-    fetchJson(`/api/projects/${projectId}`)
-      .then((row) => {
-        setDesignRuntime(createDesignRuntime(row.runtime?.unitSystem));
-        const restoredDesign = applyDesignSnapshot(row.design, true);
-        if (!restoredDesign) throw new Error('Shared project design is unavailable.');
-        setCurrentProjectId(projectId);
+    const entry = initialPublicEntryRef.current;
+    if (!entry.kind || entry.status === 'invalid') return;
+    loadPublicDesignEntry(entry, {
+      embeddedDesign: window.__IRONWRAP_DESIGN__ || null,
+      embeddedCatalog: window.__IRONWRAP_PUBLIC_CATALOG__ || { colors: [], materials: [] },
+      embeddedQuote: window.__IRONWRAP_QUOTE__ || null,
+      embeddedRuntime: window.__IRONWRAP_RUNTIME__ || null,
+      decodeDesign: decodeDesignFromUrl,
+      fetchJson,
+    }).then((loaded) => {
+      applyColorsCatalog(loaded.catalog?.colors);
+      applyMaterialsCatalog(loaded.catalog?.materials);
+      setDesignRuntime(loaded.runtime ? createDesignRuntime(loaded.runtime.unitSystem) : null);
+      const restoredDesign = requireAppliedDesign(
+        applyDesignSnapshot(loaded.design, true),
+        'Shared design is unavailable.',
+      );
+      if (loaded.projectId) {
+        setCurrentProjectId(loaded.projectId);
         markDesignPersisted(restoredDesign);
-        setApprovedAt(row.approved_at || null);
-        // A customer exploring this shared link should see the same custom
-        // Materials/Colors Library entries the owner set up, not just the
-        // baseline catalog — ownerId comes straight off this already-public
-        // project row, so no login is needed for these two reads either.
-        if (row.owner_id) {
-          fetch(`/api/colors?ownerId=${row.owner_id}`)
-            .then((r) => (r.ok ? r.json() : []))
-            .then((rows) => setExtraColors(rows.map(toColorEntry)))
-            .catch((error) => showLoadNotice('Failed to load shared project colors:', 'Some shared project options are unavailable. Built-in options remain available.', error));
-          fetch(`/api/materials?ownerId=${row.owner_id}`)
-            .then((r) => (r.ok ? r.json() : []))
-            .then(applyMaterialsCatalog)
-            .catch((error) => showLoadNotice('Failed to load shared project materials:', 'Some shared project options are unavailable. Built-in options remain available.', error));
-        }
-      })
-      .catch((error) => showLoadNotice('Failed to load shared project:', 'We couldn’t load the shared project. The current design is still available.', error));
+      }
+      setApprovedAt(loaded.approvedAt || null);
+      setPublicQuoteTotal(Number.isFinite(Number(loaded.quote?.total)) ? Number(loaded.quote.total) : null);
+      setPublicEntryState({ ...entry, status: 'ready' });
+    }).catch((error) => {
+      setPublicEntryState({ ...entry, status: 'error' });
+      showLoadNotice('Failed to load public design:', 'We couldn’t open the shared design.', error);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -465,8 +542,7 @@ export default function App({ currentUser = null }) {
   // anyway, and pricingSettings (frozen at save time) is what customer views
   // actually price off of.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (window.__IRONWRAP_DESIGN__ || params.has('p') || params.has('d')) {
+    if (initialPublicEntryRef.current.kind) {
       setCompanySettingsSettled(true);
       setDefaultCatalogsSettled(true);
       return;
@@ -478,7 +554,7 @@ export default function App({ currentUser = null }) {
     fetchJson('/api/auth/me').then(setCompanyProfile).catch((error) => showLoadNotice('Failed to load account profile:', 'Some account details are unavailable. The design tools remain available.', error));
     const defaultCatalogRequests = [
       fetchJson('/api/custom-services').then(setCustomServiceCatalog).catch((error) => showLoadNotice('Failed to load saved service options:', 'Some saved service options are unavailable. Built-in options remain available.', error)),
-      fetchJson('/api/colors').then((rows) => setExtraColors(rows.map(toColorEntry))).catch((error) => showLoadNotice('Failed to load saved color options:', 'Some saved color options are unavailable. Built-in options remain available.', error)),
+      fetchJson('/api/colors').then(applyColorsCatalog).catch((error) => showLoadNotice('Failed to load saved color options:', 'Some saved color options are unavailable. Built-in options remain available.', error)),
       fetchJson('/api/materials').then(applyMaterialsCatalog).catch((error) => showLoadNotice('Failed to load saved material options:', 'Some saved material options are unavailable. Built-in options remain available.', error)),
     ];
     Promise.allSettled(defaultCatalogRequests).then(() => setDefaultCatalogsSettled(true));
@@ -561,10 +637,19 @@ export default function App({ currentUser = null }) {
       calculateEstimate(measurements, {
         roofProduct: roofProductId,
         wallProduct: wallProductId,
+        roofProducts: [
+          ...ROOF_PRODUCTS,
+          ...effectiveMaterialsCatalog.filter((material) => material.kind !== 'wall').map(toMaterialProduct),
+        ],
+        wallProducts: [
+          ...WALL_PRODUCTS,
+          ...effectiveMaterialsCatalog.filter((material) => material.kind === 'wall').map(toMaterialProduct),
+        ],
         roofFaces: roofFacesForPricing,
         wallFaces: wallFacesForPricing,
         facetOverrides: uniformFinish ? {} : extractProductOverrides(facetOverrides),
         services,
+        trimAccents,
         gutterOption: gutterOptionId,
         downspoutOption: downspoutOptionId,
         manualDiscount,
@@ -574,7 +659,7 @@ export default function App({ currentUser = null }) {
         ...(effectivePricingSettings || {}),
         customServiceLines,
       }),
-    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings, customServiceLines]
+    [measurements, roofProductId, wallProductId, roofFacesForPricing, wallFacesForPricing, uniformFinish, facetOverrides, services, trimAccents, gutterOptionId, downspoutOptionId, manualDiscount, companySettings, pricingSettings, customServiceLines, effectiveMaterialsCatalog, catalogRenderVersion]
   );
 
   const facetColors = useMemo(() => {
@@ -590,7 +675,7 @@ export default function App({ currentUser = null }) {
       map[key] = override?.colorId ? colorById(override.colorId) : wallColor;
     });
     return map;
-  }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish]);
+  }, [roofFacesForPricing, wallFacesForPricing, facetOverrides, roofColorId, wallColorId, uniformFinish, effectiveColorsCatalog, catalogRenderVersion]);
 
   // True when at least one facet has been overridden to a color different
   // from the global default — the Roof/Siding Color button can't show a
@@ -714,7 +799,7 @@ export default function App({ currentUser = null }) {
     });
 
   const handleFacetClick = (payload) => {
-    if (uniformFinish) return;
+    if (uniformFinish && workspaceState.mode !== 'expert') return;
     setSelectedFacet(payload);
   };
 
@@ -724,7 +809,13 @@ export default function App({ currentUser = null }) {
 
   const setFacetOverride = (patch) => {
     if (!selectedFacet) return;
-    setFacetOverrides((prev) => ({ ...prev, [selectedFacet.key]: { ...prev[selectedFacet.key], ...patch } }));
+    setFacetOverrides((prev) => applySurfaceEdit({
+      uniformFinish,
+      facetOverrides: prev,
+      facetKey: selectedFacet.key,
+      patch,
+    }).facetOverrides);
+    setUniformFinish(false);
   };
 
   const clearFacetOverride = () => {
@@ -735,6 +826,42 @@ export default function App({ currentUser = null }) {
       return next;
     });
   };
+
+  const selectedFacetMeasurement = selectedFacet
+    ? displayMeasurement(selectedFacet.sizeSf, 'sqft', effectiveUnitSystem)
+    : null;
+  const selectedFacetProduct = selectedFacet?.role === 'roof'
+    ? allRoofProducts().find((product) => product.id === (facetOverrideState?.productId || facetGlobalProductId))
+    : allWallProducts().find((product) => product.id === (facetOverrideState?.productId || facetGlobalProductId));
+  const selectedFacetColor = selectedFacet
+    ? colorById(facetOverrideState?.colorId || facetGlobalColorId)
+    : null;
+  const expertSurfaceInspector = (
+    <ExpertSurfaceInspector
+      surface={selectedFacet ? {
+        id: selectedFacet.key,
+        identity: `${selectedFacet.role === 'roof' ? 'Roof' : 'Wall'} facet ${selectedFacet.faceId}`,
+        measurement: `${selectedFacetMeasurement.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${selectedFacetMeasurement.unit}`,
+        pitch: selectedFacet.pitch ? `${selectedFacet.pitch}/12 pitch` : undefined,
+      } : null}
+      material={selectedFacetProduct ? { id: selectedFacetProduct.id, label: selectedFacetProduct.label } : null}
+      color={selectedFacetColor ? { id: selectedFacetColor.id, label: selectedFacetColor.name } : null}
+      hasOverride={Boolean(facetOverrideState)}
+      editor={selectedFacet ? (
+        <FacetInspector
+          facet={selectedFacet}
+          effectiveProductId={facetOverrideState?.productId || facetGlobalProductId}
+          effectiveColorId={facetOverrideState?.colorId || facetGlobalColorId}
+          hasOverride={Boolean(facetOverrideState)}
+          onProductChange={(id) => setFacetOverride({ productId: id })}
+          onColorChange={(id) => setFacetOverride({ colorId: id })}
+          onClear={clearFacetOverride}
+          onClose={() => setSelectedFacet(null)}
+          unitSystem={effectiveUnitSystem}
+        />
+      ) : null}
+    />
+  );
 
   const handleExportText = () => {
     const text = buildEstimateText({
@@ -809,14 +936,25 @@ export default function App({ currentUser = null }) {
           return null;
         }
       }
-      const stateWithProject = saved?.id ? { ...state, projectId: saved.id } : state;
+      const sharePayload = buildStandaloneSharePayload({
+        applicationUrl: new URL(window.location.pathname, window.location.origin).toString(),
+        projectId: saved?.id,
+        design: state,
+        colors: effectiveColorsCatalog,
+        materials: effectiveMaterialsCatalog,
+        total: estimate.total,
+        runtime: createDesignRuntime(effectiveUnitSystem),
+      });
 
       // Escape "</script>" sequences that could appear inside string values
       // (e.g. a customer name) so they can't break out of the inline script.
-      const stateJson = JSON.stringify(stateWithProject).replace(/</g, '\\u003c');
-      const runtimeJson = JSON.stringify(createDesignRuntime(effectiveUnitSystem)).replace(/</g, '\\u003c');
-      const originJson = JSON.stringify(window.location.origin);
-      const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson}; window.__IRONWRAP_RUNTIME__ = ${runtimeJson}; window.__IRONWRAP_ORIGIN__ = ${originJson};</script>\n`;
+      const stateJson = JSON.stringify(sharePayload.design).replace(/</g, '\\u003c');
+      const runtimeJson = JSON.stringify(sharePayload.runtime).replace(/</g, '\\u003c');
+      const catalogJson = JSON.stringify(sharePayload.catalog).replace(/</g, '\\u003c');
+      const quoteJson = JSON.stringify(sharePayload.quote).replace(/</g, '\\u003c');
+      const applicationUrlJson = JSON.stringify(sharePayload.applicationUrl);
+      const originJson = JSON.stringify(new URL(sharePayload.applicationUrl).origin);
+      const stateScript = `<script>window.__IRONWRAP_DESIGN__ = ${stateJson}; window.__IRONWRAP_RUNTIME__ = ${runtimeJson}; window.__IRONWRAP_PUBLIC_CATALOG__ = ${catalogJson}; window.__IRONWRAP_QUOTE__ = ${quoteJson}; window.__IRONWRAP_APPLICATION_URL__ = ${applicationUrlJson}; window.__IRONWRAP_ORIGIN__ = ${originJson};</script>\n`;
       const html = template.replace('<script type="module">', `${stateScript}<script type="module">`);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -1048,36 +1186,51 @@ export default function App({ currentUser = null }) {
     </>
   );
 
-  const servicesPanelProps = {
-    services,
-    onServicesChange: setServices,
-    lockedServices,
-    onLockedServicesChange: setLockedServices,
-    measurements,
-    onMeasurementsChange: setMeasurements,
-    gutterOptionId,
-    onGutterOptionChange: setGutterOptionId,
-    downspoutOptionId,
-    onDownspoutOptionChange: setDownspoutOptionId,
-    accessoryColors,
-    onAccessoryColorsChange: setAccessoryColors,
-    readOnlyQuantities: isCustomerView,
-    isCustomerView,
-    customServiceLines,
-    onCustomServiceLinesChange: handleCustomServiceLinesChange,
-    customServiceCatalog,
-    trimAccents,
-    onTrimAccentsChange: handleTrimAccentsChange,
-    unitSystem: effectiveUnitSystem,
-  };
-
-  const servicesContent = (
-    <ServicesPanel section="services" {...servicesPanelProps} />
+  const extraServices = projectExtrasOnly(services);
+  const extraLockedServices = projectExtrasOnly(lockedServices);
+  const handleExtraServicesChange = (nextExtraServices) => setServices((current) => ({
+    ...current,
+    ...projectExtrasOnly(nextExtraServices),
+  }));
+  const handleExtraLockedServicesChange = (nextExtraLocks) => setLockedServices((current) => ({
+    ...current,
+    ...projectExtrasOnly(nextExtraLocks),
+  }));
+  const trimsContent = (
+    <TrimsPanel
+      records={trimAccents}
+      onChange={handleTrimAccentsChange}
+      unitSystem={effectiveUnitSystem}
+      readOnly={isCustomerView}
+      isCustomerView={isCustomerView}
+      gutterOptionId={gutterOptionId}
+      onGutterOptionChange={setGutterOptionId}
+      downspoutOptionId={downspoutOptionId}
+      onDownspoutOptionChange={setDownspoutOptionId}
+    />
   );
+  const extrasServicesContent = (
+    <ExtrasServicesPanel
+      services={extraServices}
+      onServicesChange={handleExtraServicesChange}
+      lockedServices={extraLockedServices}
+      onLockedServicesChange={handleExtraLockedServicesChange}
+      measurements={measurements}
+      onMeasurementsChange={setMeasurements}
+      readOnlyQuantities={isCustomerView}
+      isCustomerView={isCustomerView}
+      customServiceLines={customServiceLines}
+      onCustomServiceLinesChange={handleCustomServiceLinesChange}
+      customServiceCatalog={customServiceCatalog}
+      unitSystem={effectiveUnitSystem}
+    />
+  );
+
+  const servicesContent = extrasServicesContent;
 
   const accentsContent = (
     <>
-      <ServicesPanel section="accents" {...servicesPanelProps} />
+      {trimsContent}
       <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
     </>
   );
@@ -1130,7 +1283,8 @@ export default function App({ currentUser = null }) {
       {uniformFinishContent}
       {roofSelectionContent}
       {sidingSelectionContent}
-      <ServicesPanel {...servicesPanelProps} />
+      {trimsContent}
+      {extrasServicesContent}
       <PhotoOverlayControl photoOverlay={photoOverlay} onChange={setPhotoOverlay} />
       {priceSummaryContent}
       {approvalContent}
@@ -1138,7 +1292,7 @@ export default function App({ currentUser = null }) {
     </div>
   );
 
-  const viewerContent = (
+  const sharedViewer = (
     <div className="viewer-pane" style={{ height: '100%' }}>
       <div className="viewer3d-canvas-wrap">
         <Viewer3D
@@ -1148,11 +1302,15 @@ export default function App({ currentUser = null }) {
           facetColors={facetColors}
           facetLabels={facetLabels}
           photoOverlay={photoOverlay}
-          facetSelectionEnabled={!uniformFinish}
-          selectedFacetId={selectedFacet?.key}
-          onFacetClick={handleFacetClick}
+          facetSelectionEnabled={workspaceState.mode === 'expert'
+            ? activeExpertTool === 'select'
+            : workspaceState.mode !== 'showroom' && !uniformFinish}
+          selectedFacetId={workspaceState.mode === 'showroom' ? null : selectedFacet?.key}
+          onFacetClick={workspaceState.mode === 'expert' && activeExpertTool !== 'select'
+            ? undefined
+            : workspaceState.mode === 'showroom' ? undefined : handleFacetClick}
         />
-        {!uniformFinish && (
+        {workspaceState.mode === 'sales' && !uniformFinish && (
           <FacetInspector
             facet={selectedFacet}
             effectiveProductId={facetOverrideState?.productId || facetGlobalProductId}
@@ -1165,32 +1323,80 @@ export default function App({ currentUser = null }) {
             unitSystem={effectiveUnitSystem}
           />
         )}
-        <AssemblyAdjustment
-          layers={house.layers}
-          layerOffsets={layerOffsets}
-          activeLayerId={activeLayerId}
-          onActiveLayerChange={setActiveLayerId}
-          onChange={handleLayerOffsetChange}
-          onReset={handleResetLayerOffset}
-          unitSystem={effectiveUnitSystem}
-        />
+        {workspaceState.mode !== 'showroom' && (
+          <AssemblyAdjustment
+            layers={house.layers}
+            layerOffsets={layerOffsets}
+            activeLayerId={activeLayerId}
+            onActiveLayerChange={setActiveLayerId}
+            onChange={handleLayerOffsetChange}
+            onReset={handleResetLayerOffset}
+            unitSystem={effectiveUnitSystem}
+          />
+        )}
       </div>
     </div>
   );
 
-  const activeStudioStepIndex = STUDIO_STEPS.findIndex((step) => step.key === activeStudioStep);
-  const activeStudioStepLabel = STUDIO_STEPS[activeStudioStepIndex]?.label || STUDIO_STEPS[0].label;
+  const activeStudioStepLabel = STUDIO_STEPS.find((step) => step.key === activeStudioStep)?.label || STUDIO_STEPS[0].label;
   const xmlRecoveryMessage = parseFailures.length
     ? `${parseFailures.length === 1 ? 'An imported XML layer could' : 'Some imported XML layers could'} not be read. Your design changes are still here; review the Project imports to replace or remove the affected layer${parseFailures.length === 1 ? '' : 's'}.`
     : '';
-  const configuratorActive = activeSection === 'configurator' || isCustomerView;
+  const configuratorActive = activeSection === 'configurator';
   const handleOpenProjectTools = () => {
     setActiveSection('configurator');
-    setExpertRequested(false);
+    returnToSales();
     setActiveStudioStep('project');
     setMobileInspectorOpen(true);
   };
-  const legacySectionContent = !isCustomerView && (
+  const handlePresentToCustomer = () => {
+    try {
+      enterPresentationMode();
+    } catch {
+      setShellNotice('Presentation is unavailable for this workspace.');
+    }
+  };
+  const handleExitPresentation = () => {
+    try {
+      const restoredWorkspace = exitPresentationMode();
+      if (!restoredWorkspace) return;
+      setActiveSection('configurator');
+    } catch {
+      // The verified context changed while presenting; fall back to the
+      // normal mode resolver without ever restoring a forged private state.
+      cancelPresentation();
+      returnToSales();
+    }
+  };
+  const showroomShareTarget = resolveShowroomShareTarget({
+    applicationUrl: window.__IRONWRAP_APPLICATION_URL__
+      || new URL(window.location.pathname, window.location.origin).toString(),
+    projectId: currentProjectId,
+    currentUrl: window.location.href,
+    standalone: Boolean(window.__IRONWRAP_DESIGN__),
+  });
+  const handleShowroomShare = async () => {
+    const { url } = showroomShareTarget;
+    if (!url) {
+      setShellNotice(showroomShareTarget.unavailableReason);
+      return;
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'IronWrap design', url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShellNotice('Share link copied.');
+      } else {
+        window.prompt('Copy this share link', url);
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        showLoadNotice('Failed to share Showroom link:', 'The share link could not be copied. Please copy it from your browser.', error);
+      }
+    }
+  };
+  const administrativeContent = !isCustomerView && (
     <>
       {activeSection === 'settings' && (
         <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />
@@ -1201,160 +1407,262 @@ export default function App({ currentUser = null }) {
       )}
       {activeSection === 'materials' && (
         <MaterialsPanel
-          onColorsChanged={(rows) => setExtraColors(rows.map(toColorEntry))}
+          onColorsChanged={applyColorsCatalog}
           onMaterialsChanged={applyMaterialsCatalog}
         />
       )}
+      {activeSection === 'platform' && canViewPlatform && (
+        <PlatformConsole capabilities={capabilities} />
+      )}
     </>
   );
+  const showroomViewModel = useMemo(() => {
+    const categoryIsRenderable = (showroomSelectedCategory === 'roof' && hasRoofFaces)
+      || (showroomSelectedCategory === 'siding' && hasWallFaces);
+    const selectedColorId = showroomSelectedCategory === 'roof'
+      ? roofColorId
+      : showroomSelectedCategory === 'siding' ? wallColorId : undefined;
+    const selectColor = showroomSelectedCategory === 'roof' && hasRoofFaces
+      ? setRoofColorId
+      : showroomSelectedCategory === 'siding' && hasWallFaces
+        ? setWallColorId
+        : undefined;
+    const selectedProductId = showroomSelectedCategory === 'roof'
+      ? roofProductId
+      : showroomSelectedCategory === 'siding' ? wallProductId : undefined;
+    const applicableColorIds = effectiveMaterialsCatalog.find((material) => material.id === selectedProductId)?.colorIds;
+    const showroomColors = categoryIsRenderable
+      ? applicableColorIds?.length
+        ? allColors().filter((color) => applicableColorIds.includes(color.id))
+        : allColors()
+      : [];
+
+    return buildShowroomViewModel({
+      categories: [
+        { key: 'roof', label: 'Roof', available: hasRoofFaces, unavailableReason: 'No roof surfaces in this model' },
+        { key: 'siding', label: 'Siding', available: hasWallFaces, unavailableReason: 'No siding surfaces in this model' },
+        { key: 'accents', label: 'Accents', available: false, unavailableReason: 'Accent geometry is not available in this 3D model' },
+        { key: 'doors', label: 'Doors', available: false, unavailableReason: 'Door geometry is not available in this 3D model' },
+        { key: 'gutters', label: 'Gutters', available: false, unavailableReason: 'Gutter geometry is not available in this 3D model' },
+      ],
+      selectedCategory: showroomSelectedCategory,
+      onCategoryChange: setShowroomSelectedCategory,
+      materials: buildShowroomMaterials({
+        colors: showroomColors,
+        allowedColorIds: applicableColorIds,
+        selectedColorId,
+        onSelect: selectColor,
+      }),
+      estimate: {
+        label: 'Estimated project total',
+        displayTotal: (isCustomerView && publicQuoteTotal != null ? publicQuoteTotal : estimate.total)
+          .toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }),
+        qualifier: approvedAt
+          ? `Approved on ${new Date(approvedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+          : 'Final pricing follows an on-site review.',
+      },
+      customerActions: {
+        onApprove: isCustomerView && currentProjectId && !approvedAt ? handleApproveDesign : undefined,
+        onShare: isCustomerView
+          ? showroomShareTarget.url ? handleShowroomShare : undefined
+          : projectOperations.canShare ? handleExportHtml : undefined,
+        shareUnavailableReason: isCustomerView ? showroomShareTarget.unavailableReason : undefined,
+      },
+    });
+  }, [approvedAt, catalogRenderVersion, currentProjectId, effectiveMaterialsCatalog, estimate.total, hasRoofFaces, hasWallFaces, isCustomerView, publicQuoteTotal, roofColorId, roofProductId, showroomSelectedCategory, showroomShareTarget.unavailableReason, showroomShareTarget.url, wallColorId, wallProductId]);
+  const sharedViewerStage = (
+    <ViewerStage
+      mode={workspaceState.mode}
+      viewer={sharedViewer}
+      notice={shellNotice}
+    />
+  );
+  const activeControlContent = configuratorActive
+    ? workspaceState.mode === 'sales'
+      ? (
+        <SalesStepContent
+          activeStep={activeStudioStep}
+          projectContent={null}
+          roofContent={roofContent}
+          sidingContent={sidingContent}
+          accentsContent={accentsContent}
+          servicesContent={servicesContent}
+          reviewContent={reviewContent}
+        />
+      )
+      : fullControlsContent
+    : administrativeContent;
+  const sharedInspector = (
+    <ContextInspector
+      title={configuratorActive ? activeStudioStepLabel : 'Application tools'}
+      mobileOpen={mobileInspectorOpen}
+      onMobileOpenChange={setMobileInspectorOpen}
+      error={configuratorActive ? xmlRecoveryMessage : ''}
+      onRetry={configuratorActive && parseFailures.length ? handleOpenProjectTools : undefined}
+      recoveryLabel="Review project imports"
+    >
+      <div hidden={!configuratorActive || (workspaceState.mode === 'sales' && activeStudioStep !== 'project')}>
+        {projectContent}
+      </div>
+      <div
+        data-project-panels
+        hidden={!configuratorActive || (workspaceState.mode === 'sales' && !['project', 'review'].includes(activeStudioStep))}
+      >
+        {projectPanelsContent}
+      </div>
+      {activeControlContent}
+    </ContextInspector>
+  );
+  const handleApplicationSectionChange = (key) => {
+    setActiveSection(key);
+    returnToSales();
+    setMobileInspectorOpen(true);
+  };
+  const handleOpenWorkspaceNavigation = (event) => {
+    openWorkspaceNavigation(workspaceState.mode, event);
+  };
+  const applicationNavigation = (
+    <>
+      {NAV_SECTIONS.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          aria-current={activeSection === key ? 'page' : undefined}
+          onClick={() => handleApplicationSectionChange(key)}
+        >
+          {label}
+        </button>
+      ))}
+      {canViewPlatform && (
+        <button
+          type="button"
+          aria-current={activeSection === 'platform' ? 'page' : undefined}
+          onClick={() => handleApplicationSectionChange('platform')}
+        >
+          Platform
+        </button>
+      )}
+      {showExpertControl && workspaceState.mode === 'sales' && (
+        <button
+          type="button"
+          aria-pressed={false}
+          onClick={() => {
+            setActiveSection('configurator');
+            requestExpert();
+          }}
+        >
+          Expert mode
+        </button>
+      )}
+      {canViewPlatform && (
+        <span data-interface-design-placeholder>
+          <button type="button" disabled>Import Interface Design</button>
+          <span className="control-sublabel">Skin package validation is not enabled in this release.</span>
+        </span>
+      )}
+      {projectActionStatus && <span role="status" aria-live="polite">{projectActionStatus}</span>}
+    </>
+  );
+  const closeProjectMenuAndRun = (action) => {
+    setProjectMenuOpen(false);
+    return action();
+  };
+  const applicationTopBar = (
+    <WorkspaceTopBar
+      mode={workspaceState.mode}
+      logoUrl={companySettings?.logo_url}
+      navigation={applicationNavigation}
+      project={{
+        workspaceLabel: `${brand.name} · ${house.jobNumber || 'Untitled project'}`,
+        label: `${house.jobNumber || 'Untitled project'} · ${projectSaveStatus}`,
+        menuId: 'workspace-project-actions',
+        menuOpen: projectMenuOpen,
+        onMenuToggle: setProjectMenuOpen,
+        onMenuClose: setProjectMenuOpen,
+        menu: (
+          <>
+            <button role="menuitem" type="button" onClick={() => closeProjectMenuAndRun(handleOpenProjectTools)} disabled={projectActionBusy || !projectOperations.canOpen}>Open Project</button>
+            <button role="menuitem" type="button" onClick={() => closeProjectMenuAndRun(handleSaveProject)} disabled={projectActionBusy || !projectOperations.canSave}>Save / Download</button>
+            <button role="menuitem" type="button" onClick={() => closeProjectMenuAndRun(handleExportHtml)} disabled={projectActionBusy || !projectOperations.canShare}>Share Design</button>
+          </>
+        ),
+      }}
+      actions={{
+        busy: projectActionBusy,
+        onNew: handleNewProject,
+      }}
+      account={{
+        label: 'Account',
+        menuId: 'workspace-account-actions',
+        menuOpen: accountMenuOpen,
+        onMenuToggle: setAccountMenuOpen,
+        onMenuClose: setAccountMenuOpen,
+        menu: <button role="menuitem" type="button" onClick={handleLogout}>Log out</button>,
+      }}
+      onPresent={workspaceState.mode === 'sales' && configuratorActive ? handlePresentToCustomer : undefined}
+    />
+  );
+  const salesViewModel = {
+    topBar: applicationTopBar,
+    steps: STUDIO_STEPS,
+    activeStep: activeStudioStep,
+    onStepChange: setActiveStudioStep,
+    inspector: sharedInspector,
+    estimate: {
+      content: (
+        <strong>
+          Total Estimate: {estimate.total.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}
+        </strong>
+      ),
+      nextReady: true,
+    },
+    onPrevious: (targetStep) => {
+      setActiveStudioStep(targetStep);
+      setMobileInspectorOpen(true);
+    },
+    onNext: (targetStep) => {
+      setActiveStudioStep(targetStep);
+      setMobileInspectorOpen(true);
+    },
+    onOpenNavigation: handleOpenWorkspaceNavigation,
+  };
+  const expertViewModel = {
+    expertEntitled: workspaceSecurityContext.expertEntitled,
+    showExpertMode: workspaceSecurityContext.showExpertMode,
+    topBar: applicationTopBar,
+    activeTool: activeExpertTool,
+    onToolChange: setActiveExpertTool,
+    surfaceInspector: expertSurfaceInspector,
+    estimate: estimate.total.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }),
+    onUpdateEstimate: () => setShellNotice('The estimate is up to date.'),
+    onReturnToSales: returnToSales,
+    onPresent: handlePresentToCustomer,
+    onOpenNavigation: handleOpenWorkspaceNavigation,
+  };
+  const authenticatedPresentation = workspaceState.presentationSource === 'authenticated';
+  const showroomShellViewModel = {
+    sessionType: authenticatedPresentation ? 'authenticated-presentation' : 'public',
+    categories: showroomViewModel.categories,
+    selectedCategory: showroomViewModel.selectedCategory,
+    onCategoryChange: showroomViewModel.onCategoryChange,
+    materials: showroomViewModel.materials,
+    estimate: showroomViewModel.estimate,
+    customerActions: showroomViewModel.customerActions,
+    onExitPresentation: authenticatedPresentation ? handleExitPresentation : undefined,
+    status: isCustomerView ? publicEntryState.status : 'ready',
+    errorMessage: publicEntryState.status === 'invalid'
+      ? 'This shared design link is invalid.'
+      : 'This shared design is unavailable. Please contact the contractor.',
+  };
 
   return (
     <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
-      <StudioShell
-        mode={studioMode}
-        notice={shellNotice}
-        topBar={(
-          <>
-            {isCustomerView ? (
-              <header className="app-header">
-                <div className="app-header-brand">
-                  {companySettings?.logo_url && <img src={companySettings.logo_url} alt="Company logo" className="app-header-logo" />}
-                  <div>
-                    <div className="app-title">{brand.name} 3D Configurator</div>
-                    <div className="app-subtitle">{brand.tagline} — Job {house.jobNumber} · {house.customerName}</div>
-                  </div>
-                </div>
-                <BrandToggle brandId={brandId} onChange={setBrandId} />
-              </header>
-            ) : (
-              <StudioTopBar
-                title={`${brand.name} 3D Configurator`}
-                subtitle={`${brand.tagline} — Job ${house.jobNumber} · ${house.customerName}`}
-                logoUrl={companySettings?.logo_url}
-                projectLabel={house.jobNumber || 'Untitled project'}
-                projectStatus={projectSaveStatus}
-                projectActions={{
-                  onNew: handleNewProject,
-                  onOpen: handleOpenProjectTools,
-                  onSave: handleSaveProject,
-                  onShare: handleExportHtml,
-                  canOpen: projectOperations.canOpen,
-                  canSave: projectOperations.canSave,
-                  canShare: projectOperations.canShare,
-                  busy: projectActionBusy,
-                  status: projectActionStatus || (
-                    (!projectOperations.canSave || !projectOperations.canShare)
-                      ? projectOperations.message
-                      : ''
-                  ),
-                }}
-                canShowExpert={showExpertControl}
-                expertActive={studioMode === 'expert'}
-                onToggleExpert={() => {
-                  setActiveSection('configurator');
-                  setExpertRequested((requested) => !requested);
-                }}
-                onLogout={handleLogout}
-                onOpenNavigation={() => setActiveSection('configurator')}
-              />
-            )}
-
-            {!isCustomerView && (
-              <nav className="app-nav">
-                {NAV_SECTIONS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`app-nav-tab${activeSection === key ? ' active' : ''}`}
-                    onClick={() => setActiveSection(key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-                {canViewPlatform && (
-                  <button
-                    type="button"
-                    className={`app-nav-tab${activeSection === 'platform' ? ' active' : ''}`}
-                    onClick={() => setActiveSection('platform')}
-                  >
-                    Platform
-                  </button>
-                )}
-                {canViewPlatform && (
-                  <div data-interface-design-placeholder>
-                    <button type="button" className="app-nav-tab" disabled>Import Interface Design</button>
-                    <span className="control-sublabel">Skin package validation is not enabled in this release.</span>
-                  </div>
-                )}
-              </nav>
-            )}
-          </>
-        )}
-        stepRail={configuratorActive && studioMode === 'sales' ? (
-          <GuidedStepRail
-            steps={STUDIO_STEPS}
-            activeStep={activeStudioStep}
-            completedSteps={STUDIO_STEPS.slice(0, Math.max(0, activeStudioStepIndex)).map((step) => step.key)}
-            onStepChange={setActiveStudioStep}
-          />
-        ) : null}
-        viewer={configuratorActive ? (
-          <ViewerWorkspace viewerMode={viewerMode} onViewerModeChange={setViewerMode}>
-            {viewerContent}
-          </ViewerWorkspace>
-        ) : legacySectionContent}
-        inspector={configuratorActive ? (
-          <ContextInspector
-            title={studioMode === 'sales' ? activeStudioStepLabel : 'Design controls'}
-            mobileOpen={mobileInspectorOpen}
-            onMobileOpenChange={setMobileInspectorOpen}
-            error={xmlRecoveryMessage}
-            onRetry={parseFailures.length ? handleOpenProjectTools : undefined}
-            recoveryLabel="Review project imports"
-          >
-            <div hidden={studioMode === 'sales' && activeStudioStep !== 'project'}>
-              {projectContent}
-            </div>
-            <div
-              data-project-panels
-              hidden={studioMode === 'sales' && !['project', 'review'].includes(activeStudioStep)}
-            >
-              {projectPanelsContent}
-            </div>
-            {studioMode === 'sales' ? (
-              <SalesStepContent
-                activeStep={activeStudioStep}
-                projectContent={null}
-                roofContent={roofContent}
-                sidingContent={sidingContent}
-                accentsContent={accentsContent}
-                servicesContent={servicesContent}
-                reviewContent={reviewContent}
-              />
-            ) : fullControlsContent}
-          </ContextInspector>
-        ) : null}
-        estimateDock={configuratorActive && studioMode === 'sales' ? (
-          <EstimateDock
-            estimate={estimate}
-            activeStep={activeStudioStepLabel}
-            atFirstStep={activeStudioStepIndex <= 0}
-            atLastStep={activeStudioStepIndex === STUDIO_STEPS.length - 1}
-            onPrevious={() => {
-              setActiveStudioStep(previousStudioStep(activeStudioStep).key);
-              setMobileInspectorOpen(true);
-            }}
-            onNext={() => {
-              setActiveStudioStep(nextStudioStep(activeStudioStep).key);
-              setMobileInspectorOpen(true);
-            }}
-          >
-            <strong>
-              Total Estimate: {estimate.total.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}
-            </strong>
-          </EstimateDock>
-        ) : null}
-        platformContent={canViewPlatform && <PlatformConsole capabilities={capabilities} />}
+      <AppWorkspace
+        workspaceState={workspaceState}
+        viewerStage={isCustomerView && publicEntryState.status !== 'ready' ? null : sharedViewerStage}
+        salesViewModel={salesViewModel}
+        expertViewModel={expertViewModel}
+        showroomViewModel={showroomShellViewModel}
       />
     </div>
   );

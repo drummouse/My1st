@@ -1,4 +1,5 @@
 import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING, allRoofProducts, allWallProducts } from '../data/pricing.js';
+import { normalizeTrimServiceBoundary } from './trimServiceBoundary.js';
 
 // Fallback base tax rate when an owner hasn't configured a tax region yet
 // (Alberta GST — this app's original single hardcoded rate).
@@ -7,8 +8,8 @@ export const GST_RATE = 0.05;
 // Searches the baseline catalog plus any owner-added Materials Library
 // entries (allRoofProducts()/allWallProducts() — see data/pricing.js) so a
 // project referencing a custom material still prices and labels correctly.
-const findRoofProduct = (id) => allRoofProducts().find((p) => p.id === id) || allRoofProducts()[0];
-const findWallProduct = (id) => allWallProducts().find((p) => p.id === id) || allWallProducts()[0];
+const findRoofProduct = (id, products = allRoofProducts()) => products.find((p) => p.id === id) || products[0];
+const findWallProduct = (id, products = allWallProducts()) => products.find((p) => p.id === id) || products[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
 const findDownspout = (id) => DOWNSPOUT_OPTIONS.find((d) => d.id === id) || DOWNSPOUT_OPTIONS[0];
 
@@ -128,16 +129,28 @@ function buildAccessoryLine(key, label, qty, unit, rate, serviceRuleFor, applied
  */
 export function calculateEstimate(measurements, selections) {
   const line = [];
-  const services = selections.services || {};
+  const trimBoundary = normalizeTrimServiceBoundary({ ...selections, measurements });
+  const services = trimBoundary.extraServices;
+  const trimByService = {
+    soffit: trimBoundary.trimAccents.find((record) => record.kind === 'soffit'),
+    fascia: trimBoundary.trimAccents.find((record) => record.kind === 'fascia'),
+    gutters: trimBoundary.trimAccents.find((record) => record.kind === 'gutters'),
+    downspouts: trimBoundary.trimAccents.find((record) => record.kind === 'downspouts'),
+    garageDoorCapping: trimBoundary.trimAccents.find((record) => record.kind === 'garage_doors'),
+    capFlashing: trimBoundary.trimAccents.find((record) => (
+      record.kind === 'other_trims' && record.customLabel === undefined
+    )),
+  };
+  const trimIsSelected = (key) => trimByService[key]?.selected === true;
 
   const roofGroups = services.roof
-    ? groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, findRoofProduct, 'Roofing')
+    ? groupFacetsByProduct(selections.roofFaces, selections.facetOverrides, selections.roofProduct, (id) => findRoofProduct(id, selections.roofProducts), 'Roofing')
     : { items: [], total: 0 };
   line.push(...roofGroups.items);
   const roofTotal = roofGroups.total;
 
   const wallGroups = services.wall
-    ? groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, findWallProduct, 'Siding')
+    ? groupFacetsByProduct(selections.wallFaces, selections.facetOverrides, selections.wallProduct, (id) => findWallProduct(id, selections.wallProducts), 'Siding')
     : { items: [], total: 0 };
   line.push(...wallGroups.items);
   const wallTotal = wallGroups.total;
@@ -145,13 +158,13 @@ export function calculateEstimate(measurements, selections) {
   const active = {
     roof: roofTotal > 0,
     wall: wallTotal > 0,
-    soffit: !!services.soffit,
-    fascia: !!services.fascia,
-    gutters: !!services.gutters,
-    downspouts: !!services.downspouts,
+    soffit: trimIsSelected('soffit'),
+    fascia: trimIsSelected('fascia'),
+    gutters: trimIsSelected('gutters'),
+    downspouts: trimIsSelected('downspouts'),
     snowRetention: !!services.snowRetention,
-    capFlashing: !!services.capFlashing,
-    garageDoorCapping: !!services.garageDoorCapping,
+    capFlashing: trimIsSelected('capFlashing'),
+    garageDoorCapping: trimIsSelected('garageDoorCapping'),
   };
 
   const discountRules = selections.discountRules?.length
@@ -177,31 +190,31 @@ export function calculateEstimate(measurements, selections) {
   const appliedDiscounts = [];
 
   let soffitTotal = 0;
-  if (services.soffit) {
-    const li = buildAccessoryLine('soffit', ACCESSORY_PRICING.soffit.label, measurements.soffitSqft, 'sqft', ACCESSORY_PRICING.soffit.pricePerSqft, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('soffit')) {
+    const li = buildAccessoryLine('soffit', ACCESSORY_PRICING.soffit.label, trimByService.soffit.quantity, 'sqft', ACCESSORY_PRICING.soffit.pricePerSqft, serviceRuleFor, appliedDiscounts);
     soffitTotal = li.total;
     line.push(li);
   }
 
   let fasciaTotal = 0;
-  if (services.fascia) {
-    const li = buildAccessoryLine('fascia', ACCESSORY_PRICING.fascia.label, measurements.fasciaLf, 'LF', ACCESSORY_PRICING.fascia.pricePerLf, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('fascia')) {
+    const li = buildAccessoryLine('fascia', ACCESSORY_PRICING.fascia.label, trimByService.fascia.quantity, 'LF', ACCESSORY_PRICING.fascia.pricePerLf, serviceRuleFor, appliedDiscounts);
     fasciaTotal = li.total;
     line.push(li);
   }
 
   const gutterOption = findGutter(selections.gutterOption);
   let gutterTotal = 0;
-  if (services.gutters) {
-    const li = buildAccessoryLine('gutters', gutterOption.label, measurements.gutterLf, 'LF', gutterOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('gutters')) {
+    const li = buildAccessoryLine('gutters', gutterOption.label, trimByService.gutters.quantity, 'LF', gutterOption.pricePerLf, serviceRuleFor, appliedDiscounts);
     gutterTotal = li.total;
     line.push(li);
   }
 
   const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
-  if (services.downspouts) {
-    const li = buildAccessoryLine('downspouts', downspoutOption.label, measurements.downspoutLf, 'LF', downspoutOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('downspouts')) {
+    const li = buildAccessoryLine('downspouts', downspoutOption.label, trimByService.downspouts.quantity, 'LF', downspoutOption.pricePerLf, serviceRuleFor, appliedDiscounts);
     downspoutTotal = li.total;
     line.push(li);
   }
@@ -214,18 +227,43 @@ export function calculateEstimate(measurements, selections) {
   }
 
   let capFlashingTotal = 0;
-  if (services.capFlashing) {
-    const li = buildAccessoryLine('capFlashing', ACCESSORY_PRICING.capFlashing.label, measurements.capFlashingLf, 'LF', ACCESSORY_PRICING.capFlashing.pricePerLf, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('capFlashing')) {
+    const li = buildAccessoryLine('capFlashing', ACCESSORY_PRICING.capFlashing.label, trimByService.capFlashing.quantity, 'LF', ACCESSORY_PRICING.capFlashing.pricePerLf, serviceRuleFor, appliedDiscounts);
     capFlashingTotal = li.total;
     line.push(li);
   }
 
   let garageDoorCappingTotal = 0;
-  if (services.garageDoorCapping) {
-    const li = buildAccessoryLine('garageDoorCapping', ACCESSORY_PRICING.garageDoorCapping.label, measurements.garageDoorCappingLf, 'LF', ACCESSORY_PRICING.garageDoorCapping.pricePerLf, serviceRuleFor, appliedDiscounts);
+  if (trimIsSelected('garageDoorCapping')) {
+    const li = buildAccessoryLine('garageDoorCapping', ACCESSORY_PRICING.garageDoorCapping.label, trimByService.garageDoorCapping.quantity, 'LF', ACCESSORY_PRICING.garageDoorCapping.pricePerLf, serviceRuleFor, appliedDiscounts);
     garageDoorCappingTotal = li.total;
     line.push(li);
   }
+
+  // Additional trim rows are canonical work, not optional services. Their
+  // unit determines the existing material pricing path: area follows soffit
+  // pricing; linear additional trim follows the cap-flashing line. They get
+  // one explicit line and never re-enter the legacy service calculation.
+  let additionalTrimTotal = 0;
+  trimBoundary.trimAccents
+    .filter((record) => record.customLabel !== undefined && record.selected === true)
+    .forEach((record) => {
+      const isArea = record.canonicalUnit === 'square_feet';
+      const rate = isArea
+        ? ACCESSORY_PRICING.soffit.pricePerSqft
+        : ACCESSORY_PRICING.capFlashing.pricePerLf;
+      const qty = record.quantity;
+      const total = qty * rate;
+      additionalTrimTotal += total;
+      line.push({
+        key: `trim-${record.id}`,
+        label: record.customLabel,
+        qty,
+        unit: isArea ? 'sqft' : 'LF',
+        rate,
+        total,
+      });
+    });
 
   // Owner-defined custom services — a simple qty * price line each, frozen
   // at the name/price/description/link the project was saved with (the
@@ -245,7 +283,7 @@ export function calculateEstimate(measurements, selections) {
     });
   });
 
-  const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal + customServicesTotal;
+  const subtotal = roofTotal + wallTotal + soffitTotal + fasciaTotal + gutterTotal + downspoutTotal + snowRetentionTotal + capFlashingTotal + garageDoorCappingTotal + additionalTrimTotal + customServicesTotal;
 
   const subtotalDiscount = subtotalRule ? subtotal * subtotalRule.effect.value : 0;
   if (subtotalRule) {

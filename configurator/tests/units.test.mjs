@@ -175,17 +175,19 @@ test('schema, UI, and saved-design contracts keep units company-scoped', async (
 });
 
 test('fixed services and model positioning convert only at the display boundary', async () => {
-  const [services, adjustment, app] = await Promise.all([
-    readFile(new URL('../src/components/ServicesPanel.jsx', import.meta.url), 'utf8'),
+  const [trims, extras, adjustment, app] = await Promise.all([
+    readFile(new URL('../src/components/TrimsPanel.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/ExtrasServicesPanel.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/AssemblyAdjustment.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/App.jsx', import.meta.url), 'utf8'),
   ]);
 
-  for (const helper of ['feetToDisplay', 'feetFromDisplay', 'squareFeetToDisplay', 'squareFeetFromDisplay']) {
-    assert.match(services, new RegExp(helper));
+  for (const helper of ['feetToDisplay', 'feetFromDisplay']) {
+    assert.match(extras, new RegExp(helper));
   }
-  assert.match(services, /unitSystem/);
-  assert.doesNotMatch(services, /unit="LF"|unit="sqft"/);
+  assert.match(trims, /unitPriceToDisplay/);
+  assert.match(`${trims}${extras}`, /unitSystem/);
+  assert.doesNotMatch(`${trims}${extras}`, /unit="LF"|unit="sqft"/);
   assert.match(adjustment, /feetToDisplay/);
   assert.match(adjustment, /feetFromDisplay/);
   assert.match(adjustment, /linearUnit\(unitSystem\)/);

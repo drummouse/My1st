@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App.jsx';
 import AuthGate from './components/AuthGate.jsx';
 import './index.css';
+import './styles/workspace-modes.css';
 
 // Without this, a tab left open (or even just reopened from history) can
 // keep running whatever JS bundle was cached at install time — the service

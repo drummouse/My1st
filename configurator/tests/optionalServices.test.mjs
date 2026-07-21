@@ -170,23 +170,29 @@ test('the shared row locks customer changes while keeping quantity visible', asy
     assert.match(row, new RegExp(`>${field}<`));
   }
   assert.match(row, /const customerLocked = isCustomerView && service\.locked;/);
-  assert.match(row, /value=\{service\.quantity\}/);
+  assert.match(row, /value=\{displayQuantity\.value\}/);
   assert.match(row, /disabled=\{!service\.selected \|\| readOnlyQuantity \|\| customerLocked\}/);
   assert.doesNotMatch(row, /customerLocked\s*&&\s*\([^)]*service\.quantity/);
 });
 
 test('optional services use the shared adapter and stay separate from physical trim records', async () => {
-  const panel = await readFile(new URL('../src/components/ServicesPanel.jsx', import.meta.url), 'utf8');
+  const [extras, trims] = await Promise.all([
+    readFile(new URL('../src/components/ExtrasServicesPanel.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/TrimsPanel.jsx', import.meta.url), 'utf8'),
+  ]);
   const catalog = await readFile(new URL('../src/components/CustomServicesPanel.jsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
 
-  assert.match(panel, /customServiceLines\.map\(\(line\) => adaptCustomServiceLine\(line\)\)/);
-  assert.match(panel, /<OptionalServiceRow/);
-  assert.match(panel, /trimAccents\.map\(\(record\) => \(/);
-  assert.match(panel, /<TrimAccentRow/);
-  assert.doesNotMatch(panel, /adaptCustomServiceLine\(record\)/);
+  assert.match(extras, /customServiceLines\.map\(\(line\) => adaptCustomServiceLine\(line\)\)/);
+  assert.match(extras, /<OptionalServiceRow/);
+  assert.match(extras, /filter\(\(\[key\]\) => !isTrimServiceKey\(key\)\)/);
+  assert.doesNotMatch(extras, /adaptCustomServiceLine\(record\)/);
+  assert.match(trims, /trimRecords\.map\(\(record\) => \(/);
+  assert.match(trims, /<TrimAccentRow/);
   assert.match(catalog, /<OptionalServiceRow/);
   assert.match(catalog, />Pricing method</);
   assert.match(catalog, /value="per_unit"/);
-  assert.match(app, /onCustomServiceLinesChange:\s*handleCustomServiceLinesChange/);
+  assert.match(app, /onCustomServiceLinesChange=\{handleCustomServiceLinesChange\}/);
+  assert.match(app, /services=\{extraServices\}/);
+  assert.match(app, /records=\{trimAccents\}/);
 });

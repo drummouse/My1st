@@ -12,11 +12,13 @@ const vite = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
 });
-const [productModule, facetModule, summaryModule, servicesModule] = await Promise.all([
+const [productModule, facetModule, summaryModule, servicesModule, optionalServiceModule, extrasModule] = await Promise.all([
   vite.ssrLoadModule('/src/components/ProductSelector.jsx'),
   vite.ssrLoadModule('/src/components/FacetInspector.jsx'),
   vite.ssrLoadModule('/src/components/PriceSummary.jsx'),
   vite.ssrLoadModule('/src/components/ServicesPanel.jsx'),
+  vite.ssrLoadModule('/src/components/OptionalServiceRow.jsx'),
+  vite.ssrLoadModule('/src/components/ExtrasServicesPanel.jsx'),
 ]);
 after(() => vite.close());
 
@@ -98,4 +100,43 @@ test('metric service rows show metres and converted prices per metre', () => {
   assert.match(markup, /30\.48/);
   assert.match(markup, /\$32\.81\/m/);
   assert.doesNotMatch(markup, /\/LF/);
+});
+
+test('metric custom services display converted quantity and price while edits stay canonical', () => {
+  const changes = [];
+  const element = React.createElement(optionalServiceModule.default, {
+    service: {
+      id: 'custom-flashing', name: 'Custom flashing', description: '', pricingMethod: 'per_unit',
+      quantity: 100, unit: 'LF', unitPrice: 10, selected: true, locked: false,
+    },
+    onChange: (next) => changes.push(next),
+    unitSystem: 'metric',
+  });
+  const markup = renderToStaticMarkup(element);
+  const rendered = optionalServiceModule.default(element.props);
+  const quantityInput = rendered.props.children.find((child) => child?.props?.className?.includes('optional-service-quantity'))
+    .props.children[1].props.children[0];
+
+  assert.match(markup, /value="30\.48"/);
+  assert.match(markup, />m<\/span>/);
+  assert.match(markup, /\$32\.81\/m/);
+  assert.doesNotMatch(markup, /100|\/LF/);
+
+  quantityInput.props.onChange({ target: { value: '15.24' } });
+  assert.equal(changes[0].quantity, 50);
+  assert.equal(changes[0].unit, 'LF');
+  assert.equal(changes[0].unitPrice, 10);
+});
+
+test('metric custom-service add picker converts catalog unit prices and units', () => {
+  const markup = renderToStaticMarkup(React.createElement(extrasModule.default, {
+    services: {},
+    customServiceLines: [],
+    catalog: [{ id: 'flashing', name: 'Flashing', price: 10, unit: 'LF' }],
+    onCustomServiceLinesChange: noop,
+    unitSystem: 'metric',
+  }));
+
+  assert.match(markup, /Flashing — \$32\.81\/m/);
+  assert.doesNotMatch(markup, /\$10\.00\/LF/);
 });

@@ -59,6 +59,13 @@ export function displayMeasurement(value, canonicalUnit, system) {
   return { value: Number(value), unit: canonicalUnit };
 }
 
+export function measurementFromDisplay(value, canonicalUnit, system) {
+  const resolvedSystem = requireUnitSystem(system);
+  if (LINEAR_FOOT_UNITS.has(canonicalUnit)) return feetFromDisplay(value, resolvedSystem);
+  if (SQUARE_FOOT_UNITS.has(canonicalUnit)) return squareFeetFromDisplay(value, resolvedSystem);
+  return Number(value);
+}
+
 // Catalog prices stay canonical per foot/square foot. Dividing by the
 // displayed quantity represented by one canonical unit produces the
 // equivalent price per metre/square metre without changing estimator data.

@@ -394,3 +394,46 @@ test('complete custom-material snapshots preserve empty profiles through export 
   assert.equal(reopenedState.roofProfile, '');
   assert.equal(reopenedState.wallProfile, '');
 });
+
+test('selected custom catalog snapshots freeze rate and visual metadata across library changes', async () => {
+  const { buildSelectedCatalogSnapshot } = await import('../src/lib/catalogSnapshot.js');
+  const first = buildSelectedCatalogSnapshot({
+    materials: [{
+      id: 'custom-roof', name: 'Original roof', kind: 'roof', price_per_sqft: 18,
+      profiles: ['Narrow rib'], colorIds: ['custom-color'],
+    }],
+    colors: [{ id: 'custom-color', name: 'Original graphite', code: 'X-1', hex: '#454545', series: 'Custom' }],
+    materialIds: ['custom-roof'],
+    colorIds: ['custom-color'],
+  });
+  const afterLibraryMutation = buildSelectedCatalogSnapshot({
+    existing: first,
+    materials: [{
+      id: 'custom-roof', name: 'Changed roof', kind: 'roof', price_per_sqft: 99,
+      profiles: ['Changed'], colorIds: [],
+    }],
+    colors: [],
+    materialIds: ['custom-roof'],
+    colorIds: ['custom-color'],
+  });
+
+  assert.deepEqual(afterLibraryMutation, first);
+  assert.equal(afterLibraryMutation.version, 1);
+  assert.equal(afterLibraryMutation.materials[0].pricePerSqft, 18);
+  assert.equal(afterLibraryMutation.colors[0].name, 'Original graphite');
+});
+
+test('applying a saved design restores its selected catalog snapshot', () => {
+  const catalogSnapshot = {
+    version: 1,
+    materials: [{ id: 'custom-roof', name: 'Frozen roof', kind: 'roof', pricePerSqft: 18 }],
+    colors: [{ id: 'custom-color', name: 'Frozen graphite', hex: '#454545' }],
+  };
+  let restored = null;
+
+  applyDesignState({ version: 2, catalogSnapshot }, {
+    setCatalogSnapshot: (value) => { restored = value; },
+  });
+
+  assert.deepEqual(restored, catalogSnapshot);
+});

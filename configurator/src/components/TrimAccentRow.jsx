@@ -12,6 +12,9 @@ export default function TrimAccentRow({
   onChange,
   onRemove,
   isCustomerView = false,
+  canonicalReadOnly = false,
+  extra,
+  secondaryExtra,
 }) {
   const label = record.customLabel ?? TRIM_KIND_LABELS[record.kind] ?? 'Trim';
   const customerLocked = isCustomerView && record.locked;
@@ -26,7 +29,7 @@ export default function TrimAccentRow({
             <input
               type="text"
               value={record.customLabel}
-              disabled={customerLocked}
+              disabled={customerLocked || canonicalReadOnly}
               aria-label="Additional trim name"
               onChange={(event) => update({ customLabel: event.target.value })}
             />
@@ -34,6 +37,15 @@ export default function TrimAccentRow({
         ) : (
           <strong>{label}</strong>
         )}
+        <label className="service-lock-toggle">
+          <input
+            type="checkbox"
+            checked={record.selected === true}
+            disabled={customerLocked}
+            onChange={(event) => update({ selected: event.target.checked })}
+          />
+          <span>Include</span>
+        </label>
         {!isCustomerView && (
           <label className="service-lock-toggle">
             <input
@@ -44,7 +56,7 @@ export default function TrimAccentRow({
             <span>Lock</span>
           </label>
         )}
-        {record.customLabel !== undefined && !isCustomerView && onRemove && (
+        {record.customLabel !== undefined && !isCustomerView && !canonicalReadOnly && onRemove && (
           <button
             type="button"
             className="layer-remove-btn"
@@ -54,6 +66,8 @@ export default function TrimAccentRow({
             ×
           </button>
         )}
+        {extra}
+        {secondaryExtra}
       </div>
       <div className="trim-accent-row-fields">
         <label className="trim-accent-field">
@@ -61,7 +75,7 @@ export default function TrimAccentRow({
           <input
             type="text"
             value={record.productId}
-            disabled={customerLocked}
+            disabled={customerLocked || canonicalReadOnly}
             aria-label={`${label} product`}
             onChange={(event) => update({ productId: event.target.value })}
           />
@@ -71,7 +85,7 @@ export default function TrimAccentRow({
           <input
             type="text"
             value={record.profile}
-            disabled={customerLocked}
+            disabled={customerLocked || canonicalReadOnly}
             aria-label={`${label} profile`}
             onChange={(event) => update({ profile: event.target.value })}
           />
@@ -89,7 +103,7 @@ export default function TrimAccentRow({
             <span>Dimension</span>
             <select
               value={record.canonicalUnit}
-              disabled={customerLocked}
+              disabled={customerLocked || canonicalReadOnly}
               aria-label={`${label} quantity dimension`}
               onChange={(event) => update({ canonicalUnit: event.target.value, quantity: 0 })}
             >

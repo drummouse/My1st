@@ -12,6 +12,7 @@ export default function StudioTopBar({
   canShowExpert,
   expertActive,
   onToggleExpert,
+  onPresent,
   onLogout,
   onOpenNavigation,
 }) {
@@ -138,6 +139,11 @@ export default function StudioTopBar({
             variant={expertActive ? 'primary' : 'secondary'}
           >
             Expert mode
+          </StudioButton>
+        )}
+        {onPresent && (
+          <StudioButton onClick={onPresent} variant="secondary">
+            Present to Customer
           </StudioButton>
         )}
         <StudioButton aria-label="Log out" onClick={onLogout}>

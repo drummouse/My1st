@@ -19,9 +19,14 @@ export function resolveStudioMode({
   capabilities = [],
   expertRequested = false,
   tenantEntitlement = false,
+  showExpertMode = false,
 } = {}) {
   if (isCustomerView) return 'showroom';
   if (activeSection === 'platform' && canOpenPlatform(capabilities)) return 'platform';
-  if (expertRequested && canEnterExpert(role, tenantEntitlement)) return 'expert';
+  if (expertRequested && canShowExpertControl({
+    role,
+    entitled: tenantEntitlement,
+    tenantPreference: showExpertMode,
+  })) return 'expert';
   return 'sales';
 }
