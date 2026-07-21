@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import ColorPickerButton from './ColorPickerButton.jsx';
+import LibraryOptionPicker from './LibraryOptionPicker.jsx';
 import { DEFAULT_SERVICES, DEFAULT_LOCKED_SERVICES, DEFAULT_ACCESSORY_COLORS } from '../data/defaults.js';
 import { COUNTRIES, REGIONS, regionByCode } from '../data/taxRates.js';
 import { formatPostalOrZip } from '../lib/address.js';
+import {
+  appendUniqueDefaultCatalogItem,
+  dedupeDefaultCatalogItems,
+  defaultCatalogItemFromOption,
+  sameCatalogOptionIdentity,
+} from '../lib/defaultCatalogItems.js';
+import { isLibraryTrimOption } from '../lib/trimAccents.js';
 
 const SERVICE_KEYS = [
   { key: 'roof', label: 'Roof' },
@@ -12,9 +20,6 @@ const SERVICE_KEYS = [
   { key: 'fascia', label: 'Fascia' },
   { key: 'gutters', label: 'Gutters' },
   { key: 'downspouts', label: 'Downspouts' },
-  { key: 'snowRetention', label: 'Snow Retention' },
-  { key: 'capFlashing', label: 'Cap Flashing' },
-  { key: 'garageDoorCapping', label: 'Garage Door Capping' },
 ];
 
 const ACCESSORY_KEYS = ['soffit', 'fascia', 'gutters', 'downspouts'];
@@ -24,13 +29,14 @@ const ACCESSORY_KEYS = ['soffit', 'fascia', 'gutters', 'downspouts'];
 const toPct = (frac) => (Number(frac) * 100).toString();
 const toFrac = (pct) => (Number(pct) || 0) / 100;
 
-export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
+export default function SettingsPanel({ onSaved, libraryOptions = { products: [], services: [] } }) {
   const [form, setForm] = useState(null);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
+  const [defaultPickerKind, setDefaultPickerKind] = useState(null);
 
   // Company Profile is identity/contact info on the `users` row (required at
   // signup, see AuthGate.jsx) rather than the per-owner `settings` row this
@@ -105,6 +111,9 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultRoofColorId: row.default_roof_color_id || 'wg-02',
           defaultWallColorId: row.default_wall_color_id || 'wg-02',
           defaultCustomServiceIds: row.default_custom_service_ids || [],
+          defaultCatalogItems: Array.isArray(row.default_catalog_items)
+            ? dedupeDefaultCatalogItems(row.default_catalog_items)
+            : null,
           reportFooterNote: row.report_footer_note || '',
           logoUrl: row.logo_url || '',
           unitSystem: row.unit_system || 'imperial',
@@ -128,6 +137,7 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultRoofColorId: 'wg-02',
           defaultWallColorId: 'wg-02',
           defaultCustomServiceIds: [],
+          defaultCatalogItems: null,
           reportFooterNote: '',
           logoUrl: '',
           unitSystem: 'imperial',
@@ -152,13 +162,35 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
     setForm((f) => ({ ...f, defaultLockedServices: { ...f.defaultLockedServices, [key]: val } }));
   const setAccessoryColor = (key) => (val) =>
     setForm((f) => ({ ...f, defaultAccessoryColors: { ...f.defaultAccessoryColors, [key]: val } }));
-  const toggleDefaultCustomService = (id) => (checked) =>
-    setForm((f) => ({
-      ...f,
-      defaultCustomServiceIds: checked
-        ? [...(f.defaultCustomServiceIds || []), id]
-        : (f.defaultCustomServiceIds || []).filter((x) => x !== id),
-    }));
+  const addDefaultCatalogItem = (kind, option) => setForm((f) => ({
+    ...f,
+    defaultCatalogItems: appendUniqueDefaultCatalogItem(
+      f.defaultCatalogItems,
+      defaultCatalogItemFromOption(kind, option),
+    ),
+  }));
+  const updateDefaultCatalogItem = (index, patch) => setForm((f) => ({
+    ...f,
+    defaultCatalogItems: (f.defaultCatalogItems || []).map((item, itemIndex) => (
+      itemIndex === index ? { ...item, ...patch } : item
+    )),
+  }));
+  const removeDefaultCatalogItem = (index) => setForm((f) => ({
+    ...f,
+    defaultCatalogItems: (f.defaultCatalogItems || []).filter((_, itemIndex) => itemIndex !== index),
+  }));
+  const selectedDefaultItems = dedupeDefaultCatalogItems(form.defaultCatalogItems);
+  const defaultProductOptions = (libraryOptions.products || [])
+    .filter(isLibraryTrimOption)
+    .filter((option) => !selectedDefaultItems.some((item) => sameCatalogOptionIdentity(
+      item,
+      defaultCatalogItemFromOption('trim', option),
+    )));
+  const defaultServiceOptions = (libraryOptions.services || [])
+    .filter((option) => !selectedDefaultItems.some((item) => sameCatalogOptionIdentity(
+      item,
+      defaultCatalogItemFromOption('service', option),
+    )));
 
   // Picking a file just previews it locally (instant, no network) — nothing
   // is sent until "Upload" is clicked, so a slow/failed upload doesn't leave
@@ -213,14 +245,18 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           defaultRoofColorId: form.defaultRoofColorId,
           defaultWallColorId: form.defaultWallColorId,
           defaultCustomServiceIds: form.defaultCustomServiceIds,
+          ...(Array.isArray(form.defaultCatalogItems)
+            ? { defaultCatalogItems: form.defaultCatalogItems }
+            : {}),
           reportFooterNote: form.reportFooterNote,
           logoUrl: form.logoUrl,
           unitSystem: form.unitSystem,
           ...(form.expertModeEntitled ? { showExpertMode: form.showExpertMode } : {}),
         }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const row = await res.json();
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      const row = body;
       setForm((f) => ({
         ...f,
         unitSystem: row.unit_system || 'imperial',
@@ -231,7 +267,7 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
       onSaved?.(row);
     } catch (err) {
       console.error('Settings API error:', err);
-      setStatus('Could not save — the Settings database may not be reachable yet.');
+      setStatus(err.message || 'Could not save.');
     }
     setBusy(false);
     setTimeout(() => setStatus(''), 4000);
@@ -428,27 +464,57 @@ export default function SettingsPanel({ onSaved, customServiceCatalog = [] }) {
           </div>
         ))}
 
-        {customServiceCatalog.length > 0 ? (
-          <>
-            <div className="field-label" style={{ marginTop: '0.6rem' }}>Custom services</div>
-            {customServiceCatalog.map((cs) => (
-              <div className="service-row" key={cs.id}>
-                <label className="service-row-main">
-                  <input
-                    type="checkbox" checked={(form.defaultCustomServiceIds || []).includes(cs.id)}
-                    onChange={(e) => toggleDefaultCustomService(cs.id)(e.target.checked)}
-                  />
-                  <span>{cs.name}</span>
-                </label>
-                <span className="service-note">${Number(cs.price).toFixed(2)}/{cs.unit}</span>
-              </div>
-            ))}
-          </>
-        ) : (
-          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
-            No custom services defined yet — add some in the Custom Services tab, then come back
-            here to have any of them turned on by default for new projects too.
+        {selectedDefaultItems.map((item, index) => (
+          <div className="service-row" key={`${item.kind}:${item.source || 'legacy'}:${item.optionId}`}>
+            <span className="service-row-main">{item.label}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="service-qty"
+              value={item.quantity}
+              aria-label={`${item.label} default quantity`}
+              onChange={(event) => updateDefaultCatalogItem(index, {
+                quantity: Number(event.target.value) || 0,
+              })}
+            />
+            <span className="service-unit">{item.unit}</span>
+            <label className="service-lock-toggle">
+              <input
+                type="checkbox"
+                checked={item.locked}
+                onChange={(event) => updateDefaultCatalogItem(index, { locked: event.target.checked })}
+              />
+              <span>Lock</span>
+            </label>
+            <button
+              type="button"
+              className="layer-remove-btn"
+              aria-label={`Remove ${item.label}`}
+              onClick={() => removeDefaultCatalogItem(index)}
+            >
+              ×
+            </button>
           </div>
+        ))}
+        <div className="export-buttons">
+          <button type="button" className="btn-secondary" onClick={() => setDefaultPickerKind('trim')}>
+            Add Product
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setDefaultPickerKind('service')}>
+            Add Service
+          </button>
+        </div>
+        {defaultPickerKind && (
+          <LibraryOptionPicker
+            kind={defaultPickerKind === 'trim' ? 'product' : 'service'}
+            options={defaultPickerKind === 'trim' ? defaultProductOptions : defaultServiceOptions}
+            onClose={() => setDefaultPickerKind(null)}
+            onSelect={(option) => {
+              addDefaultCatalogItem(defaultPickerKind, option);
+              setDefaultPickerKind(null);
+            }}
+          />
         )}
       </div>
 

@@ -2,6 +2,8 @@ import ColorPickerButton from './ColorPickerButton.jsx';
 import {
   TRIM_KIND_LABELS,
   displayTrimQuantity,
+  practicalProductLabel,
+  productBaseLabel,
   trimDisplayUnit,
   trimQuantityFromDisplay,
 } from '../lib/trimAccents.js';
@@ -13,8 +15,6 @@ export default function TrimAccentRow({
   onRemove,
   isCustomerView = false,
   canonicalReadOnly = false,
-  extra,
-  secondaryExtra,
 }) {
   const label = record.customLabel ?? TRIM_KIND_LABELS[record.kind] ?? 'Trim';
   const customerLocked = isCustomerView && record.locked;
@@ -23,20 +23,7 @@ export default function TrimAccentRow({
   return (
     <div className="trim-accent-row" data-trim-kind={record.kind}>
       <div className="trim-accent-row-heading">
-        {record.customLabel !== undefined ? (
-          <label className="trim-accent-field trim-accent-name">
-            <span>Name</span>
-            <input
-              type="text"
-              value={record.customLabel}
-              disabled={customerLocked || canonicalReadOnly}
-              aria-label="Additional trim name"
-              onChange={(event) => update({ customLabel: event.target.value })}
-            />
-          </label>
-        ) : (
-          <strong>{label}</strong>
-        )}
+        <strong>{label}</strong>
         <label className="service-lock-toggle">
           <input
             type="checkbox"
@@ -66,28 +53,20 @@ export default function TrimAccentRow({
             ×
           </button>
         )}
-        {extra}
-        {secondaryExtra}
       </div>
       <div className="trim-accent-row-fields">
         <label className="trim-accent-field">
           <span>Product</span>
           <input
             type="text"
-            value={record.productId}
+            value={record.productLabel ?? practicalProductLabel(record.productId, record.profile)}
             disabled={customerLocked || canonicalReadOnly}
             aria-label={`${label} product`}
-            onChange={(event) => update({ productId: event.target.value })}
-          />
-        </label>
-        <label className="trim-accent-field">
-          <span>Profile</span>
-          <input
-            type="text"
-            value={record.profile}
-            disabled={customerLocked || canonicalReadOnly}
-            aria-label={`${label} profile`}
-            onChange={(event) => update({ profile: event.target.value })}
+            onChange={(event) => update({
+              productLabel: event.target.value,
+              baseProductLabel: productBaseLabel(event.target.value, record.profile),
+              ...(record.sourceOptionId ? {} : { productId: event.target.value, profile: '' }),
+            })}
           />
         </label>
         <div className="trim-accent-field trim-accent-color">

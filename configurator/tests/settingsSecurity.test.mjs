@@ -123,4 +123,5 @@ test('tenant settings route uses explicit projections for reads and writes', () 
   assert.match(settingsSource, /serializeTenantSettings/);
   assert.match(settingsSource, /expert_mode_enabled/);
   assert.match(settingsSource, /show_expert_mode/);
+  assert.match(settingsSource, /SETTINGS_PERSISTENCE_FAILED/);
 });

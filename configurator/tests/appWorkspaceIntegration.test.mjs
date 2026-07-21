@@ -260,6 +260,33 @@ test('Materials administration updates React-owned color catalog state', async (
   assert.match(app, /<MaterialsPanel[\s\S]*?onColorsChanged=\{applyColorsCatalog\}/);
 });
 
+test('administrative sections mount a full-screen shell outside the persistent viewer workspace', async () => {
+  const app = await readApp();
+
+  assert.match(app, /const ADMINISTRATIVE_SECTIONS = new Set\(\['settings', 'discounts', 'customServices', 'materials', 'platform'\]\);/);
+  assert.match(app, /export const isAdministrativeSection = \(section\) => ADMINISTRATIVE_SECTIONS\.has\(section\);/);
+  assert.match(app, /const administrativeWorkspace = !isCustomerView && isAdministrativeSection\(activeSection\);/);
+  assert.match(app, /administrativeWorkspace \? \([\s\S]*?<AdminWorkspaceShell[\s\S]*?\{administrativeContent\}[\s\S]*?<\/AdminWorkspaceShell>[\s\S]*?\) : \([\s\S]*?<AppWorkspace/s);
+});
+
+test('closing administration restores Configurator and Sales unless presentation is authenticated', async () => {
+  const app = await readApp();
+  const closeHandler = app.match(/const handleCloseAdministration = \(\) => \{([\s\S]*?)\n  \};/)?.[1];
+
+  assert.ok(closeHandler, 'App should own the administrative workspace close transition');
+  assert.match(closeHandler, /setActiveSection\('configurator'\)/);
+  assert.match(closeHandler, /workspaceState\.presentationSource !== 'authenticated'/);
+  assert.match(closeHandler, /returnToSales\(\)/);
+});
+
+test('App connects the administration compact header to its dedicated navigation drawer', async () => {
+  const app = await readApp();
+
+  assert.match(app, /const handleOpenAdminNavigation = \(event\) => \{[\s\S]*?openWorkspaceNavigation\('admin', event\)/);
+  assert.match(app, /<AdminWorkspaceShell[\s\S]*?topBar=\{applicationTopBar\}[\s\S]*?onOpenNavigation=\{handleOpenAdminNavigation\}/);
+  assert.doesNotMatch(app, /className="admin-workspace-application-header"/);
+});
+
 test('mounted controller transitions preserve viewer lifecycle and restore step and tool state', () => {
   const lifecycle = { menuOpens: 0, mounts: 0, unmounts: 0 };
   let renderer;
@@ -409,7 +436,7 @@ test('AppWorkspace keeps the shared viewer under one stable keyed parent across 
   const source = await readApp();
 
   assert.match(source, /export function AppWorkspace\(\{[\s\S]*?viewerStage,[\s\S]*?\}\)/);
-  assert.match(source, /className=\{`workspace-root app-workspace-layout \$\{workspaceState\.mode\}-workspace\$\{safeStateClass\}`\}/);
+  assert.match(source, /className=\{`workspace-root app-workspace-layout \$\{workspaceState\.mode\}-workspace\$\{safeStateClass\}\$\{detailsStateClass\}`\}/);
   assert.match(source, /key="persistent-viewer"[\s\S]*?\{viewerStage\}/);
   for (const shell of ['SalesModeShell', 'ExpertWorkspaceShell', 'ShowroomModeShell']) {
     assert.match(source, new RegExp(`<${shell}[^>]*key="workspace-shell"[^>]*embedded[^>]*viewerStage=\\{null\\}`));
@@ -473,4 +500,11 @@ test('Present is limited to the configurator so Exit restores the same workspace
   const source = await readApp();
 
   assert.match(source, /onPresent=\{workspaceState\.mode === 'sales' && configuratorActive \? handlePresentToCustomer : undefined\}/);
+});
+
+test('App passes inspector disclosure state to the Sales shell so closing details releases its grid row', async () => {
+  const source = await readApp();
+
+  assert.match(source, /const salesViewModel = \{[\s\S]*?detailsOpen: mobileInspectorOpen,/);
+  assert.match(source, /const expertViewModel = \{[\s\S]*?detailsOpen: Boolean\(selectedFacet\),/);
 });

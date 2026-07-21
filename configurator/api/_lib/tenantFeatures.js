@@ -1,4 +1,5 @@
 import { resolveExpertEntitlement } from '../../src/lib/studioMode.js';
+import { dedupeDefaultCatalogItems } from '../../src/lib/defaultCatalogItems.js';
 
 export const EXPERT_MODE_API_FIELD = 'EXPERT_MODE_VAR';
 export const EXPERT_MODE_DB_FIELD = 'expert_mode_enabled';
@@ -31,6 +32,7 @@ const TENANT_SETTINGS_PUBLIC_FIELDS = [
   'discount_rules',
   'notification_webhook_url',
   'default_custom_service_ids',
+  'default_catalog_items',
   'unit_system',
   'updated_at',
 ];
@@ -72,6 +74,9 @@ export function serializeTenantSettings({ row = {}, role } = {}) {
   const dto = {};
   for (const field of TENANT_SETTINGS_PUBLIC_FIELDS) {
     if (Object.hasOwn(row, field)) dto[field] = row[field];
+  }
+  if (Array.isArray(dto.default_catalog_items)) {
+    dto.default_catalog_items = dedupeDefaultCatalogItems(dto.default_catalog_items);
   }
   const expertModeEntitled = resolveExpertEntitlement({
     role,

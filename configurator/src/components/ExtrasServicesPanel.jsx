@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { ACCESSORY_PRICING } from '../data/pricing.js';
-import { adaptCustomServiceLine, optionalServiceToCustomServiceLine } from '../lib/designState.js';
-import { displayMeasurement, feetFromDisplay, feetToDisplay, linearUnit, unitPriceToDisplay } from '../lib/units.js';
+import {
+  adaptCustomServiceLine,
+  libraryOptionToCustomServiceLine,
+  optionalServiceToCustomServiceLine,
+} from '../lib/designState.js';
+import { isTrimServiceKey, partitionServiceLines } from '../lib/trimServiceBoundary.js';
+import { feetFromDisplay, feetToDisplay, linearUnit } from '../lib/units.js';
 import ColorPickerButton from './ColorPickerButton.jsx';
+import LibraryOptionPicker from './LibraryOptionPicker.jsx';
 import OptionalServiceRow from './OptionalServiceRow.jsx';
-
-export const TRIM_SERVICE_KEYS = Object.freeze([
-  'soffit', 'fascia', 'gutters', 'downspouts', 'garageDoorCapping', 'capFlashing',
-]);
-
-export function isTrimServiceKey(key) {
-  return TRIM_SERVICE_KEYS.includes(key);
-}
 
 export function ServiceRow({
   label, checked, onToggle, qty, unit, onQtyChange, note, colorId, onColorChange, readOnly,
@@ -49,28 +47,6 @@ export function ServiceRow({
   );
 }
 
-function AddServiceRow({ catalog, existingCustomIds, onAddCustom, unitSystem }) {
-  const availableCustom = catalog.filter((definition) => !existingCustomIds.includes(definition.id));
-  const [selectedId, setSelectedId] = useState(availableCustom[0]?.id || '');
-  if (!availableCustom.length) return null;
-  const selected = availableCustom.find((definition) => definition.id === selectedId) ?? availableCustom[0];
-  return (
-    <div className="service-row service-row-select">
-      <label htmlFor="add-service">Add a service</label>
-      <select id="add-service" className="control-select" value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>
-        {availableCustom.map((definition) => (
-          <option key={definition.id} value={definition.id}>
-            {definition.name} — ${unitPriceToDisplay(
-              Number(definition.price), definition.unit, unitSystem,
-            ).toFixed(2)}/{displayMeasurement(0, definition.unit, unitSystem).unit}
-          </option>
-        ))}
-      </select>
-      <button type="button" className="btn-secondary" onClick={() => onAddCustom(selected)}>+ Add</button>
-    </div>
-  );
-}
-
 export default function ExtrasServicesPanel({
   services = {},
   customServiceLines = [],
@@ -86,8 +62,10 @@ export default function ExtrasServicesPanel({
   readOnlyQuantities = false,
   isCustomerView = false,
   onCustomServiceLinesChange = () => {},
+  libraryOptions = [],
   unitSystem = 'imperial',
 }) {
+  const [addingService, setAddingService] = useState(false);
   const extras = Object.fromEntries(
     Object.entries(services || {}).filter(([key]) => !isTrimServiceKey(key)),
   );
@@ -100,8 +78,26 @@ export default function ExtrasServicesPanel({
   const toggle = (key) => (value) => onServicesChange?.({ ...services, [key]: value });
   const toggleLock = (key) => (value) => onLockedServicesChange({ ...lockedServices, [key]: value });
   const showLockToggle = !isCustomerView;
-  const optionalServiceRecords = customServiceLines.map((line) => adaptCustomServiceLine(line));
-  const updateOptionalService = (nextService) => onCustomServiceLinesChange(customServiceLines.map((line) => (
+  const { serviceLines, trimServiceLines } = partitionServiceLines(customServiceLines);
+  const publishServiceLines = (nextServiceLines) => onCustomServiceLinesChange([
+    ...trimServiceLines,
+    ...nextServiceLines,
+  ]);
+  const fallbackOptions = (catalog || []).map((definition) => ({
+    id: definition.id,
+    source: 'custom-service',
+    kind: 'service',
+    label: definition.name,
+    unit: definition.unit,
+    unitPrice: definition.price,
+    active: true,
+  }));
+  const availableServices = (libraryOptions.length ? libraryOptions : fallbackOptions).filter((option) => (
+    !isTrimServiceKey(option.serviceKey ?? option.key)
+    && !serviceLines.some((line) => (line.sourceOptionId ?? line.id) === option.id)
+  ));
+  const optionalServiceRecords = serviceLines.map((line) => adaptCustomServiceLine(line));
+  const updateOptionalService = (nextService) => publishServiceLines(serviceLines.map((line) => (
     line.id === nextService.id ? optionalServiceToCustomServiceLine(nextService, line) : line
   )));
 
@@ -118,28 +114,19 @@ export default function ExtrasServicesPanel({
           readOnly={readOnlyQuantities} locked={lockedServices?.snowRetention} onToggleLock={toggleLock('snowRetention')} showLockToggle={showLockToggle}
         />
       )}
-      {!extras.snowRetention && !isCustomerView && !readOnlyQuantities && (
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => toggle('snowRetention')(true)}
-        >
-          Add Snow Retention
-        </button>
-      )}
-      {customServiceLines.length > 0 && (
+      {serviceLines.length > 0 && (
         <>
           <div className="field-label" style={{ marginTop: '0.75rem' }}>Custom Services</div>
           {optionalServiceRecords.map((service) => (
             <OptionalServiceRow
               key={service.id}
               service={service}
-              linkUrl={customServiceLines.find((line) => line.id === service.id)?.linkUrl}
+              linkUrl={serviceLines.find((line) => line.id === service.id)?.linkUrl}
               isCustomerView={isCustomerView}
               readOnlyQuantity={readOnlyQuantities}
               onChange={updateOptionalService}
-              onRemove={readOnlyQuantities ? undefined : () => onCustomServiceLinesChange(
-                customServiceLines.filter((line) => line.id !== service.id),
+              onRemove={readOnlyQuantities ? undefined : () => publishServiceLines(
+                serviceLines.filter((line) => line.id !== service.id),
               )}
               unitSystem={unitSystem}
             />
@@ -147,22 +134,27 @@ export default function ExtrasServicesPanel({
         </>
       )}
       {!isCustomerView && !readOnlyQuantities && (
-        <AddServiceRow
-          catalog={catalog}
-          existingCustomIds={customServiceLines.map((line) => line.id)}
-          onAddCustom={(definition) => onCustomServiceLinesChange([...customServiceLines,
-            optionalServiceToCustomServiceLine(adaptCustomServiceLine({
-              id: definition.id,
-              name: definition.name,
-              unit: definition.unit,
-              price: Number(definition.price),
-              qty: 1,
-              description: definition.description,
-              selected: true,
-              locked: false,
-            }), { linkUrl: definition.link_url }),
-          ])}
-          unitSystem={unitSystem}
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={!availableServices.length}
+          onClick={() => setAddingService(true)}
+        >
+          Add Service
+        </button>
+      )}
+      {addingService && (
+        <LibraryOptionPicker
+          kind="service"
+          options={availableServices}
+          onClose={() => setAddingService(false)}
+          onSelect={(option) => {
+            publishServiceLines([
+              ...serviceLines,
+              libraryOptionToCustomServiceLine(option),
+            ]);
+            setAddingService(false);
+          }}
         />
       )}
     </div>

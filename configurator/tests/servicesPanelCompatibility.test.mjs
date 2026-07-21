@@ -98,6 +98,6 @@ test('legacy-only trim controls disable canonical-only edits instead of silently
   }));
 
   assert.match(html, /<input[^>]*disabled[^>]*aria-label="Soffit product"/);
-  assert.match(html, /<input[^>]*disabled[^>]*aria-label="Soffit profile"/);
-  assert.doesNotMatch(html, /Add Additional/);
+  assert.doesNotMatch(html, /aria-label="Soffit profile"/);
+  assert.doesNotMatch(html, /Add Product/);
 });

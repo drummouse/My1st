@@ -1,5 +1,5 @@
 import { GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, ACCESSORY_PRICING, allRoofProducts, allWallProducts } from '../data/pricing.js';
-import { normalizeTrimServiceBoundary } from './trimServiceBoundary.js';
+import { normalizeTrimServiceBoundary, projectServiceLinesOnly } from './trimServiceBoundary.js';
 
 // Fallback base tax rate when an owner hasn't configured a tax region yet
 // (Alberta GST — this app's original single hardcoded rate).
@@ -12,6 +12,11 @@ const findRoofProduct = (id, products = allRoofProducts()) => products.find((p) 
 const findWallProduct = (id, products = allWallProducts()) => products.find((p) => p.id === id) || products[0];
 const findGutter = (id) => GUTTER_OPTIONS.find((g) => g.id === id) || GUTTER_OPTIONS[0];
 const findDownspout = (id) => DOWNSPOUT_OPTIONS.find((d) => d.id === id) || DOWNSPOUT_OPTIONS[0];
+const frozenTrimRate = (record, fallback) => {
+  if (record?.unitPrice == null) return fallback;
+  const rate = Number(record.unitPrice);
+  return Number.isFinite(rate) && rate >= 0 ? rate : fallback;
+};
 
 // Groups facets by their effective product (per-facet override, falling back
 // to the global product) and returns one line item per distinct product —
@@ -191,14 +196,14 @@ export function calculateEstimate(measurements, selections) {
 
   let soffitTotal = 0;
   if (trimIsSelected('soffit')) {
-    const li = buildAccessoryLine('soffit', ACCESSORY_PRICING.soffit.label, trimByService.soffit.quantity, 'sqft', ACCESSORY_PRICING.soffit.pricePerSqft, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('soffit', trimByService.soffit.productLabel || ACCESSORY_PRICING.soffit.label, trimByService.soffit.quantity, 'sqft', frozenTrimRate(trimByService.soffit, ACCESSORY_PRICING.soffit.pricePerSqft), serviceRuleFor, appliedDiscounts);
     soffitTotal = li.total;
     line.push(li);
   }
 
   let fasciaTotal = 0;
   if (trimIsSelected('fascia')) {
-    const li = buildAccessoryLine('fascia', ACCESSORY_PRICING.fascia.label, trimByService.fascia.quantity, 'LF', ACCESSORY_PRICING.fascia.pricePerLf, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('fascia', trimByService.fascia.productLabel || ACCESSORY_PRICING.fascia.label, trimByService.fascia.quantity, 'LF', frozenTrimRate(trimByService.fascia, ACCESSORY_PRICING.fascia.pricePerLf), serviceRuleFor, appliedDiscounts);
     fasciaTotal = li.total;
     line.push(li);
   }
@@ -206,7 +211,7 @@ export function calculateEstimate(measurements, selections) {
   const gutterOption = findGutter(selections.gutterOption);
   let gutterTotal = 0;
   if (trimIsSelected('gutters')) {
-    const li = buildAccessoryLine('gutters', gutterOption.label, trimByService.gutters.quantity, 'LF', gutterOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('gutters', trimByService.gutters.productLabel || gutterOption.label, trimByService.gutters.quantity, 'LF', frozenTrimRate(trimByService.gutters, gutterOption.pricePerLf), serviceRuleFor, appliedDiscounts);
     gutterTotal = li.total;
     line.push(li);
   }
@@ -214,7 +219,7 @@ export function calculateEstimate(measurements, selections) {
   const downspoutOption = findDownspout(selections.downspoutOption);
   let downspoutTotal = 0;
   if (trimIsSelected('downspouts')) {
-    const li = buildAccessoryLine('downspouts', downspoutOption.label, trimByService.downspouts.quantity, 'LF', downspoutOption.pricePerLf, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('downspouts', trimByService.downspouts.productLabel || downspoutOption.label, trimByService.downspouts.quantity, 'LF', frozenTrimRate(trimByService.downspouts, downspoutOption.pricePerLf), serviceRuleFor, appliedDiscounts);
     downspoutTotal = li.total;
     line.push(li);
   }
@@ -228,14 +233,14 @@ export function calculateEstimate(measurements, selections) {
 
   let capFlashingTotal = 0;
   if (trimIsSelected('capFlashing')) {
-    const li = buildAccessoryLine('capFlashing', ACCESSORY_PRICING.capFlashing.label, trimByService.capFlashing.quantity, 'LF', ACCESSORY_PRICING.capFlashing.pricePerLf, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('capFlashing', trimByService.capFlashing.productLabel || ACCESSORY_PRICING.capFlashing.label, trimByService.capFlashing.quantity, 'LF', frozenTrimRate(trimByService.capFlashing, ACCESSORY_PRICING.capFlashing.pricePerLf), serviceRuleFor, appliedDiscounts);
     capFlashingTotal = li.total;
     line.push(li);
   }
 
   let garageDoorCappingTotal = 0;
   if (trimIsSelected('garageDoorCapping')) {
-    const li = buildAccessoryLine('garageDoorCapping', ACCESSORY_PRICING.garageDoorCapping.label, trimByService.garageDoorCapping.quantity, 'LF', ACCESSORY_PRICING.garageDoorCapping.pricePerLf, serviceRuleFor, appliedDiscounts);
+    const li = buildAccessoryLine('garageDoorCapping', trimByService.garageDoorCapping.productLabel || ACCESSORY_PRICING.garageDoorCapping.label, trimByService.garageDoorCapping.quantity, 'LF', frozenTrimRate(trimByService.garageDoorCapping, ACCESSORY_PRICING.garageDoorCapping.pricePerLf), serviceRuleFor, appliedDiscounts);
     garageDoorCappingTotal = li.total;
     line.push(li);
   }
@@ -249,9 +254,10 @@ export function calculateEstimate(measurements, selections) {
     .filter((record) => record.customLabel !== undefined && record.selected === true)
     .forEach((record) => {
       const isArea = record.canonicalUnit === 'square_feet';
-      const rate = isArea
+      const fallbackRate = isArea
         ? ACCESSORY_PRICING.soffit.pricePerSqft
         : ACCESSORY_PRICING.capFlashing.pricePerLf;
+      const rate = frozenTrimRate(record, fallbackRate);
       const qty = record.quantity;
       const total = qty * rate;
       additionalTrimTotal += total;
@@ -270,7 +276,7 @@ export function calculateEstimate(measurements, selections) {
   // caller resolves these from the owner's catalog before calling here; see
   // App.jsx's buildDesignSnapshot). Not matched against discountRules —
   // package deals only ever referenced the fixed service keys.
-  const customServiceLines = (selections.customServiceLines || []).filter((cs) => (
+  const customServiceLines = projectServiceLinesOnly(selections.customServiceLines).filter((cs) => (
     cs.selected !== false && Number(cs.qty) > 0
   ));
   let customServicesTotal = 0;

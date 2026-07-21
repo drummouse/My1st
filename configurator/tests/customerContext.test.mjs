@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { deriveCustomerContext, getInitialCustomerContext, parsePublicDesignEntry } from '../src/lib/customerContext.js';
+import {
+  deriveCustomerContext,
+  derivePresentationEditable,
+  getInitialCustomerContext,
+  parsePublicDesignEntry,
+} from '../src/lib/customerContext.js';
 import * as publicProjectLoader from '../src/lib/publicProjectLoader.js';
 
 test('public design entry points are identified synchronously before App renders', () => {
@@ -13,6 +18,41 @@ test('public design entry points are identified synchronously before App renders
 test('owner edit links remain authenticated workspace entries', () => {
   assert.equal(deriveCustomerContext({ search: '?edit=project-123' }), false);
   assert.equal(deriveCustomerContext({ search: '?edit=project-123&tab=review' }), false);
+});
+
+test('presentation editing requires an authenticated non-public presentation session', () => {
+  const authenticatedPresentation = {
+    mode: 'showroom',
+    authenticated: true,
+    publicShowroom: false,
+    presentationSource: 'authenticated',
+  };
+
+  assert.equal(derivePresentationEditable({
+    currentUser: { id: 'owner-1' },
+    isCustomerView: false,
+    session: authenticatedPresentation,
+  }), true);
+  assert.equal(derivePresentationEditable({
+    currentUser: { id: 'owner-1' },
+    isCustomerView: true,
+    session: authenticatedPresentation,
+  }), false, 'a public entry cannot become editable from visual mode alone');
+  assert.equal(derivePresentationEditable({
+    currentUser: null,
+    isCustomerView: false,
+    session: authenticatedPresentation,
+  }), false, 'presentation provenance cannot replace the authenticated account');
+  assert.equal(derivePresentationEditable({
+    currentUser: { id: 'owner-1' },
+    isCustomerView: false,
+    session: { ...authenticatedPresentation, presentationSource: 'public' },
+  }), false);
+  assert.equal(derivePresentationEditable({
+    currentUser: { id: 'owner-1' },
+    isCustomerView: false,
+    session: { ...authenticatedPresentation, mode: 'sales' },
+  }), false);
 });
 
 test('browser initialization reads the embedded design and URL in the same synchronous call', () => {

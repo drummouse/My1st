@@ -33,6 +33,25 @@ test('desktop shells preserve the approved compact chrome and viewer-first propo
   assert.match(css, /\.workspace-root \.showroom-material-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 
+test('desktop correction shell keeps graphite structure warm inspector surfaces and red-only primary emphasis', async () => {
+  const [css, legacyShellCss] = await Promise.all([
+    readStyle('styles/workspace-modes.css'),
+    readStyle('styles/studio-shell.css'),
+  ]);
+
+  assert.match(css, /--workspace-topbar-h:/);
+  assert.match(css, /--studio-red:\s*var\(--studio-action\)/);
+  assert.match(css, /\.workspace-root\s*\{[^}]*background:\s*var\(--studio-surface-graphite\)/s);
+  assert.match(css, /\.workspace-root \.sales-workspace-rail\s*\{[^}]*background:\s*var\(--studio-surface-frame\)/s);
+  assert.match(css, /\.workspace-root \.expert-workspace-tools\s*\{[^}]*background:\s*var\(--studio-surface-frame\)/s);
+  assert.match(css, /\.workspace-root \.sales-workspace-inspector\s*\{[^}]*background:\s*var\(--studio-surface-panel\)/s);
+  assert.match(css, /\.workspace-root \.expert-workspace-inspector\s*\{[^}]*background:\s*var\(--studio-surface-panel\)/s);
+  assert.match(css, /\.workspace-root \.showroom-quote-region\s*\{[^}]*background:\s*var\(--studio-surface-panel\)/s);
+  assert.match(legacyShellCss, /\.studio-shell \.studio-shell-top-bar \.studio-top-bar\s*\{[^}]*background:\s*var\(--studio-surface-frame\)/s);
+  assert.match(legacyShellCss, /\.studio-shell \.studio-shell-inspector\s*\{[^}]*background:\s*var\(--studio-surface-panel\)/s);
+  assert.doesNotMatch(css, /background:\s*#d11f2a[^;]*;\s*min-height:\s*100vh/);
+});
+
 test('Showroom reserves a material row that cannot cover viewer comparison controls', async () => {
   const css = await readStyle('styles/workspace-modes.css');
   const showroom = css.match(/\.workspace-root\.showroom-workspace\s*\{([\s\S]*?)\n\}/)?.[1] || '';
@@ -73,6 +92,19 @@ test('phone layouts are bounded workspaces rather than document-length generic s
   assert.match(mobile, /\.sales-workspace-active-panel,[\s\S]*?\.expert-surface-panel\s*\{[^}]*overflow-y:\s*auto/s);
   assert.match(mobile, /\.workspace-root \.workspace-mobile-step\s*\{[^}]*min-width:\s*0/s);
   assert.match(mobile, /\.workspace-root \.showroom-material-grid\s*\{[^}]*grid-auto-flow:\s*column[^}]*grid-auto-columns:/s);
+});
+
+test('phone sheets keep close controls reachable and preserve 44px interaction geometry', async () => {
+  const [css, legacyShellCss] = await Promise.all([
+    readStyle('styles/workspace-modes.css'),
+    readStyle('styles/studio-shell.css'),
+  ]);
+  const mobile = css.match(/@media \(max-width:\s*767px\)\s*\{([\s\S]*)\n\}/)?.[1] || '';
+
+  assert.match(css, /\.workspace-root :is\(button, \[href\], \[role='button'\]\)\s*\{[^}]*min-height:\s*var\(--studio-control-min\)[^}]*min-width:\s*var\(--studio-control-min\)/s);
+  assert.match(mobile, /\.workspace-root \.context-inspector-heading \.studio-button\s*\{[^}]*display:\s*inline-flex/s);
+  assert.match(mobile, /\.workspace-root \.workspace-viewer-stage\[data-positioning-open='false'\] \.assembly-dock\s*\{[^}]*display:\s*none/s);
+  assert.match(legacyShellCss, /@media \(max-width:\s*900px\)[\s\S]*?\.studio-shell \.studio-shell-inspector \.context-inspector\.is-mobile-open\s*\{[^}]*transform:\s*translateY\(0\)/s);
 });
 
 test('workspace transitions honor reduced motion and keyboard focus remains explicit', async () => {

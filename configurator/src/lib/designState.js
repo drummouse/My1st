@@ -1,7 +1,9 @@
-import { normalizeTrimServiceBoundary } from './trimServiceBoundary.js';
+import { isTrimServiceKey, normalizeTrimServiceBoundary } from './trimServiceBoundary.js';
 import { buildSelectedCatalogSnapshot } from './catalogSnapshot.js';
 
 export const DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD = 'per_unit';
+
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value ?? {}, key);
 
 function nonNegativeNumber(value) {
   const number = Number(value);
@@ -19,7 +21,7 @@ function nonEmptyText(value, fallback) {
 // catalog migration or teaching the pricing engine a duplicate schema.
 export function adaptCustomServiceLine(line = {}) {
   const quantity = line.quantity ?? line.qty;
-  const unitPrice = line.unitPrice ?? line.price;
+  const unitPrice = hasOwn(line, 'unitPrice') ? line.unitPrice : line.price;
   return {
     id: line.id ?? '',
     name: nonEmptyText(line.name, 'Custom service'),
@@ -27,7 +29,7 @@ export function adaptCustomServiceLine(line = {}) {
     pricingMethod: nonEmptyText(line.pricingMethod, DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD),
     quantity: nonNegativeNumber(quantity),
     unit: nonEmptyText(line.unit, 'each'),
-    unitPrice: nonNegativeNumber(unitPrice),
+    unitPrice: unitPrice == null ? null : nonNegativeNumber(unitPrice),
     selected: typeof line.selected === 'boolean' ? line.selected : true,
     locked: line.locked === true,
   };
@@ -61,8 +63,36 @@ export function optionalServiceToCustomServiceLine(service, original = {}) {
 
 export function normalizeCustomServiceLines(lines) {
   return (Array.isArray(lines) ? lines : []).map((line) => (
-    optionalServiceToCustomServiceLine(adaptCustomServiceLine(line), line)
+    isTrimServiceKey(line?.serviceKey ?? line?.key)
+      ? line
+      : optionalServiceToCustomServiceLine(adaptCustomServiceLine(line), line)
   ));
+}
+
+export function libraryOptionToCustomServiceLine(option, {
+  label = option?.label,
+  quantity = 1,
+  unit = option?.unit || 'each',
+  locked = false,
+} = {}) {
+  const sourceOptionId = String(option?.id ?? '');
+  const unitPrice = option?.unitPrice == null ? null : nonNegativeNumber(option.unitPrice);
+  const canonicalQuantity = nonNegativeNumber(quantity);
+  return {
+    id: sourceOptionId,
+    sourceOptionId,
+    source: String(option?.source ?? 'library'),
+    name: String(label || 'Library service'),
+    unit,
+    price: unitPrice,
+    unitPrice,
+    qty: canonicalQuantity,
+    quantity: canonicalQuantity,
+    description: '',
+    pricingMethod: DEFAULT_OPTIONAL_SERVICE_PRICING_METHOD,
+    selected: true,
+    locked: locked === true,
+  };
 }
 
 // Serializes the parts of App's state that define a customer's design so it
@@ -115,7 +145,7 @@ export function captureDesignState(state) {
     // owner's catalog at save time, not just a catalog id) — so a shared
     // link still shows/prices them correctly even if the owner later edits
     // or deletes that catalog entry.
-    customServiceLines: state.customServiceLines ?? [],
+    customServiceLines: Array.isArray(state.customServiceLines) ? state.customServiceLines : [],
     // Freezes the GST/package-deal rates that applied when this design was
     // saved. Company Settings are per-owner and admin-editable — without
     // this, a customer reopening an already-shared/quoted design later would
@@ -125,7 +155,6 @@ export function captureDesignState(state) {
   };
 }
 
-const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const hasLegacyValue = (snapshot, key) => hasOwn(snapshot, key) && snapshot[key] !== null && snapshot[key] !== undefined;
 
 // Expands a sparse version-2 snapshot to the exact shape captureDesignState

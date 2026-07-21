@@ -2,6 +2,7 @@
   --workspace-topbar-h: 3.25rem;
   --workspace-rail-w: 15rem;
   --workspace-inspector-w: 21rem;
+  --studio-red: var(--studio-action);
   --studio-surface-graphite: var(--studio-surface-frame);
   min-height: 100dvh;
   background: var(--studio-surface-graphite);
@@ -125,9 +126,83 @@
   min-width: 12rem;
   padding: 0.5rem;
   position: absolute;
-  right: 0;
-  top: calc(100% + 0.25rem);
+  inset: calc(100% + 0.4rem) 0 auto auto;
   z-index: 20;
+}
+
+.workspace-root.admin-workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace-root .admin-workspace-shell {
+  background: var(--studio-surface-panel);
+  display: grid;
+  grid-template:
+    "top" var(--workspace-topbar-h)
+    "header" auto
+    "content" minmax(0, 1fr)
+    / minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.workspace-root .admin-workspace-mobile-header {
+  display: none;
+  grid-area: mobile;
+  min-width: 0;
+}
+
+.workspace-root .admin-workspace-header {
+  align-items: center;
+  background: var(--studio-surface-panel-muted);
+  border-bottom: 1px solid var(--studio-border);
+  display: flex;
+  gap: 1rem;
+  grid-area: header;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+
+.workspace-root .admin-workspace-header > div {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.workspace-root .admin-workspace-header :is(h1, span) {
+  margin: 0;
+}
+
+.workspace-root .admin-workspace-header span {
+  color: var(--studio-text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.workspace-root .admin-workspace-header h1 {
+  font-size: 1.125rem;
+}
+
+.workspace-root .admin-workspace-header button {
+  background: var(--studio-surface-control);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-control);
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--studio-font-weight-control);
+  padding: 0 0.875rem;
+}
+
+.workspace-root .admin-workspace-content {
+  grid-area: content;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 1rem;
 }
 
 .workspace-root .workspace-viewer-stage {
@@ -188,6 +263,126 @@
   display: flex;
   gap: 0.5rem;
   left: 0.75rem;
+}
+
+.workspace-root .viewer-direction-controls {
+  bottom: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  left: auto;
+  max-width: min(20rem, calc(100% - 1.5rem));
+  position: absolute;
+  right: 0.75rem;
+  z-index: 2;
+}
+
+.workspace-root .viewer-direction-controls :is(.viewer3d-elevation-btn, .viewer3d-topview-btn) {
+  bottom: auto;
+  height: auto;
+  left: auto;
+  position: static;
+  right: auto;
+  top: auto;
+  transform: none;
+  width: auto;
+}
+
+.workspace-root .assembly-dock-header {
+  align-items: center;
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  justify-content: space-between;
+  padding: 0.25rem 0.35rem 0.2rem 0.55rem;
+}
+
+.workspace-root .assembly-dock-close {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--studio-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.125rem;
+}
+
+.workspace-root .adjust-row-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace-root .adjust-range {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 1rem;
+  width: 100%;
+}
+
+.workspace-root .adjust-range::-webkit-slider-runnable-track {
+  background: var(--studio-border-strong, #6b7280);
+  border-radius: 999px;
+  height: 0.45rem;
+}
+
+.workspace-root .adjust-range::-moz-range-track {
+  background: var(--studio-border-strong, #6b7280);
+  border-radius: 999px;
+  height: 0.45rem;
+}
+
+.workspace-root .adjust-axis-actions {
+  display: grid;
+  gap: 0.2rem;
+  grid-template-columns: var(--studio-control-min) minmax(0, 1fr) var(--studio-control-min);
+}
+
+.workspace-root .adjust-major-action,
+.workspace-root .adjust-arrow-actions button {
+  appearance: none;
+  background: var(--studio-surface-control);
+  border: 1px solid var(--studio-border);
+  color: var(--studio-text);
+  cursor: pointer;
+}
+
+.workspace-root .adjust-major-action {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.workspace-root .adjust-number-stepper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.25rem;
+  min-width: 0;
+}
+
+.workspace-root .adjust-number-stepper .adjust-number {
+  min-width: 0;
+  width: 100%;
+}
+
+.workspace-root .adjust-arrow-actions {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.workspace-root .adjust-arrow-actions button {
+  font-size: 0.5rem;
+  line-height: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+.workspace-root .model-positioning-launcher {
+  bottom: 0.75rem;
+  left: 0.75rem;
+  position: absolute;
+  z-index: 3;
 }
 
 .workspace-root .workspace-viewer-notice {
@@ -411,7 +606,7 @@
 .workspace-root .sales-workspace-estimate {
   background: var(--studio-surface-panel);
   border: 0;
-  border-top: 3px solid var(--studio-action);
+  border-top: 1px solid var(--studio-border);
   border-radius: 0;
   box-shadow: 0 -0.25rem 0.75rem rgb(0 0 0 / 8%);
   display: grid;
@@ -451,6 +646,17 @@
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
+}
+
+.workspace-root.app-workspace-layout.expert-workspace.is-details-closed {
+  grid-template:
+    "top top" var(--workspace-topbar-h)
+    "tools viewer" minmax(0, 1fr)
+    / var(--expert-tool-rail-w) minmax(0, 1fr);
+}
+
+.workspace-root.app-workspace-layout.expert-workspace.is-details-closed .expert-workspace-inspector {
+  display: none;
 }
 
 .workspace-root .expert-workspace-top {
@@ -711,7 +917,7 @@
 .workspace-root .expert-quick-estimate {
   align-items: center;
   background: var(--studio-surface-panel);
-  border-top: 3px solid var(--studio-action);
+  border-top: 1px solid var(--studio-border);
   box-shadow: 0 -0.25rem 0.75rem rgb(0 0 0 / 8%);
   display: grid;
   gap: 0.75rem;
@@ -768,7 +974,7 @@
 }
 
 .workspace-root .showroom-brand span {
-  color: var(--studio-action);
+  color: var(--studio-red);
   font-size: 0.75rem;
   font-weight: var(--studio-font-weight-control);
   letter-spacing: 0.08em;
@@ -931,7 +1137,6 @@
 .workspace-root .showroom-safe-state {
   background: var(--studio-surface-panel);
   border: 1px solid var(--studio-border);
-  border-top: 3px solid var(--studio-action);
   max-width: 34rem;
   padding: clamp(1rem, 4vw, 2rem);
   width: min(100%, 34rem);
@@ -1017,7 +1222,7 @@
 }
 
 .workspace-root .showroom-estimate-card {
-  border-top: 3px solid var(--studio-action);
+  border-top: 1px solid var(--studio-border);
   box-shadow: 0 -0.25rem 0.75rem rgb(0 0 0 / 8%);
   display: grid;
   gap: 0.75rem;
@@ -1141,8 +1346,31 @@
 }
 
 @media (min-width: 1180px) {
+  .workspace-root:is(.sales-workspace, .expert-workspace, .admin-workspace) {
+    --workspace-topbar-h: 4.55rem;
+  }
+
+  .workspace-root:is(.sales-workspace, .expert-workspace, .admin-workspace) .workspace-topbar-brand {
+    flex-basis: 19.6rem;
+    font-size: 1.05rem;
+  }
+
+  .workspace-root:is(.sales-workspace, .expert-workspace, .admin-workspace) .workspace-topbar-logo {
+    height: 2.8rem;
+    max-width: 11.2rem;
+  }
+
+  .workspace-root:is(.sales-workspace, .expert-workspace, .admin-workspace) .workspace-topbar :is(button, [role='button']) {
+    font-size: 0.9625rem;
+  }
+
+  .workspace-root.showroom-workspace {
+    --workspace-topbar-h: 3.25rem;
+  }
+
   .workspace-root .sales-workspace-mobile-header,
-  .workspace-root .expert-workspace-mobile-header {
+  .workspace-root .expert-workspace-mobile-header,
+  .workspace-root .admin-workspace-mobile-header {
     display: none;
   }
 }
@@ -1155,8 +1383,18 @@
   }
 
   .workspace-root .sales-workspace-mobile-header,
-  .workspace-root .expert-workspace-mobile-header {
+  .workspace-root .expert-workspace-mobile-header,
+  .workspace-root .admin-workspace-mobile-header {
     display: block;
+  }
+
+  .workspace-root .admin-workspace-shell {
+    grid-template-areas:
+      "mobile"
+      "header"
+      "content";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
   .workspace-root .workspace-mobile-header {
@@ -1202,6 +1440,15 @@
       "rail rail"
       "viewer inspector";
     grid-template-columns: minmax(0, 1fr) minmax(19rem, var(--workspace-inspector-w));
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .workspace-root.app-workspace-layout.expert-workspace.is-details-closed {
+    grid-template-areas:
+      "mobile"
+      "tools"
+      "viewer";
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
   }
 
@@ -1288,6 +1535,7 @@
 
   .workspace-root .sales-workspace-top[popover]:popover-open .workspace-topbar-menu-popover,
   .workspace-root .expert-workspace-top[popover]:popover-open .workspace-topbar-menu-popover {
+    inset: auto;
     margin-top: 0.25rem;
     max-width: 100%;
     min-width: 0;
@@ -1608,6 +1856,10 @@
     grid-template-rows: auto minmax(15.5rem, 42dvh) minmax(0, 1fr);
   }
 
+  .workspace-root.app-workspace-layout.sales-workspace.is-details-closed {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
   .workspace-root.app-workspace-layout.expert-workspace {
     grid-template-rows: auto auto minmax(14.5rem, 39dvh) minmax(0, 1fr);
   }
@@ -1737,6 +1989,14 @@
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
+  .workspace-root [data-showroom-session='authenticated-presentation'] .showroom-quote-region {
+    display: block;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .workspace-root .showroom-materials {
     background: var(--studio-surface-frame);
     color: var(--studio-text-on-frame);
@@ -1774,7 +2034,7 @@
 
   .workspace-root .showroom-estimate-card {
     background: var(--studio-surface-frame);
-    border-color: var(--studio-action);
+    border-color: var(--studio-border-on-frame);
     color: var(--studio-text-on-frame);
     gap: 0.5rem;
   }
@@ -1813,9 +2073,36 @@
   }
 
   .workspace-root .assembly-dock {
+    bottom: 0;
+    left: 0.5rem;
+    top: auto;
+    max-height: min(
+      calc(100dvh - var(--workspace-topbar-h) - .75rem),
+      calc(100% - var(--studio-control-min) - 1.25rem)
+    );
+    max-width: none;
+    overflow-y: auto;
+    position: absolute;
+    right: 0.5rem;
+    width: auto;
+    z-index: 40;
+  }
+
+  .workspace-root .workspace-viewer-stage[data-positioning-open='false'] .assembly-dock {
+    display: none;
+  }
+
+  .workspace-root .viewer-direction-controls {
+    bottom: auto;
+    max-width: calc(100% - 1rem);
+    right: 0.5rem;
+    top: 0.5rem;
+    z-index: 41;
+  }
+
+  .workspace-root .model-positioning-launcher {
     bottom: 0.5rem;
     left: 0.5rem;
-    max-width: calc(100% - 1rem);
   }
 }
 

@@ -54,6 +54,7 @@ export default function ExpertWorkspaceShell({
   onToolChange,
   viewerStage,
   surfaceInspector,
+  detailsOpen = true,
   estimate,
   onUpdateEstimate,
   onReturnToSales,
@@ -65,7 +66,7 @@ export default function ExpertWorkspaceShell({
 
   return (
     <div
-      className={`${embedded ? 'workspace-shell' : 'workspace-root'} expert-workspace`}
+      className={`${embedded ? 'workspace-shell' : 'workspace-root'} expert-workspace${detailsOpen ? '' : ' is-details-closed'}`}
       data-workspace-mode="expert"
       data-active-tool={activeTool || ''}
     >
@@ -114,34 +115,36 @@ export default function ExpertWorkspaceShell({
         {viewerStage}
       </div>
 
-      <aside className="expert-workspace-inspector workspace-control-surface" aria-label="Selected surface inspector">
-        <section className="expert-surface-panel">
-          <header className="expert-inspector-heading">
-            <span>Selected surface</span>
-            <strong>Inspector</strong>
-          </header>
-          {surfaceInspector || (
-            <p className="expert-empty-surface">
-              Select a roof or wall surface in the viewer to inspect measurements and overrides.
-            </p>
-          )}
-        </section>
+      {detailsOpen && (
+        <aside className="expert-workspace-inspector workspace-control-surface" aria-label="Selected surface inspector">
+          <section className="expert-surface-panel">
+            <header className="expert-inspector-heading">
+              <span>Selected surface</span>
+              <strong>Inspector</strong>
+            </header>
+            {surfaceInspector || (
+              <p className="expert-empty-surface">
+                Select a roof or wall surface in the viewer to inspect measurements and overrides.
+              </p>
+            )}
+          </section>
 
-        <section className="expert-quick-estimate workspace-primary-actions" aria-label="Quick estimate">
-          <div>
-            <span>Quick estimate</span>
-            <div className="expert-estimate-value">{estimate}</div>
-          </div>
-          <button
-            type="button"
-            className="expert-update-estimate"
-            disabled={!onUpdateEstimate}
-            onClick={onUpdateEstimate}
-          >
-            Update Estimate
-          </button>
-        </section>
-      </aside>
+          <section className="expert-quick-estimate workspace-primary-actions" aria-label="Quick estimate">
+            <div>
+              <span>Quick estimate</span>
+              <div className="expert-estimate-value">{estimate}</div>
+            </div>
+            <button
+              type="button"
+              className="expert-update-estimate"
+              disabled={!onUpdateEstimate}
+              onClick={onUpdateEstimate}
+            >
+              Update Estimate
+            </button>
+          </section>
+        </aside>
+      )}
     </div>
   );
 }

@@ -148,6 +148,7 @@ export function ensureSchema() {
           default_accessory_colors jsonb,
           default_roof_color_id text,
           default_wall_color_id text,
+          default_catalog_items jsonb,
           report_footer_note text,
           updated_at timestamptz not null default now()
         )
@@ -227,6 +228,9 @@ export function ensureSchema() {
       // default_services, just for the owner's own custom catalog instead
       // of the fixed roof/wall/soffit/... set.
       await sql`alter table settings add column if not exists default_custom_service_ids jsonb`;
+      // Library-backed defaults coexist with legacy defaults. Null means an
+      // owner has not migrated yet; [] means they explicitly chose none.
+      await sql`alter table settings add column if not exists default_catalog_items jsonb`;
 
       // Owner-defined services beyond the fixed roof/wall/soffit/etc. set —
       // a simple name+price+unit+description(+link) catalog, not a formula

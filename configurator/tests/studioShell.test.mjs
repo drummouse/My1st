@@ -217,9 +217,10 @@ test('App derives dirty state from database persistence and gates owner writes u
   assert.match(app, /const \[persistedDesignFingerprint, setPersistedDesignFingerprint\] = useState\(null\);/);
   assert.match(app, /const \[companySettingsSettled, setCompanySettingsSettled\] = useState\(false\);/);
   assert.match(app, /const \[defaultCatalogsSettled, setDefaultCatalogsSettled\] = useState\(false\);/);
+  assert.match(app, /const \[libraryOptionsSettled, setLibraryOptionsSettled\] = useState\(false\);/);
   assert.match(app, /const stableDesignNormalizerRef = useRef\(null\);/);
   assert.match(app, /buildAccountDefaultDesignSnapshot\(\{[\s\S]*?companySettings,[\s\S]*?customServiceCatalog,[\s\S]*?effectivePricingSettings,[\s\S]*?\}\)/);
-  assert.match(app, /if \(stableDesignNormalizerRef\.current \|\| isCustomerView \|\| !companySettingsSettled \|\| !defaultCatalogsSettled\) return;/);
+  assert.match(app, /stableDesignNormalizerRef\.current[\s\S]*?!companySettingsSettled[\s\S]*?!defaultCatalogsSettled[\s\S]*?!libraryOptionsSettled[\s\S]*?\) return;/);
   assert.match(app, /stableDesignNormalizerRef\.current = createStableDesignNormalizer\(accountDefaults\);[\s\S]*?setDesignDefaultsReady\(true\);/);
   assert.match(app, /const initialEditRestoreRef = useRef\(null\);/);
   assert.match(app, /initialEditRestoreRef\.current = createInitialEditRestore\(window\.location\.search\);/);
@@ -407,11 +408,11 @@ test('Studio shell stylesheet defines the desktop grid and mobile inspector-shee
 test('Studio shell renders a graphite frame around a warm work canvas', async () => {
   const css = await readFile(new URL('../src/styles/studio-shell.css', import.meta.url), 'utf8');
 
-  assert.match(css, /\.studio-shell-top-bar \.studio-top-bar\s*\{[^}]*background:\s*var\(--studio-surface-frame\)[^}]*border-bottom:\s*3px solid var\(--studio-action\)[^}]*color:\s*var\(--studio-text-on-frame\)/s);
+  assert.match(css, /\.studio-shell-top-bar \.studio-top-bar\s*\{[^}]*background:\s*var\(--studio-surface-frame\)[^}]*border-bottom:\s*var\(--studio-border-width\) solid var\(--studio-border-on-frame\)[^}]*color:\s*var\(--studio-text-on-frame\)/s);
   assert.match(css, /\.studio-shell-steps\s*\{[^}]*background:\s*var\(--studio-surface-frame\)[^}]*border-right:[^;]*var\(--studio-border-on-frame\)/s);
   assert.match(css, /\.studio-shell-viewer\s*\{[^}]*background:\s*var\(--studio-surface-canvas\)/s);
   assert.match(css, /\.studio-shell-inspector\s*\{[^}]*background:\s*var\(--studio-surface-panel\)/s);
-  assert.match(css, /\.studio-shell-estimate\s*\{[^}]*background:\s*var\(--studio-surface-panel\)[^}]*border-top:\s*3px solid var\(--studio-action\)/s);
+  assert.match(css, /\.studio-shell-estimate\s*\{[^}]*background:\s*var\(--studio-surface-panel\)[^}]*border-top:\s*var\(--studio-border-width\) solid var\(--studio-border\)/s);
 });
 
 test('workflow progress and critical estimate emphasis use semantic red without color-only state', async () => {
@@ -507,14 +508,17 @@ test('App gives Accents and Services distinct control semantics', async () => {
 
   assert.match(trims, /trimRecords\.map\(\(record\) => \(/);
   assert.match(trims, /<TrimAccentRow/);
-  assert.match(trims, /Add Additional/);
-  assert.match(trims, /Eavestrough profile/);
-  assert.match(trims, /Downspout type/);
+  assert.match(trims, /Add Product/);
+  assert.match(trims, /LibraryOptionPicker/);
+  assert.match(trims, /gutterLabel/);
+  assert.match(trims, /downspoutLabel/);
+  assert.doesNotMatch(trims, /Eavestrough profile|Downspout type|<select/);
   assert.match(extras, /filter\(\(\[key\]\) => !isTrimServiceKey\(key\)\)/);
-  assert.match(extras, /customServiceLines\.length > 0/);
+  assert.match(extras, /serviceLines\.length > 0/);
+  assert.match(extras, /Add Service/);
   assert.match(extras, /<OptionalServiceRow/);
   assert.match(trimRow, />Product</);
-  assert.match(trimRow, />Profile</);
+  assert.doesNotMatch(trimRow, />Profile</);
   assert.match(trimRow, />Color</);
   assert.match(trimRow, />Quantity</);
   assert.match(trimRow, />Lock</);
@@ -603,18 +607,16 @@ test('App hides the legacy brand switch while retaining brand state, assets, and
   assert.match(source, /style=\{\{ '--brand-accent': brand\.accent, '--brand-accent-dark': brand\.accentDark \}\}/);
 });
 
-test('desktop Model Positioning and Front use opposite bounded bottom-edge regions', async () => {
+test('desktop Model Positioning and camera actions use opposite bounded corners', async () => {
   const adjustment = await readComponent('AssemblyAdjustment');
   const css = await readIndexCss();
   const shellCss = await readFile(new URL('../src/styles/studio-shell.css', import.meta.url), 'utf8');
   const desktopCss = shellCss.split('@media (min-width: 901px) {')[1]?.split('@media (max-width: 900px) {')[0];
-  const mobileFrontRule = css.match(/\.viewer3d-elevation-btn-top, \.viewer3d-elevation-btn-bottom\s*\{([^}]*)\}/)?.[1];
   const dockRule = desktopCss?.match(/\.studio-shell \.assembly-dock\s*\{([^}]*)\}/)?.[1];
-  const desktopFrontRule = desktopCss?.match(/\.studio-shell \.viewer3d-elevation-btn-bottom\s*\{([^}]*)\}/)?.[1];
+  const directionRule = desktopCss?.match(/\.studio-shell \.viewer-direction-controls\s*\{([^}]*)\}/)?.[1];
 
   assert.match(adjustment, />Model Positioning<\/span>/);
-  assert.match(adjustment, /aria-expanded=\{!collapsed\}/);
-  assert.match(adjustment, /aria-controls=\{bodyId\}/);
+  assert.match(adjustment, /aria-label="Close model positioning"/);
   assert.match(adjustment, /id=\{bodyId\}/);
   assert.match(adjustment, /unitSystem/);
   assert.match(adjustment, /feetToDisplay/);
@@ -623,16 +625,11 @@ test('desktop Model Positioning and Front use opposite bounded bottom-edge regio
   assert.match(css, /\.viewer3d-canvas-wrap\s*\{[^}]*--viewer3d-left-control-lane:\s*[^;]+;/s);
   assert.ok(desktopCss, 'desktop positioning contract should use the Studio breakpoint');
   assert.match(dockRule || '', /left:\s*var\(--viewer3d-left-control-lane\)/);
-  assert.match(dockRule || '', /width:\s*min\(/);
-  assert.match(dockRule || '', /max-height:\s*min\(/);
+  assert.match(dockRule || '', /width:\s*9\.6rem/);
+  assert.match(dockRule || '', /max-height:\s*13\.6rem/);
   assert.match(desktopCss, /\.studio-shell \.assembly-dock :is\(button, input, select\)\s*\{[^}]*min-height:\s*0/s);
-
-  assert.match(mobileFrontRule || '', /left:\s*50%/);
-  assert.match(mobileFrontRule || '', /transform:\s*translateX\(-50%\)/);
-  assert.match(css, /\.viewer3d-elevation-btn-bottom\s*\{[^}]*bottom:\s*0\.6rem/s);
-  assert.match(desktopFrontRule || '', /left:\s*auto/);
-  assert.match(desktopFrontRule || '', /right:\s*0\.6rem/);
-  assert.match(desktopFrontRule || '', /transform:\s*none/);
+  assert.match(directionRule || '', /right:\s*0\.6rem/);
+  assert.match(directionRule || '', /left:\s*auto/);
 });
 
 test('authenticated application navigation stays compact and outside the legacy tab shell', async () => {

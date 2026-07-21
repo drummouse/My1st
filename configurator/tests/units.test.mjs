@@ -150,6 +150,18 @@ test('tenant Settings PUT persists valid company units in the scoped upsert', as
   assert.equal(res.body.unit_system, 'metric');
 });
 
+test('Settings and Discounts display API persistence error text', async () => {
+  const [settings, discounts] = await Promise.all([
+    readFile(new URL('../src/components/SettingsPanel.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/DiscountsPanel.jsx', import.meta.url), 'utf8'),
+  ]);
+
+  for (const panel of [settings, discounts]) {
+    assert.match(panel, /const body = await res\.json\(\);\s*if \(!res\.ok\) throw new Error\(body\.error \|\| `HTTP \$\{res\.status\}`\);/);
+    assert.match(panel, /setStatus\(err\.message \|\| 'Could not save\.'\);/);
+  }
+});
+
 test('schema, UI, and saved-design contracts keep units company-scoped', async () => {
   const [db, schema, settings, designState, newProjectDesignState] = await Promise.all([
     readFile(new URL('../api/_lib/db.js', import.meta.url), 'utf8'),
@@ -170,6 +182,8 @@ test('schema, UI, and saved-design contracts keep units company-scoped', async (
   assert.match(settings, /unitSystem:\s*row\.unit_system/);
   assert.match(settings, /unitSystem:\s*form\.unitSystem/);
   assert.match(settings, /id="settings-unit-system"[\s\S]*?<option value="imperial">Imperial[\s\S]*?<option value="metric">Metric/);
+  assert.match(settings, /const body = await res\.json\(\);\s*if \(!res\.ok\) throw new Error\(body\.error \|\| `HTTP \$\{res\.status\}`\);/);
+  assert.match(settings, /setStatus\(err\.message \|\| 'Could not save\.'\);/);
   assert.doesNotMatch(designState, /unitSystem|unit_system/);
   assert.doesNotMatch(newProjectDesignState, /unitSystem|unit_system/);
 });
@@ -185,7 +199,8 @@ test('fixed services and model positioning convert only at the display boundary'
   for (const helper of ['feetToDisplay', 'feetFromDisplay']) {
     assert.match(extras, new RegExp(helper));
   }
-  assert.match(trims, /unitPriceToDisplay/);
+  assert.doesNotMatch(trims, /unitPriceToDisplay/);
+  assert.match(trims, /unitSystem/);
   assert.match(`${trims}${extras}`, /unitSystem/);
   assert.doesNotMatch(`${trims}${extras}`, /unit="LF"|unit="sqft"/);
   assert.match(adjustment, /feetToDisplay/);

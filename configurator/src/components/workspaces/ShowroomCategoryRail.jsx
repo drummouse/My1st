@@ -2,6 +2,7 @@ export default function ShowroomCategoryRail({
   categories = [],
   selectedCategory,
   onCategoryChange,
+  allowUnavailableSelection = false,
 }) {
   const categoriesAreInteractive = typeof onCategoryChange === 'function';
 
@@ -13,7 +14,8 @@ export default function ShowroomCategoryRail({
       </div>
       <div className="showroom-category-list">
         {categories.map((category) => {
-          const canChoose = categoriesAreInteractive && category.available !== false;
+          const canChoose = categoriesAreInteractive
+            && (category.available !== false || allowUnavailableSelection === true);
           return (
             <button
               aria-pressed={category.key === selectedCategory}

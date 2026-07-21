@@ -1,27 +1,47 @@
+import { useState } from 'react';
 import { DOWNSPOUT_OPTIONS, GUTTER_OPTIONS } from '../data/pricing.js';
-import { createAdditionalTrimAccent, normalizeTrimAccents } from '../lib/trimAccents.js';
-import { linearUnit, unitPriceToDisplay } from '../lib/units.js';
+import {
+  catalogOptionIdentity,
+  isLibraryTrimOption,
+  normalizeTrimAccents,
+  practicalProductLabel,
+  upsertLibraryTrimProduct,
+} from '../lib/trimAccents.js';
+import LibraryOptionPicker from './LibraryOptionPicker.jsx';
 import TrimAccentRow from './TrimAccentRow.jsx';
 
 export default function TrimsPanel({
   records = [],
+  libraryOptions = [],
   onChange,
   unitSystem = 'imperial',
   readOnly = false,
   isCustomerView = false,
   allowCanonicalEdits = true,
   gutterOptionId,
-  onGutterOptionChange,
   downspoutOptionId,
-  onDownspoutOptionChange,
 }) {
-  const trimRecords = normalizeTrimAccents({ trimAccents: records });
+  const [addingProduct, setAddingProduct] = useState(false);
+  const gutterLabel = GUTTER_OPTIONS.find((option) => option.id === gutterOptionId)?.label ?? '';
+  const downspoutLabel = DOWNSPOUT_OPTIONS.find((option) => option.id === downspoutOptionId)?.label ?? '';
+  const trimRecords = normalizeTrimAccents({ trimAccents: records }).map((record) => {
+    const existingLabel = practicalProductLabel(record.productLabel ?? record.productId, record.profile);
+    const legacyLabel = record.kind === 'gutters'
+      ? gutterLabel
+      : record.kind === 'downspouts' ? downspoutLabel : '';
+    return !existingLabel && legacyLabel ? { ...record, productLabel: legacyLabel } : record;
+  });
   const updateRecords = onChange || (() => {});
-  const linearDisplayUnit = linearUnit(unitSystem) === 'ft' ? 'LF' : linearUnit(unitSystem);
   const updateRecord = (record, nextRecord) => updateRecords(
     trimRecords.map((item) => (item.id === record.id ? nextRecord : item)),
   );
   const removeRecord = (record) => updateRecords(trimRecords.filter((item) => item.id !== record.id));
+  const availableProducts = libraryOptions
+    .filter(isLibraryTrimOption)
+    .filter((option) => !trimRecords.some((record) => (
+      record.customLabel !== undefined
+      && catalogOptionIdentity(record) === catalogOptionIdentity(option)
+    )));
 
   return (
     <div className="control-block">
@@ -35,46 +55,28 @@ export default function TrimsPanel({
           canonicalReadOnly={!allowCanonicalEdits}
           onChange={(nextRecord) => updateRecord(record, nextRecord)}
           onRemove={record.customLabel === undefined ? undefined : () => removeRecord(record)}
-          extra={record.customLabel === undefined && record.kind === 'gutters' && (
-            <select
-              className="control-select"
-              aria-label="Eavestrough profile"
-              value={gutterOptionId}
-              disabled={readOnly || !onGutterOptionChange}
-              onChange={(event) => onGutterOptionChange?.(event.target.value)}
-            >
-              {GUTTER_OPTIONS.map((gutter) => (
-                <option key={gutter.id} value={gutter.id}>
-                  {gutter.label} — ${unitPriceToDisplay(gutter.pricePerLf, 'LF', unitSystem).toFixed(2)}/{linearDisplayUnit}
-                </option>
-              ))}
-            </select>
-          )}
-          secondaryExtra={record.customLabel === undefined && record.kind === 'downspouts' && (
-            <select
-              className="control-select"
-              aria-label="Downspout type"
-              value={downspoutOptionId}
-              disabled={readOnly || !onDownspoutOptionChange}
-              onChange={(event) => onDownspoutOptionChange?.(event.target.value)}
-            >
-              {DOWNSPOUT_OPTIONS.map((downspout) => (
-                <option key={downspout.id} value={downspout.id}>
-                  {downspout.label} — ${unitPriceToDisplay(downspout.pricePerLf, 'LF', unitSystem).toFixed(2)}/{linearDisplayUnit}
-                </option>
-              ))}
-            </select>
-          )}
         />
       ))}
       {!isCustomerView && !readOnly && allowCanonicalEdits && (
         <button
           type="button"
           className="btn-secondary"
-          onClick={() => updateRecords([...trimRecords, createAdditionalTrimAccent()])}
+          onClick={() => setAddingProduct(true)}
+          disabled={!availableProducts.length}
         >
-          Add Additional
+          Add Product
         </button>
+      )}
+      {addingProduct && (
+        <LibraryOptionPicker
+          kind="product"
+          options={availableProducts}
+          onClose={() => setAddingProduct(false)}
+          onSelect={(option) => {
+            updateRecords(upsertLibraryTrimProduct(trimRecords, option));
+            setAddingProduct(false);
+          }}
+        />
       )}
     </div>
   );

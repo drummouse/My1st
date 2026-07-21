@@ -100,6 +100,7 @@ create table if not exists settings (
   default_accessory_colors jsonb,
   default_roof_color_id text,
   default_wall_color_id text,
+  default_catalog_items jsonb,
   report_footer_note text,
   updated_at timestamptz not null default now()
 );
@@ -139,6 +140,8 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 alter table settings add column if not exists owner_id uuid references users(id);
+alter table settings add column if not exists default_custom_service_ids jsonb;
+alter table settings add column if not exists default_catalog_items jsonb;
 create unique index if not exists settings_owner_id_key on settings (owner_id);
 alter table settings add column if not exists unit_system text not null default 'imperial' check (unit_system in ('imperial', 'metric'));
 alter table settings add column if not exists expert_mode_enabled boolean not null default false;

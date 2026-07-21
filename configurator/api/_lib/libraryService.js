@@ -8,6 +8,102 @@ import {
 } from './libraryPolicy.js';
 import { toLibraryRecord, toLibraryRelationship, toLibraryDocument } from './libraryDto.js';
 
+const optionValue = (row, snake, camel, fallback = undefined) => row?.[snake] ?? row?.[camel] ?? fallback;
+const optionList = (input) => Array.isArray(input) ? input.filter((item) => typeof item === 'string' && item) : [];
+const nullableOptionNumber = (input) => {
+  if (input == null) return null;
+  const number = Number(input);
+  return Number.isFinite(number) ? number : null;
+};
+const OPTION_TRIM_KINDS = new Set(['soffit', 'fascia', 'gutters', 'downspouts', 'garage_doors', 'other_trims']);
+const optionTrimKind = (input) => OPTION_TRIM_KINDS.has(input) ? input : null;
+const optionActive = (row) => row?.active !== false
+  && optionValue(row, 'lifecycle_status', 'lifecycleStatus', 'active') === 'active';
+const optionVisible = (row, ownerId) => {
+  const scope = optionValue(row, 'scope', 'scope');
+  const tenantId = optionValue(row, 'tenant_id', 'tenantId', optionValue(row, 'owner_id', 'ownerId', null));
+  return scope === 'global' || (tenantId != null && tenantId === ownerId);
+};
+const safeOption = ({ id, source, kind, label, unit, unitPrice, colorIds, profileLabel, trimKind }) => ({
+  id: String(id),
+  source,
+  kind,
+  label: String(label),
+  unit: String(unit || 'each'),
+  unitPrice: nullableOptionNumber(unitPrice),
+  colorIds: optionList(colorIds),
+  profileLabel: typeof profileLabel === 'string' && profileLabel.trim() ? profileLabel : null,
+  trimKind: optionTrimKind(trimKind),
+  active: true,
+});
+
+/** Server-only counterpart to src/lib/libraryOptions.js. */
+export function toTenantLibraryOptions({ ownerId, libraryRecords = [], materials = [], customServices = [] } = {}) {
+  const libraryOptions = libraryRecords
+    .filter((record) => optionActive(record) && optionVisible(record, ownerId))
+    .map((record) => {
+      const applicationMetadata = optionValue(record, 'application_metadata', 'applicationMetadata', {}) || {};
+      const metadata = record.metadata || {};
+      const kind = applicationMetadata.kind === 'service' || metadata.kind === 'service' ? 'service' : 'product';
+      return safeOption({
+        id: record.id, source: 'library', kind, label: record.name,
+        unit: optionValue(record, 'unit', 'unit', kind === 'product' ? 'sq ft' : 'each'),
+        unitPrice: optionValue(record, 'price', 'price', null),
+        colorIds: applicationMetadata.colorIds || metadata.colorIds || record.color_ids || record.colorIds,
+        profileLabel: applicationMetadata.profileLabel || metadata.profileLabel || null,
+        trimKind: applicationMetadata.trimKind || metadata.trimKind || null,
+      });
+    });
+  const materialOptions = materials
+    .filter((record) => optionActive(record) && optionVisible(record, ownerId))
+    .map((record) => safeOption({
+      id: record.id, source: 'material', kind: 'product', label: record.name, unit: 'sq ft',
+      unitPrice: optionValue(record, 'price_per_sqft', 'pricePerSqft', null),
+      colorIds: record.color_ids || record.colorIds, profileLabel: optionList(record.profiles)[0] || null,
+      trimKind: null,
+    }));
+  const serviceOptions = customServices
+    .filter((record) => optionActive(record) && optionVisible(record, ownerId))
+    .map((record) => safeOption({
+      id: record.id, source: 'custom-service', kind: 'service', label: record.name,
+      unit: record.unit || 'each', unitPrice: record.price ?? record.unit_price ?? record.unitPrice ?? null,
+      colorIds: [], profileLabel: null,
+      trimKind: null,
+    }));
+  return {
+    products: [...libraryOptions, ...materialOptions].filter((item) => item.kind === 'product'),
+    services: [...libraryOptions, ...serviceOptions].filter((item) => item.kind === 'service'),
+  };
+}
+
+export async function listTenantLibraryOptions(sql, ownerId) {
+  const [libraryRecords, materials, materialColors, customServices] = await Promise.all([
+    sql`select r.id, r.record_type, r.scope, r.tenant_id, r.name, r.lifecycle_status, r.metadata,
+      pd.unit, pd.price, pd.application_metadata
+      from library_records r
+      left join library_product_details pd on pd.record_id = r.id
+      where r.record_type = 'product' and r.lifecycle_status = 'active'
+        and (r.scope = 'global' or (r.scope = 'tenant' and r.tenant_id = ${ownerId}))
+      order by r.name asc`,
+    sql`select * from materials where owner_id = ${ownerId} order by created_at asc`,
+    sql`select mc.material_id, mc.color_id from material_colors mc
+      join materials m on m.id = mc.material_id where m.owner_id = ${ownerId}`,
+    sql`select * from custom_services where owner_id = ${ownerId} order by created_at asc`,
+  ]);
+  const colorIdsByMaterial = new Map();
+  materialColors.forEach((row) => {
+    const colorIds = colorIdsByMaterial.get(row.material_id) || [];
+    colorIds.push(row.color_id);
+    colorIdsByMaterial.set(row.material_id, colorIds);
+  });
+  return toTenantLibraryOptions({
+    ownerId,
+    libraryRecords,
+    materials: materials.map((row) => ({ ...row, colorIds: colorIdsByMaterial.get(row.id) || [] })),
+    customServices,
+  });
+}
+
 const cleanReason = (reason) => {
   const result = String(reason || '').trim();
   if (!result) throw new LibraryValidationError('LIBRARY_REASON_REQUIRED', 'A reason is required');

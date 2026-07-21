@@ -124,6 +124,44 @@ test('round-tripping a canonical entry keeps canonical and estimator aliases syn
   });
 });
 
+test('service edits preserve an unknown null price while keeping a true zero distinct', () => {
+  const unknown = {
+    id: 'inspection', name: 'Inspection', unit: 'each',
+    price: null, unitPrice: null, qty: 1, quantity: 1,
+  };
+  const free = {
+    id: 'free-service', name: 'Free service', unit: 'each',
+    price: 0, unitPrice: 0, qty: 1, quantity: 1,
+  };
+
+  const adaptedUnknown = adaptCustomServiceLine(unknown);
+  const adaptedFree = adaptCustomServiceLine(free);
+  const editedUnknown = optionalServiceToCustomServiceLine(
+    { ...adaptedUnknown, quantity: 2 },
+    unknown,
+  );
+  const editedFree = optionalServiceToCustomServiceLine(
+    { ...adaptedFree, quantity: 2 },
+    free,
+  );
+
+  assert.equal(adaptedUnknown.unitPrice, null);
+  assert.equal(editedUnknown.price, null);
+  assert.equal(editedUnknown.unitPrice, null);
+  assert.equal(adaptedFree.unitPrice, 0);
+  assert.equal(editedFree.price, 0);
+  assert.equal(editedFree.unitPrice, 0);
+});
+
+test('normalizing visible Services leaves compatibility trim-owned lines untouched', () => {
+  const hidden = {
+    id: 'legacy-soffit', serviceKey: 'soffit', name: 'Legacy Soffit',
+    unitPrice: null, qty: 18, legacyMetadata: { version: 1 },
+  };
+
+  assert.strictEqual(normalizeCustomServiceLines([hidden])[0], hidden);
+});
+
 test('normalization adds presentation metadata without changing equivalent estimates', () => {
   const normalized = normalizeCustomServiceLines(namedLegacyLines);
   const selections = {
@@ -183,9 +221,12 @@ test('optional services use the shared adapter and stay separate from physical t
   const catalog = await readFile(new URL('../src/components/CustomServicesPanel.jsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
 
-  assert.match(extras, /customServiceLines\.map\(\(line\) => adaptCustomServiceLine\(line\)\)/);
+  assert.match(extras, /serviceLines\.map\(\(line\) => adaptCustomServiceLine\(line\)\)/);
   assert.match(extras, /<OptionalServiceRow/);
   assert.match(extras, /filter\(\(\[key\]\) => !isTrimServiceKey\(key\)\)/);
+  assert.match(extras, /partitionServiceLines\(customServiceLines\)/);
+  assert.match(extras, /\.\.\.trimServiceLines/);
+  assert.match(extras, /<LibraryOptionPicker/);
   assert.doesNotMatch(extras, /adaptCustomServiceLine\(record\)/);
   assert.match(trims, /trimRecords\.map\(\(record\) => \(/);
   assert.match(trims, /<TrimAccentRow/);

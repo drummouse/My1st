@@ -5,6 +5,7 @@ import { Children, createElement, isValidElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { resolveExpertEntitlement } from '../src/lib/studioMode.js';
+import { createTrimAccent } from '../src/lib/trimAccents.js';
 import { enterPresentation, exitPresentation } from '../src/lib/workspaceMode.js';
 
 let vite;
@@ -13,6 +14,10 @@ let buildShowroomMaterials;
 let ShowroomCategoryRail;
 let ShowroomModeShell;
 let ShowroomQuoteCard;
+let PresentationCatalogEditor;
+let mergePresentationCatalogOptions;
+let presentationCategoryForOption;
+let presentationCatalogOptionFromTrimRecord;
 
 test.before(async () => {
   vite = await createServer({ appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } });
@@ -20,6 +25,10 @@ test.before(async () => {
   ({
     buildShowroomViewModel,
     buildShowroomMaterials,
+    PresentationCatalogEditor,
+    mergePresentationCatalogOptions,
+    presentationCategoryForOption,
+    presentationCatalogOptionFromTrimRecord,
     ShowroomQuoteCard,
     default: ShowroomModeShell,
   } = await vite.ssrLoadModule('/src/components/workspaces/ShowroomModeShell.jsx'));
@@ -144,7 +153,7 @@ test('Showroom constructs strict DTOs before any child receives public props', (
     thumbnail: undefined,
     description: undefined,
     selected: true,
-    onSelect,
+    onSelect: undefined,
   }]);
   assert.deepEqual(viewModel.estimate, {
     label: 'Estimated project total',
@@ -220,6 +229,99 @@ test('authenticated presentation exposes exactly one discreet restoring action',
   assert.match(html, /class="showroom-exit-presentation"/);
 });
 
+test('authenticated presentation exposes category-compatible product, profile, and color mutations', () => {
+  const calls = [];
+  const shell = ShowroomModeShell(baseProps({
+    sessionType: 'authenticated-presentation',
+    presentationEditable: true,
+    onExitPresentation: () => {},
+    materials: materials.map((material) => ({
+      ...material,
+      onSelect: () => calls.push(`color:${material.id}`),
+    })),
+    presentationControls: {
+      selectedCategory: 'roof',
+      selectedProductId: 'roof-product',
+      selectedProfile: 'Standing seam',
+      selectedColorId: 'graphite',
+      productOptions: [
+        { id: 'roof-product', label: 'Roof Product', category: 'roof', source: 'material', profiles: ['Standing seam'] },
+        { id: 'wall-product', label: 'Wall Product', category: 'siding', source: 'material', profiles: ['Board and batten'] },
+      ],
+      profileOptions: ['Standing seam', 'Snap lock'],
+      onProductChange: (id) => calls.push(`product:${id}`),
+      onProfileChange: (profile) => calls.push(`profile:${profile}`),
+      onRemoveProduct: (id) => calls.push(`remove:${id}`),
+      onRemoveProfile: () => calls.push('remove-profile'),
+      onRemoveColor: () => calls.push('remove-color'),
+    },
+  }));
+  const quoteCard = findElements(shell, (element) => element.type === ShowroomQuoteCard)[0];
+  const editors = findElements(ShowroomQuoteCard(quoteCard.props), (element) => (
+    element.type === PresentationCatalogEditor
+  ));
+
+  assert.equal(editors.length, 1);
+  assert.deepEqual(editors[0].props.controls.productOptions.map((option) => option.id), ['roof-product']);
+  assert.equal(Object.hasOwn(editors[0].props.controls.productOptions[0], 'unitPrice'), false);
+
+  const editor = PresentationCatalogEditor(editors[0].props);
+  const productSelect = findElements(editor, (element) => (
+    element.type === 'select' && element.props['aria-label'] === 'Product'
+  ))[0];
+  const profileSelect = findElements(editor, (element) => (
+    element.type === 'select' && element.props['aria-label'] === 'Profile'
+  ))[0];
+  const removeProduct = findElements(editor, (element) => (
+    element.type === 'button' && element.props.children === 'Remove Product'
+  ))[0];
+  const removeProfile = findElements(editor, (element) => (
+    element.type === 'button' && element.props.children === 'Remove Profile'
+  ))[0];
+  const removeColor = findElements(editor, (element) => (
+    element.type === 'button' && element.props.children === 'Remove Color'
+  ))[0];
+  const addProduct = findElements(editor, (element) => (
+    element.type === 'button' && element.props.children === 'Add Product'
+  ));
+
+  assert.equal(addProduct.length, 0, 'product selection is the one add/select mutation');
+  productSelect.props.onChange({ target: { value: 'roof-product' } });
+  profileSelect.props.onChange({ target: { value: 'Snap lock' } });
+  removeProduct.props.onClick();
+  removeProfile.props.onClick();
+  removeColor.props.onClick();
+  assert.deepEqual(calls, [
+    'product:roof-product', 'profile:Snap lock', 'remove:roof-product', 'remove-profile', 'remove-color',
+  ]);
+});
+
+test('public Showroom strips catalog picker options and every design mutation callback', () => {
+  const shell = ShowroomModeShell(baseProps({
+    sessionType: 'public',
+    presentationEditable: true,
+    materials: materials.map((material) => ({ ...material, onSelect: () => {} })),
+    presentationControls: {
+      selectedCategory: 'roof',
+      productOptions: [{ id: 'private-product', label: 'Private Product', category: 'roof', unitPrice: 99 }],
+      onAddProduct: () => {},
+      onRemoveProduct: () => {},
+      onProductChange: () => {},
+      onProfileChange: () => {},
+      onRemoveColor: () => {},
+    },
+  }));
+
+  assert.equal(findElements(shell, (element) => element.type === PresentationCatalogEditor).length, 0);
+  const quoteCard = findElements(shell, (element) => element.type === ShowroomQuoteCard)[0];
+  const swatches = findElements(ShowroomQuoteCard(quoteCard.props), (element) => (
+    element.type === 'button' && element.props.className?.includes('showroom-material-swatch')
+  ));
+  assert.ok(swatches.every((button) => button.props.disabled === true));
+  assert.ok(swatches.every((button) => button.props.onClick === undefined));
+  assert.doesNotMatch(renderToStaticMarkup(shell), /Private Product|99/);
+});
+
 test('session type is closed to invalid or missing values', () => {
   assert.throws(() => ShowroomModeShell(baseProps({ sessionType: 'expert' })), /invalid Showroom session type/i);
   assert.throws(() => ShowroomModeShell(baseProps({ sessionType: undefined })), /invalid Showroom session type/i);
@@ -246,6 +348,22 @@ test('category rail exposes controlled customer-safe choices', () => {
   assert.match(html, /aria-label="Material categories"/);
   assert.match(html, /Not rendered by this model/);
   assert.doesNotMatch(html, /internalUnitPrice|\$8.90|database row 77/i);
+});
+
+test('authenticated presentation can select an unavailable geometry category and keeps its explanation visible', () => {
+  const changes = [];
+  const rail = ShowroomCategoryRail({
+    categories,
+    selectedCategory: 'roof',
+    onCategoryChange: (key) => changes.push(key),
+    allowUnavailableSelection: true,
+  });
+  const buttons = findElements(rail, (element) => element.type === 'button');
+
+  assert.equal(buttons[2].props.disabled, false);
+  buttons[2].props.onClick();
+  assert.deepEqual(changes, ['accents']);
+  assert.match(renderToStaticMarkup(rail), /Not rendered by this model/);
 });
 
 test('unsupported category and material choices are visibly unavailable', () => {
@@ -280,12 +398,15 @@ test('unsupported category and material choices are visibly unavailable', () => 
 test('material swatches are selected explicitly and never render internal fields', () => {
   const selected = [];
   const html = renderToStaticMarkup(createElement(ShowroomModeShell, baseProps({
+    sessionType: 'authenticated-presentation',
+    presentationEditable: true,
     materials: materials.map((material) => ({
       ...material,
       onSelect: () => selected.push(material.id),
     })),
   })));
   const materialViewModel = buildShowroomViewModel({
+    presentationEditable: true,
     materials: materials.map((material) => ({
       ...material,
       onSelect: () => selected.push(material.id),
@@ -338,6 +459,71 @@ test('Showroom materials honor the selected product palette without exposing inc
 
   const unrestricted = buildShowroomMaterials({ colors, allowedColorIds: [], onSelect: () => {} });
   assert.deepEqual(unrestricted.map((material) => material.id), ['roof-safe', 'siding-safe', 'incompatible']);
+});
+
+test('duplicate catalog enrichment preserves rich compatibility and only fills missing snapshot metadata', () => {
+  assert.equal(typeof mergePresentationCatalogOptions, 'function');
+  const merged = mergePresentationCatalogOptions([
+    {
+      id: 'roof-a', label: 'Rich material', category: 'roof', source: 'material',
+      profiles: ['Standing Seam', 'Snap Lock'], colorIds: ['color-a', 'color-b'], unitPrice: 14,
+    },
+    {
+      id: 'roof-a', label: 'Library enrichment', category: 'roof', source: 'library',
+      profiles: ['Standing Seam'], colorIds: ['color-a'], trimKind: null, unitPrice: 15,
+    },
+    {
+      id: 'roof-a', label: 'Saved selection', category: 'roof', source: 'snapshot', snapshot: true,
+      profiles: ['Standing Seam'], colorIds: [], unitPrice: 12.5,
+    },
+  ]);
+
+  assert.deepEqual(merged, [{
+    id: 'roof-a', label: 'Rich material', category: 'roof', source: 'material',
+    kind: undefined, profileLabel: undefined,
+    profiles: ['Standing Seam', 'Snap Lock'], colorIds: ['color-a', 'color-b'],
+    trimKind: undefined, unit: undefined, unitPrice: 12.5, active: true,
+  }]);
+});
+
+test('selecting then removing a trim color preserves the compatible palette across rerenders', () => {
+  assert.equal(typeof presentationCatalogOptionFromTrimRecord, 'function');
+  const record = createTrimAccent({
+    id: 'gutters', kind: 'gutters', productId: 'library-gutter', productLabel: 'Library Gutter',
+    profile: 'K-Style', profileOptions: ['K-Style'], colorId: 'color-a',
+    compatibleColorIds: ['color-a', 'color-b'], quantity: 20, canonicalUnit: 'linear_feet',
+    selected: true, unitPrice: 9,
+  });
+  const colors = [
+    { id: 'color-a', name: 'A', hex: '#111111' },
+    { id: 'color-b', name: 'B', hex: '#222222' },
+    { id: 'color-x', name: 'Incompatible', hex: '#333333' },
+  ];
+  const selectedOption = presentationCatalogOptionFromTrimRecord(record);
+  const selectedPalette = buildShowroomMaterials({
+    colors, allowedColorIds: selectedOption.colorIds, selectedColorId: record.colorId,
+  });
+  const colorRemoved = createTrimAccent({ ...record, colorId: '' });
+  const rerenderedOption = presentationCatalogOptionFromTrimRecord(colorRemoved);
+  const rerenderedPalette = buildShowroomMaterials({
+    colors, allowedColorIds: rerenderedOption.colorIds, selectedColorId: colorRemoved.colorId,
+  });
+
+  assert.deepEqual(selectedPalette.map((color) => color.id), ['color-a', 'color-b']);
+  assert.deepEqual(rerenderedPalette.map((color) => color.id), ['color-a', 'color-b']);
+  assert.deepEqual(rerenderedOption.colorIds, ['color-a', 'color-b']);
+});
+
+test('explicit trim kinds route products consistently without label inference', () => {
+  assert.equal(typeof presentationCategoryForOption, 'function');
+  const materialKinds = new Map([['wall-panel', 'wall']]);
+
+  assert.equal(presentationCategoryForOption({ id: 'wall-panel' }, materialKinds), 'siding');
+  assert.equal(presentationCategoryForOption({ id: 'g-1', trimKind: 'gutters' }, materialKinds), 'gutters');
+  assert.equal(presentationCategoryForOption({ id: 'd-1', trimKind: 'downspouts' }, materialKinds), 'gutters');
+  assert.equal(presentationCategoryForOption({ id: 'door-1', trimKind: 'garage_doors' }, materialKinds), 'doors');
+  assert.equal(presentationCategoryForOption({ id: 'accent-1', trimKind: 'fascia' }, materialKinds), 'accents');
+  assert.equal(presentationCategoryForOption({ id: 'mystery', label: 'Gutter by misleading label' }, materialKinds), null);
 });
 
 test('comparison, fullscreen, share, and contact controls appear only when supported', () => {
@@ -473,9 +659,9 @@ test('App mounts only the allowlisted Showroom path for customer views', async (
 
   assert.match(app, /import ShowroomModeShell, \{[^}]*buildShowroomViewModel[^}]*\} from '\.\/components\/workspaces\/ShowroomModeShell\.jsx';/);
   assert.match(app, /const showroomViewModel = useMemo\(\(\) => \{[\s\S]*?buildShowroomViewModel\(\{[\s\S]*?categories:[\s\S]*?materials:[\s\S]*?estimate:[\s\S]*?customerActions:/);
-  assert.match(app, /const selectedProductId = showroomSelectedCategory === 'roof'[\s\S]*?showroomSelectedCategory === 'siding' \? wallProductId : undefined;/);
-  assert.match(app, /const applicableColorIds = effectiveMaterialsCatalog\.find\(\(material\) => material\.id === selectedProductId\)\?\.colorIds;/);
-  assert.match(app, /const showroomColors = categoryIsRenderable[\s\S]*?applicableColorIds\?\.length[\s\S]*?allColors\(\)\.filter\(\(color\) => applicableColorIds\.includes\(color\.id\)\)/);
+  assert.match(app, /const selectedProductId = showroomSelectedCategory === 'roof'[\s\S]*?showroomSelectedCategory === 'siding'[\s\S]*?selectedTrimRecord/);
+  assert.match(app, /const applicableColorIds = selectedProductOption\?\.colorIds\?\.length[\s\S]*?effectiveMaterialsCatalog\.find\(\(material\) => material\.id === selectedProductId\)\?\.colorIds;/);
+  assert.match(app, /const showroomColors = categoryCanChooseFinish[\s\S]*?applicableColorIds\?\.length[\s\S]*?allColors\(\)\.filter\(\(color\) => applicableColorIds\.includes\(color\.id\)\)/);
   assert.match(app, /materials: buildShowroomMaterials\(\{[\s\S]*?colors: showroomColors,[\s\S]*?allowedColorIds: applicableColorIds,/);
   assert.ok(workspaceSelector, 'App should expose one closed workspace selector');
   assert.match(workspaceSelector, /if \(workspaceState\.mode === 'showroom'\) \{[\s\S]*?shell = <ShowroomModeShell[^>]*\{\.\.\.showroomViewModel\}[^>]*viewerStage=\{null\} \/>;/);
@@ -483,6 +669,21 @@ test('App mounts only the allowlisted Showroom path for customer views', async (
   assert.doesNotMatch(workspaceSelector, /fullControlsContent|PriceSummary|ProjectsPanel|PlatformConsole|SettingsPanel|internalUnitPrice/);
   assert.match(app, /const showroomShellViewModel = \{[\s\S]*?categories: showroomViewModel\.categories,[\s\S]*?materials: showroomViewModel\.materials,[\s\S]*?estimate: showroomViewModel\.estimate,[\s\S]*?customerActions: showroomViewModel\.customerActions,/);
   assert.doesNotMatch(app, /import StudioShell|<StudioShell/);
+});
+
+test('App derives authenticated presentation editing and reuses Sales design setters', async () => {
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+
+  assert.match(app, /derivePresentationEditable\(\{[\s\S]*?currentUser,[\s\S]*?isCustomerView,[\s\S]*?session: workspaceState,/);
+  assert.match(app, /presentationEditable:\s*!isCustomerView/);
+  assert.doesNotMatch(app, /onAddProduct/);
+  assert.match(app, /onRemoveProduct/);
+  assert.match(app, /handleRoofProductChange/);
+  assert.match(app, /handleWallProductChange/);
+  assert.match(app, /handleTrimAccentsChange/);
+  assert.match(app, /productBaseLabel\(selectedTrimRecord\.productLabel, selectedTrimRecord\.profile\)/);
+  assert.doesNotMatch(app, /\/gutter\|eavestrough\|downspout\//);
+  assert.match(app, /option\.trimKind/);
 });
 
 test('App gives only authenticated presentations an Exit callback and restores through verified transitions', async () => {

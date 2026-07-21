@@ -46,7 +46,7 @@
 .studio-shell .studio-shell-top-bar .studio-top-bar {
   align-items: center;
   background: var(--studio-surface-frame);
-  border-bottom: 3px solid var(--studio-action);
+  border-bottom: var(--studio-border-width) solid var(--studio-border-on-frame);
   color: var(--studio-text-on-frame);
   display: grid;
   gap: var(--studio-control-gap);
@@ -319,7 +319,7 @@
 
 .studio-shell .studio-shell-estimate {
   background: var(--studio-surface-panel);
-  border-top: 3px solid var(--studio-action);
+  border-top: var(--studio-border-width) solid var(--studio-border);
   grid-area: estimate;
   padding: 0.75rem;
 }
@@ -370,8 +370,9 @@
 @media (min-width: 901px) {
   .studio-shell .assembly-dock {
     left: var(--viewer3d-left-control-lane);
-    width: min(12rem, calc(100% - var(--viewer3d-left-control-lane) - 0.6rem));
-    max-height: min(17rem, calc(100% - 1.2rem));
+    width: 9.6rem;
+    max-width: calc(100% - var(--viewer3d-left-control-lane) - 0.6rem);
+    max-height: 13.6rem;
     overflow: auto;
   }
 
@@ -381,10 +382,17 @@
     min-height: 0;
   }
 
-  .studio-shell .viewer3d-elevation-btn-bottom {
+  .studio-shell .adjust-axis-actions {
+    grid-template-columns: 1.8rem minmax(0, 1fr) 1.8rem;
+  }
+
+  .studio-shell .adjust-major-action {
+    min-width: 0;
+  }
+
+  .studio-shell .viewer-direction-controls {
     left: auto;
     right: 0.6rem;
-    transform: none;
   }
 }
 

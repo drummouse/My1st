@@ -1,4 +1,8 @@
-import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './trimAccents.js';
+import {
+  createTrimAccent,
+  normalizeTrimAccents,
+  syncTrimAccentsToLegacy,
+} from './trimAccents.js';
 
 export const TRIM_SERVICE_KEYS = new Set([
   'soffit',
@@ -10,18 +14,33 @@ export const TRIM_SERVICE_KEYS = new Set([
 ]);
 
 const TRIM_RECORDS = Object.freeze({
-  soffit: Object.freeze({ id: 'soffit', kind: 'soffit' }),
-  fascia: Object.freeze({ id: 'fascia', kind: 'fascia' }),
-  gutters: Object.freeze({ id: 'gutters', kind: 'gutters' }),
-  downspouts: Object.freeze({ id: 'downspouts', kind: 'downspouts' }),
-  garageDoorCapping: Object.freeze({ id: 'garage_doors', kind: 'garage_doors' }),
-  capFlashing: Object.freeze({ id: 'other_trims', kind: 'other_trims' }),
+  soffit: Object.freeze({ id: 'soffit', kind: 'soffit', canonicalUnit: 'square_feet' }),
+  fascia: Object.freeze({ id: 'fascia', kind: 'fascia', canonicalUnit: 'linear_feet' }),
+  gutters: Object.freeze({ id: 'gutters', kind: 'gutters', canonicalUnit: 'linear_feet' }),
+  downspouts: Object.freeze({ id: 'downspouts', kind: 'downspouts', canonicalUnit: 'linear_feet' }),
+  garageDoorCapping: Object.freeze({ id: 'garage_doors', kind: 'garage_doors', canonicalUnit: 'linear_feet' }),
+  capFlashing: Object.freeze({ id: 'other_trims', kind: 'other_trims', canonicalUnit: 'linear_feet' }),
 });
+
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value ?? {}, key);
+const serviceLineKey = (line) => line?.serviceKey ?? line?.key;
 
 export const isTrimServiceKey = (key) => TRIM_SERVICE_KEYS.has(key);
 
 export function projectExtrasOnly(services = {}) {
   return Object.fromEntries(Object.entries(services).filter(([key]) => !isTrimServiceKey(key)));
+}
+
+export function projectServiceLinesOnly(lines = []) {
+  return partitionServiceLines(lines).serviceLines;
+}
+
+export function partitionServiceLines(lines = []) {
+  return (Array.isArray(lines) ? lines : []).reduce((result, line) => {
+    const target = isTrimServiceKey(serviceLineKey(line)) ? 'trimServiceLines' : 'serviceLines';
+    result[target].push(line);
+    return result;
+  }, { trimServiceLines: [], serviceLines: [] });
 }
 
 function hasExplicitTrimForService(trimAccents, serviceKey) {
@@ -32,18 +51,58 @@ function hasExplicitTrimForService(trimAccents, serviceKey) {
   ));
 }
 
+function trimRecordFromServiceLine(line) {
+  const definition = TRIM_RECORDS[serviceLineKey(line)];
+  const rawPrice = hasOwn(line, 'unitPrice') ? line.unitPrice : line.price;
+  return createTrimAccent({
+    ...definition,
+    productId: line.sourceOptionId ?? '',
+    productLabel: line.productLabel ?? line.name ?? '',
+    profile: line.profile ?? '',
+    colorId: line.colorId ?? '',
+    quantity: line.quantity ?? line.qty ?? 0,
+    selected: line.selected !== false,
+    locked: line.locked === true,
+    sourceOptionId: line.sourceOptionId,
+    source: line.source,
+    unit: line.unit,
+    unitPrice: rawPrice,
+  });
+}
+
+function migrateTrimServiceLines(input) {
+  const explicit = Array.isArray(input.trimAccents) ? input.trimAccents : [];
+  const { trimServiceLines } = partitionServiceLines(input.customServiceLines);
+  const migrated = [...explicit];
+
+  for (const line of trimServiceLines) {
+    const key = serviceLineKey(line);
+    if (!hasExplicitTrimForService(migrated, key)) migrated.push(trimRecordFromServiceLine(line));
+  }
+
+  return { migrated, trimServiceLines };
+}
+
 // One intentional transition point between the legacy mixed `services`
 // object and canonical trim records. The compatibility projection is for
-// saving/exporting older designs; runtime callers consume only trimAccents
-// and extraServices, so a trim can never be priced as both kinds of work.
+// saving/exporting older designs. Trim-owned custom lines remain in persisted
+// compatibility data, while runtime display/pricing projects them away after
+// seeding trimAccents, so a trim can never be priced as both kinds of work.
 export function normalizeTrimServiceBoundary(input = {}) {
   const services = input.services ?? {};
   const explicitTrimAccents = input.trimAccents;
-  const trimAccents = normalizeTrimAccents(input);
+  const { migrated, trimServiceLines } = migrateTrimServiceLines(input);
+  const hasMigratedLines = trimServiceLines.length > 0;
+  const trimAccents = normalizeTrimAccents({
+    ...input,
+    trimAccents: Array.isArray(explicitTrimAccents) || hasMigratedLines ? migrated : explicitTrimAccents,
+  });
   const trimSourceByService = Object.fromEntries(
     [...TRIM_SERVICE_KEYS].map((key) => [
       key,
-      hasExplicitTrimForService(explicitTrimAccents, key) ? 'canonical' : 'legacy',
+      hasExplicitTrimForService(explicitTrimAccents, key)
+        ? 'canonical'
+        : trimServiceLines.some((line) => serviceLineKey(line) === key) ? 'service-line' : 'legacy',
     ]),
   );
 

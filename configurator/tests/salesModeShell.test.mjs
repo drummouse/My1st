@@ -33,7 +33,7 @@ const readStyles = () => readFile(
 test('Option A composes one compact desktop workspace in the approved region order', async () => {
   const source = await readComponent('SalesModeShell', 'components/workspaces');
 
-  assert.match(source, /className=\{`\$\{embedded \? 'workspace-shell' : 'workspace-root'\} sales-workspace`\}/);
+  assert.match(source, /className=\{`\$\{embedded \? 'workspace-shell' : 'workspace-root'\} sales-workspace\$\{detailsOpen \? '' : ' is-details-closed'\}`\}/);
   const top = source.indexOf('sales-workspace-top');
   const rail = source.indexOf('sales-workspace-rail');
   const viewer = source.indexOf('sales-workspace-viewer');

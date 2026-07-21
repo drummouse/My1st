@@ -84,3 +84,20 @@ test('New Project uses current account defaults and catalog values without freez
   );
   assert.equal(appliedPricing, null);
 });
+
+test('an explicit empty Library default collection does not fall back to legacy specialty defaults', () => {
+  const design = buildNewProjectDesignSnapshot({
+    companySettings: {
+      default_catalog_items: [],
+      default_services: {
+        roof: true, wall: true, snowRetention: true, capFlashing: true, garageDoorCapping: true,
+      },
+      default_custom_service_ids: ['legacy-service'],
+    },
+    customServiceCatalog: [{ id: 'legacy-service', name: 'Legacy', unit: 'each', price: 5 }],
+  });
+
+  assert.deepEqual(design.services, { roof: true, wall: true });
+  assert.deepEqual(design.customServiceLines, []);
+  assert.equal(design.trimAccents.some((row) => row.kind === 'garage_doors'), false);
+});

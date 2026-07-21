@@ -4,8 +4,10 @@ import { readFile } from 'node:fs/promises';
 import {
   STANDARD_TRIM_KINDS,
   createAdditionalTrimAccent,
+  createTrimAccent,
   displayTrimQuantity,
   normalizeTrimAccents,
+  selectLibraryTrimProduct,
   syncTrimAccentsToLegacy,
   trimDisplayUnit,
   trimQuantityFromDisplay,
@@ -14,6 +16,8 @@ import {
   captureDesignState,
   normalizeDesignState,
 } from '../src/lib/designState.js';
+
+const trimHelpers = await import('../src/lib/trimAccents.js');
 
 const legacySources = {
   measurements: {
@@ -64,12 +68,14 @@ function designState(overrides = {}) {
   };
 }
 
-test('legacy measurements, colors, and locks normalize into the six standard trim kinds', () => {
+test('legacy measurements, colors, and locks normalize without creating garage-door capping by default', () => {
   const original = structuredClone(legacySources);
   const records = normalizeTrimAccents(legacySources);
 
   assert.deepEqual(STANDARD_TRIM_KINDS, ['soffit', 'fascia', 'gutters', 'downspouts', 'garage_doors', 'other_trims']);
-  assert.deepEqual(records.map((record) => record.kind), STANDARD_TRIM_KINDS);
+  assert.deepEqual(records.map((record) => record.kind), [
+    'soffit', 'fascia', 'gutters', 'downspouts', 'other_trims',
+  ]);
   assert.deepEqual(records, [
     {
       id: 'soffit', kind: 'soffit', productId: '', profile: '', colorId: 'wk-04',
@@ -86,10 +92,6 @@ test('legacy measurements, colors, and locks normalize into the six standard tri
     {
       id: 'downspouts', kind: 'downspouts', productId: '', profile: '', colorId: 'wg-03',
       quantity: 112, canonicalUnit: 'linear_feet', selected: false, locked: false,
-    },
-    {
-      id: 'garage_doors', kind: 'garage_doors', productId: '', profile: '', colorId: 'wr-9005',
-      quantity: 48, canonicalUnit: 'linear_feet', selected: false, locked: false,
     },
     {
       id: 'other_trims', kind: 'other_trims', productId: '', profile: '', colorId: 'wr-8019',
@@ -137,15 +139,54 @@ test('explicit trim records preserve product, profile, and custom additions', ()
     ],
   });
 
-  assert.deepEqual(records.slice(0, 6).map((record) => record.kind), STANDARD_TRIM_KINDS);
+  assert.deepEqual(records.slice(0, 5).map((record) => record.kind), [
+    'soffit', 'fascia', 'gutters', 'downspouts', 'other_trims',
+  ]);
   assert.equal(records[0].productId, 'vented-aluminum');
   assert.equal(records[0].profile, 'triple-four');
+  assert.equal(records[0].productLabel, 'vented-aluminum — triple-four');
   assert.equal(records[0].quantity, 120);
   assert.deepEqual(records.at(-1), {
     id: 'trim-window-cap', kind: 'other_trims', productId: '', profile: '',
     colorId: 'wr-6020', quantity: 36, canonicalUnit: 'linear_feet', selected: true, locked: false,
     customLabel: 'Window Cap',
   });
+});
+
+test('Presentation profile changes compose from a stable base label and removal is reversible', () => {
+  const selected = selectLibraryTrimProduct([], {
+    id: 'library-gutter', source: 'library', kind: 'product', label: 'Architectural Eaves',
+    unit: 'LF', unitPrice: 9, colorIds: [], profileLabel: 'Box',
+    profiles: ['Box', 'Round'], trimKind: 'gutters', active: true,
+  });
+  const box = selected.find((record) => record.kind === 'gutters');
+  const round = createTrimAccent({ ...box, profile: 'Round' });
+  const removed = createTrimAccent({ ...round, profile: '' });
+
+  assert.equal(box.baseProductLabel, 'Architectural Eaves');
+  assert.equal(box.productLabel, 'Architectural Eaves — Box');
+  assert.equal(round.baseProductLabel, 'Architectural Eaves');
+  assert.equal(round.productLabel, 'Architectural Eaves — Round');
+  assert.equal(removed.baseProductLabel, 'Architectural Eaves');
+  assert.equal(removed.productLabel, 'Architectural Eaves');
+  assert.doesNotMatch(round.productLabel, /Box/);
+});
+
+test('legacy composed labels acquire a stable base before Presentation changes profile', () => {
+  assert.equal(typeof trimHelpers.productBaseLabel, 'function');
+  const legacy = {
+    id: 'gutters', kind: 'gutters', productId: 'library-gutter',
+    productLabel: 'Architectural Eaves — Box', profile: 'Box', colorId: '', quantity: 10,
+    canonicalUnit: 'linear_feet', selected: true, locked: false,
+  };
+  const round = createTrimAccent({
+    ...legacy,
+    baseProductLabel: trimHelpers.productBaseLabel(legacy.productLabel, legacy.profile),
+    profile: 'Round',
+  });
+
+  assert.equal(round.baseProductLabel, 'Architectural Eaves');
+  assert.equal(round.productLabel, 'Architectural Eaves — Round');
 });
 
 test('display conversions use company units while canonical quantities stay Imperial', () => {
@@ -220,29 +261,35 @@ test('explicit canonical trims win over conflicting legacy pricing fields', () =
   assert.equal(normalized.lockedServices.soffit, false);
   assert.equal(normalized.measurements.gutterLf, legacySources.measurements.gutterLf);
   assert.equal(normalized.accessoryColors.gutters, legacySources.accessoryColors.gutters);
-  assert.deepEqual(normalized.trimAccents[0], canonicalSoffit);
+  assert.deepEqual(normalized.trimAccents[0], {
+    ...canonicalSoffit,
+    productLabel: 'canonical-product — canonical-profile',
+  });
 });
 
-test('TrimAccentRow renders one shared product, profile, color, quantity, unit, and Lock contract', async () => {
+test('TrimAccentRow renders one practical Product field plus color, quantity, unit, and Lock', async () => {
   const row = await readFile(new URL('../src/components/TrimAccentRow.jsx', import.meta.url), 'utf8');
   const panel = await readFile(new URL('../src/components/TrimsPanel.jsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
   const library = await readFile(new URL('../src/lib/trimAccents.js', import.meta.url), 'utf8');
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
 
-  for (const label of ['Product', 'Profile', 'Color', 'Quantity', 'Include', 'Lock']) {
+  for (const label of ['Product', 'Color', 'Quantity', 'Include', 'Lock']) {
     assert.match(row, new RegExp(`>${label}<`));
   }
+  assert.doesNotMatch(row, />Profile</);
   assert.match(row, /trimDisplayUnit/);
   assert.match(row, /displayTrimQuantity/);
   assert.match(row, /trimQuantityFromDisplay/);
   assert.match(row, /ColorPickerButton/);
   assert.match(panel, /trimRecords\.map\(\(record\) => \(/);
   assert.match(panel, /<TrimAccentRow/);
-  assert.match(panel, /Add Additional/);
-  assert.match(panel, /createAdditionalTrimAccent/);
-  assert.match(panel, /aria-label="Eavestrough profile"/);
-  assert.match(panel, /aria-label="Downspout type"/);
+  assert.match(panel, /Add Product/);
+  assert.match(panel, /LibraryOptionPicker/);
+  assert.match(panel, /upsertLibraryTrimProduct/);
+  assert.match(panel, /gutterLabel/);
+  assert.match(panel, /downspoutLabel/);
+  assert.doesNotMatch(panel, /aria-label="Eavestrough profile"|aria-label="Downspout type"|<select/);
   assert.match(panel, /onChange=\{\(nextRecord\) => updateRecord\(record, nextRecord\)\}/);
   assert.match(app, /const \[trimAccents, setTrimAccents\]/);
   assert.match(app, /unitSystem:\s*effectiveUnitSystem/);

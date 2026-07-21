@@ -82,6 +82,9 @@ const STANDARD_DEFINITIONS = Object.freeze([
 ]);
 
 const STANDARD_IDS = new Set(STANDARD_DEFINITIONS.map(({ id }) => id));
+const STANDARD_DEFINITION_BY_KIND = new Map(
+  STANDARD_DEFINITIONS.map((definition) => [definition.kind, definition]),
+);
 const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value ?? {}, key);
 
 function finiteQuantity(value) {
@@ -102,6 +105,42 @@ function requireCanonicalUnit(value) {
   return value;
 }
 
+function nullablePrice(value) {
+  if (value == null) return null;
+  const price = Number(value);
+  return Number.isFinite(price) && price >= 0 ? price : null;
+}
+
+function textList(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+}
+
+export function practicalProductLabel(productLabel, profile = '') {
+  const product = String(productLabel ?? '').trim();
+  const practicalProfile = String(profile ?? '').trim();
+  if (!practicalProfile) return product;
+  if (!product) return practicalProfile;
+  if (product.toLocaleLowerCase().includes(practicalProfile.toLocaleLowerCase())) return product;
+  return `${product} — ${practicalProfile}`;
+}
+
+export function productBaseLabel(productLabel, profile = '') {
+  const product = String(productLabel ?? '').trim();
+  const practicalProfile = String(profile ?? '').trim();
+  if (!practicalProfile) return product;
+  const suffix = ` — ${practicalProfile}`;
+  return product.toLocaleLowerCase().endsWith(suffix.toLocaleLowerCase())
+    ? product.slice(0, -suffix.length).trim()
+    : product;
+}
+
+export function canonicalTrimUnit(unit) {
+  return /sq|square|area|m²/i.test(String(unit ?? '')) ? 'square_feet' : 'linear_feet';
+}
+
 export function createTrimAccent({
   id,
   kind,
@@ -113,6 +152,14 @@ export function createTrimAccent({
   selected = true,
   locked = false,
   customLabel,
+  productLabel,
+  baseProductLabel,
+  sourceOptionId,
+  source,
+  unit,
+  unitPrice,
+  profileOptions,
+  compatibleColorIds,
 } = {}) {
   const normalizedKind = requireText(kind, 'kind');
   if (!STANDARD_TRIM_KINDS.includes(normalizedKind)) {
@@ -130,6 +177,21 @@ export function createTrimAccent({
     locked: locked === true,
   };
   if (customLabel !== undefined) record.customLabel = String(customLabel);
+  const rawProductLabel = productLabel ?? productId;
+  const stableBaseLabel = baseProductLabel !== undefined
+    ? String(baseProductLabel ?? '').trim()
+    : productBaseLabel(rawProductLabel, profile);
+  const practicalLabel = practicalProductLabel(stableBaseLabel || rawProductLabel, profile);
+  if (practicalLabel) record.productLabel = practicalLabel;
+  if (stableBaseLabel && (baseProductLabel !== undefined || productLabel !== undefined)) {
+    record.baseProductLabel = stableBaseLabel;
+  }
+  if (sourceOptionId !== undefined) record.sourceOptionId = String(sourceOptionId);
+  if (source !== undefined) record.source = String(source);
+  if (unit !== undefined) record.unit = String(unit);
+  if (unitPrice !== undefined) record.unitPrice = nullablePrice(unitPrice);
+  if (profileOptions !== undefined) record.profileOptions = textList(profileOptions);
+  if (compatibleColorIds !== undefined) record.compatibleColorIds = textList(compatibleColorIds);
   return record;
 }
 
@@ -148,6 +210,14 @@ export function createAdditionalTrimAccent({
   canonicalUnit = 'linear_feet',
   selected = true,
   locked = false,
+  productLabel,
+  baseProductLabel,
+  sourceOptionId,
+  source,
+  unit,
+  unitPrice,
+  profileOptions,
+  compatibleColorIds,
 } = {}) {
   return createTrimAccent({
     id,
@@ -160,7 +230,112 @@ export function createAdditionalTrimAccent({
     selected,
     locked,
     customLabel,
+    productLabel,
+    baseProductLabel,
+    sourceOptionId,
+    source,
+    unit,
+    unitPrice,
+    profileOptions,
+    compatibleColorIds,
   });
+}
+
+export function createLibraryTrimAccent(option, {
+  id = additionalTrimId(),
+  label = option?.label,
+  quantity = 0,
+  unit = option?.unit || 'LF',
+  locked = false,
+  colorId = option?.colorIds?.[0] || '',
+} = {}) {
+  const productLabel = practicalProductLabel(label, option?.profileLabel);
+  return createAdditionalTrimAccent({
+    id,
+    customLabel: String(label || productLabel || 'Library trim'),
+    productId: String(option?.id ?? ''),
+    profile: String(option?.profileLabel ?? ''),
+    colorId,
+    productLabel,
+    sourceOptionId: String(option?.id ?? ''),
+    source: String(option?.source ?? 'library'),
+    quantity,
+    canonicalUnit: canonicalTrimUnit(unit),
+    unit,
+    unitPrice: option?.unitPrice,
+    profileOptions: option?.profiles ?? (option?.profileLabel ? [option.profileLabel] : []),
+    compatibleColorIds: option?.colorIds ?? [],
+    selected: true,
+    locked,
+  });
+}
+
+export function isLibraryTrimOption(option) {
+  return option?.kind === 'product'
+    && option?.active !== false
+    && STANDARD_DEFINITION_BY_KIND.has(String(option?.trimKind ?? ''));
+}
+
+export function catalogOptionIdentity(option) {
+  const source = String(option?.source ?? 'library');
+  const optionId = String(option?.sourceOptionId ?? option?.optionId ?? option?.id ?? '');
+  return optionId ? `${source}:${optionId}` : '';
+}
+
+/**
+ * Selects a Presentation catalog option into its explicit trim-kind record.
+ * Product metadata is frozen onto the design so reopening it does not depend
+ * on the current Library row.
+ */
+export function upsertLibraryTrimProduct(records, option, { quantities = {} } = {}) {
+  const trimKind = String(option?.trimKind ?? '');
+  const definition = STANDARD_DEFINITION_BY_KIND.get(trimKind);
+  if (!definition) throw new TypeError(`Invalid Library trim kind: ${trimKind || '(missing)'}`);
+
+  const currentRecords = Array.isArray(records) ? records : [];
+  if (trimKind === 'other_trims') {
+    const identity = catalogOptionIdentity(option);
+    const existing = currentRecords.find((record) => (
+      record?.customLabel !== undefined && catalogOptionIdentity(record) === identity
+    ));
+    const nextRecord = createLibraryTrimAccent(option, {
+      id: existing?.id,
+      quantity: existing?.quantity ?? quantities[trimKind] ?? 0,
+      unit: option?.unit,
+      locked: existing?.locked === true,
+      colorId: existing?.colorId || option?.colorIds?.[0] || '',
+    });
+    if (!existing) return [...currentRecords, nextRecord];
+    return currentRecords.map((record) => (record === existing ? nextRecord : record));
+  }
+
+  const existing = explicitStandardRecord(currentRecords, definition);
+  const nextRecord = createTrimAccent({
+    ...(existing || {}),
+    id: existing?.id ?? definition.id,
+    kind: definition.kind,
+    productId: String(option?.id ?? ''),
+    profile: String(option?.profileLabel ?? option?.profiles?.[0] ?? ''),
+    profileOptions: option?.profiles ?? (option?.profileLabel ? [option.profileLabel] : []),
+    colorId: existing?.colorId || option?.colorIds?.[0] || '',
+    compatibleColorIds: option?.colorIds ?? [],
+    quantity: existing?.quantity ?? quantities[trimKind] ?? 0,
+    canonicalUnit: definition.canonicalUnit,
+    selected: true,
+    locked: existing?.locked === true,
+    productLabel: option?.label,
+    sourceOptionId: option?.id,
+    source: option?.source ?? 'library',
+    unit: option?.unit,
+    unitPrice: option?.unitPrice,
+  });
+
+  if (!existing) return [...currentRecords, nextRecord];
+  return currentRecords.map((record) => (record === existing ? nextRecord : record));
+}
+
+export function selectLibraryTrimProduct(records, option, config) {
+  return upsertLibraryTrimProduct(records, option, config);
 }
 
 function legacyStandardRecord(definition, {
@@ -197,7 +372,11 @@ function normalizeExplicitRecord(record, fallback) {
 }
 
 export function createStandardTrimAccents(legacy = {}) {
-  return STANDARD_DEFINITIONS.map((definition) => legacyStandardRecord(definition, legacy));
+  return STANDARD_DEFINITIONS
+    .filter((definition) => (
+      definition.kind !== 'garage_doors' || legacy.services?.garageDoorCapping === true
+    ))
+    .map((definition) => legacyStandardRecord(definition, legacy));
 }
 
 export function normalizeTrimAccents({
@@ -209,13 +388,18 @@ export function normalizeTrimAccents({
 } = {}) {
   const explicit = Array.isArray(trimAccents) ? trimAccents : [];
   const legacy = { measurements, accessoryColors, lockedServices, services };
-  const standards = STANDARD_DEFINITIONS.map((definition) => {
+  const includedDefinitions = STANDARD_DEFINITIONS.filter((definition) => (
+    definition.kind !== 'garage_doors'
+    || explicitStandardRecord(explicit, definition)
+    || services.garageDoorCapping === true
+  ));
+  const standards = includedDefinitions.map((definition) => {
     const fallback = legacyStandardRecord(definition, legacy);
     const record = explicitStandardRecord(explicit, definition);
     return record ? normalizeExplicitRecord(record, fallback) : fallback;
   });
   const standardRecords = new Set(
-    STANDARD_DEFINITIONS.map((definition) => explicitStandardRecord(explicit, definition)).filter(Boolean),
+    includedDefinitions.map((definition) => explicitStandardRecord(explicit, definition)).filter(Boolean),
   );
   const additions = explicit
     .filter((record) => !standardRecords.has(record) && !STANDARD_IDS.has(record?.id))

@@ -34,3 +34,30 @@ test('disabled primary controls use neutral, legible semantic tokens', async () 
   assert.doesNotMatch(tokens, /--studio-action-disabled-(?:surface|text|border):\s*var\(--studio-action\)/);
   assert.match(workspace, /\.expert-update-estimate:disabled\s*\{[^}]*background:\s*var\(--studio-action-disabled-surface\)[^}]*border-color:\s*var\(--studio-action-disabled-border\)[^}]*color:\s*var\(--studio-action-disabled-text\)/s);
 });
+
+test('red does not become a full-width structural divider', async () => {
+  const [workspace, legacyShell] = await Promise.all([
+    readStyle('styles/workspace-modes.css'),
+    readStyle('styles/studio-shell.css'),
+  ]);
+  const workspaceDividerSelectors = [
+    'sales-workspace-estimate',
+    'expert-quick-estimate',
+    'showroom-safe-state',
+    'showroom-estimate-card',
+  ];
+
+  for (const selector of workspaceDividerSelectors) {
+    const rule = workspace.match(new RegExp(`\\.workspace-root \\.${selector}\\s*\\{([^}]*)\\}`))?.[1] || '';
+    assert.doesNotMatch(rule, /border-(?:top|bottom):\s*3px solid var\(--studio-action\)/, `${selector} must use a neutral divider`);
+  }
+
+  const mobile = workspace.match(/@media \(max-width:\s*767px\)\s*\{([\s\S]*)\n\}/)?.[1] || '';
+  const mobileEstimateRule = mobile.match(/\.workspace-root \.showroom-estimate-card\s*\{([^}]*)\}/)?.[1] || '';
+  assert.doesNotMatch(mobileEstimateRule, /border-color:\s*var\(--studio-action\)/, 'mobile Showroom estimate must use a neutral divider');
+
+  for (const selector of ['studio-shell-top-bar \\.studio-top-bar', 'studio-shell-estimate']) {
+    const rule = legacyShell.match(new RegExp(`\\.studio-shell \\.${selector}\\s*\\{([^}]*)\\}`))?.[1] || '';
+    assert.doesNotMatch(rule, /border-(?:top|bottom):\s*3px solid var\(--studio-action\)/, `${selector} must use a neutral divider`);
+  }
+});

@@ -480,11 +480,13 @@ const Viewer3D = forwardRef(function Viewer3D({
         />
       )}
       <div ref={mountRef} className="viewer3d-canvas" />
-      <button type="button" className="viewer3d-topview-btn" aria-label="Top" onClick={snapToTop}>Top</button>
-      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-top" aria-label="Back" onClick={() => snapToElevation('back')}>Back</button>
-      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-bottom" aria-label="Front" onClick={() => snapToElevation('front')}>Front</button>
-      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-left" aria-label="Left" onClick={() => snapToElevation('left')}>Left</button>
-      <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-right" aria-label="Right" onClick={() => snapToElevation('right')}>Right</button>
+      <div className="viewer-direction-controls" aria-label="Camera directions">
+        <button type="button" className="viewer3d-topview-btn" aria-label="Top" onClick={snapToTop}>Top</button>
+        <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-top" aria-label="Back" onClick={() => snapToElevation('back')}>Back</button>
+        <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-bottom" aria-label="Front" onClick={() => snapToElevation('front')}>Front</button>
+        <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-left" aria-label="Left" onClick={() => snapToElevation('left')}>Left</button>
+        <button type="button" className="viewer3d-elevation-btn viewer3d-elevation-btn-right" aria-label="Right" onClick={() => snapToElevation('right')}>Right</button>
+      </div>
       <div className="viewer3d-note">
         Preview model: each imported layer's RoofRuler export rendered independently and stacked for display.
       </div>

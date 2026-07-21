@@ -20,6 +20,7 @@ export default function SalesModeShell({
   onStepChange,
   viewerStage,
   inspector,
+  detailsOpen = true,
   estimate,
   onPrevious,
   onNext,
@@ -33,7 +34,7 @@ export default function SalesModeShell({
   const estimateContent = estimate?.content ?? estimate;
 
   return (
-    <div className={`${embedded ? 'workspace-shell' : 'workspace-root'} sales-workspace`} data-workspace-mode="sales">
+    <div className={`${embedded ? 'workspace-shell' : 'workspace-root'} sales-workspace${detailsOpen ? '' : ' is-details-closed'}`} data-workspace-mode="sales">
       <div className="sales-workspace-top" id="sales-navigation-drawer" popover="auto">{topBar}</div>
       <div className="sales-workspace-rail">
         <GuidedStepRail

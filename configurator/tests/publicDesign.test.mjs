@@ -122,3 +122,36 @@ test('public design deeply allowlists every nested customer-visible object famil
   assert.equal(JSON.stringify(projected).includes('secret'), false);
   assert.equal(Object.hasOwn(projected, 'privateRoot'), false);
 });
+
+test('public design drops authenticated presentation controls and internal catalog prices', () => {
+  const projected = toPublicDesign({
+    version: 2,
+    house: { layers: [] },
+    presentationEditable: true,
+    productOptions: [{ id: 'private-product', label: 'Private Product', unitPrice: 91 }],
+    profileOptions: ['Private profile'],
+    colorOptions: [{ id: 'private-color', internalPrice: 12 }],
+    onAddProduct: 'serialized-write-handler',
+    onRemoveProduct: 'serialized-write-handler',
+    catalogSnapshot: {
+      version: 1,
+      materials: [{
+        id: 'public-product', name: 'Public Product', kind: 'roof', profiles: ['Public profile'],
+        colorIds: ['public-color'], unitPrice: 77,
+      }],
+      colors: [{ id: 'public-color', name: 'Public Color', unitPrice: 8 }],
+    },
+  });
+
+  assert.equal(Object.hasOwn(projected, 'presentationEditable'), false);
+  assert.equal(Object.hasOwn(projected, 'productOptions'), false);
+  assert.equal(Object.hasOwn(projected, 'profileOptions'), false);
+  assert.equal(Object.hasOwn(projected, 'colorOptions'), false);
+  assert.equal(Object.hasOwn(projected, 'onAddProduct'), false);
+  assert.equal(Object.hasOwn(projected, 'onRemoveProduct'), false);
+  assert.equal(JSON.stringify(projected).includes('unitPrice'), false);
+  assert.deepEqual(projected.catalogSnapshot.materials[0], {
+    id: 'public-product', name: 'Public Product', kind: 'roof',
+    profiles: ['Public profile'], colorIds: ['public-color'],
+  });
+});

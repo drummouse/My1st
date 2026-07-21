@@ -32,6 +32,43 @@ test('workspace top bar is one compact semantic banner with named menus', async 
   assert.match(source, /triggerRef\.current\?\.focus\(\)/);
 });
 
+test('administration shell is a full-screen main workspace with an explicit close action', async () => {
+  const source = await readWorkspaceComponent('AdminWorkspaceShell');
+
+  assert.match(source, /import MobileWorkspaceHeader from '\.\/MobileWorkspaceHeader\.jsx';/);
+  assert.match(source, /topBar,[\s\S]*?onOpenNavigation,/);
+  assert.match(source, /className="admin-workspace-shell"/);
+  assert.match(source, /className="admin-workspace-top sales-workspace-top"[^>]*id="admin-navigation-drawer"[^>]*popover="auto"/);
+  assert.match(source, /className="admin-workspace-mobile-header"[\s\S]*?<MobileWorkspaceHeader[\s\S]*?menuTarget="admin-navigation-drawer"/);
+  assert.match(source, /<main[^>]*className="admin-workspace-content"/);
+  assert.match(source, /aria-label=\{`Close \$\{title\}`\}/);
+  assert.match(source, /onClick=\{onClose\}/);
+});
+
+test('desktop Account and Project menus are absolute overlays below their trigger', async () => {
+  const css = await readWorkspaceStyles();
+
+  assert.match(css, /\.workspace-root \.workspace-topbar-menu\s*\{[^}]*position:\s*relative/s);
+  assert.match(css, /\.workspace-root \.workspace-topbar-menu-popover\s*\{[^}]*position:\s*absolute[^}]*inset:\s*calc\(100% \+ 0\.4rem\) 0 auto auto[^}]*z-index:\s*20/s);
+});
+
+test('desktop brand and navigation track scale forty percent without changing compact defaults', async () => {
+  const css = await readWorkspaceStyles();
+  const desktopStart = css.indexOf('@media (min-width: 1180px)');
+  const desktopEnd = css.indexOf('@media (max-width: 1179px)', desktopStart);
+  const desktop = css.slice(desktopStart, desktopEnd);
+
+  assert.notEqual(desktopStart, -1, 'desktop workspace rules should exist');
+  assert.match(css, /\.workspace-root \.workspace-topbar-brand\s*\{[^}]*flex:\s*0 1 14rem[^}]*font-size:\s*0\.75rem/s);
+  assert.match(css, /\.workspace-root \.workspace-topbar-logo\s*\{[^}]*height:\s*2rem[^}]*max-width:\s*8rem/s);
+  assert.match(desktop, /\.workspace-root:is\(\.sales-workspace, \.expert-workspace, \.admin-workspace\)\s*\{[^}]*--workspace-topbar-h:\s*4\.55rem/s);
+  assert.match(desktop, /\.workspace-root:is\(\.sales-workspace, \.expert-workspace, \.admin-workspace\) \.workspace-topbar-brand\s*\{[^}]*flex-basis:\s*19\.6rem[^}]*font-size:\s*1\.05rem/s);
+  assert.match(desktop, /\.workspace-root:is\(\.sales-workspace, \.expert-workspace, \.admin-workspace\) \.workspace-topbar-logo\s*\{[^}]*height:\s*2\.8rem[^}]*max-width:\s*11\.2rem/s);
+  assert.match(desktop, /\.workspace-root:is\(\.sales-workspace, \.expert-workspace, \.admin-workspace\) \.workspace-topbar :is\(button, \[role='button'\]\)\s*\{[^}]*font-size:\s*0\.9625rem/s);
+  assert.match(desktop, /\.workspace-root\.showroom-workspace\s*\{[^}]*--workspace-topbar-h:\s*3\.25rem/s);
+  assert.doesNotMatch(desktop, /\.workspace-root\s*\{[^}]*--workspace-topbar-h:\s*4\.55rem/s);
+});
+
 test('viewer stage exposes the supplied viewer in the sole main landmark', async () => {
   const source = await readWorkspaceComponent('ViewerStage');
 

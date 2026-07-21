@@ -19,9 +19,18 @@ import FacetInspector from './components/FacetInspector.jsx';
 import PlatformConsole from './components/PlatformConsole.jsx';
 import ContextInspector from './components/ContextInspector.jsx';
 import SalesStepContent from './components/SalesStepContent.jsx';
+import AdminWorkspaceShell from './components/workspaces/AdminWorkspaceShell.jsx';
 import SalesModeShell from './components/workspaces/SalesModeShell.jsx';
 import ExpertWorkspaceShell, { ExpertSurfaceInspector } from './components/workspaces/ExpertWorkspaceShell.jsx';
-import ShowroomModeShell, { buildShowroomMaterials, buildShowroomViewModel } from './components/workspaces/ShowroomModeShell.jsx';
+import ShowroomModeShell, {
+  buildShowroomMaterials,
+  buildShowroomViewModel,
+  mergePresentationCatalogOptions,
+  PRESENTATION_TRIM_KINDS,
+  presentationCatalogOption,
+  presentationCatalogOptionFromTrimRecord,
+  presentationCategoryForOption,
+} from './components/workspaces/ShowroomModeShell.jsx';
 import ViewerStage from './components/workspaces/ViewerStage.jsx';
 import WorkspaceTopBar from './components/workspaces/WorkspaceTopBar.jsx';
 import useWorkspaceController from './hooks/useWorkspaceController.js';
@@ -38,7 +47,7 @@ import { createDeferredDesignApplication, createInitialEditRestore, designFinger
 import { defaultProjectName, downloadProjectFile, saveOrUpdateProject } from './lib/projects.js';
 import { replaceEditProjectId } from './lib/projectNavigation.js';
 import { urlToDataUrl } from './lib/fileUtils.js';
-import { parsePublicDesignEntry } from './lib/customerContext.js';
+import { derivePresentationEditable, parsePublicDesignEntry } from './lib/customerContext.js';
 import { loadPublicDesignEntry } from './lib/publicProjectLoader.js';
 import { buildSelectedCatalogSnapshot, mergeCatalogSnapshots } from './lib/catalogSnapshot.js';
 import { buildStandaloneSharePayload, resolveShowroomShareTarget } from './lib/publicShare.js';
@@ -47,7 +56,13 @@ import { displayMeasurement } from './lib/units.js';
 import { canShowExpertControl } from './lib/studioMode.js';
 import { parseStudioLayers } from './lib/studioRecovery.js';
 import { STUDIO_STEPS } from './lib/studioSteps.js';
-import { normalizeTrimAccents, syncTrimAccentsToLegacy } from './lib/trimAccents.js';
+import {
+  createTrimAccent,
+  normalizeTrimAccents,
+  productBaseLabel,
+  selectLibraryTrimProduct,
+  syncTrimAccentsToLegacy,
+} from './lib/trimAccents.js';
 import { projectExtrasOnly } from './lib/trimServiceBoundary.js';
 import { ROOF_PRODUCTS, ROOF_PROFILES, WALL_PRODUCTS, WALL_PROFILES, GUTTER_OPTIONS, DOWNSPOUT_OPTIONS, allRoofProducts, allWallProducts, setExtraMaterials } from './data/pricing.js';
 import { allColors, colorById, setExtraColors } from './data/colors.js';
@@ -64,6 +79,9 @@ const NAV_SECTIONS = [
   { key: 'customServices', label: 'Custom Services' },
   { key: 'materials', label: 'Materials' },
 ];
+
+const ADMINISTRATIVE_SECTIONS = new Set(['settings', 'discounts', 'customServices', 'materials', 'platform']);
+export const isAdministrativeSection = (section) => ADMINISTRATIVE_SECTIONS.has(section);
 
 // Maps a materials-table row (snake_case, DB shape) to the plain
 // {id, label, pricePerSqft} shape ROOF_PRODUCTS/WALL_PRODUCTS already use,
@@ -118,8 +136,12 @@ export function AppWorkspace({
   const safeStateClass = workspaceState.mode === 'showroom' && showroomViewModel.status !== 'ready'
     ? ' showroom-safe-state-workspace'
     : '';
+  const detailsStateClass = (workspaceState.mode === 'sales' && salesViewModel.detailsOpen === false)
+    || (workspaceState.mode === 'expert' && expertViewModel.detailsOpen === false)
+    ? ' is-details-closed'
+    : '';
   return (
-    <div className={`workspace-root app-workspace-layout ${workspaceState.mode}-workspace${safeStateClass}`} data-studio-skin="ironwrap">
+    <div className={`workspace-root app-workspace-layout ${workspaceState.mode}-workspace${safeStateClass}${detailsStateClass}`} data-studio-skin="ironwrap">
       {shell}
       <div className="app-workspace-persistent-viewer" key="persistent-viewer">
         {viewerStage}
@@ -182,6 +204,11 @@ export default function App({ currentUser = null }) {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [showroomSelectedCategory, setShowroomSelectedCategory] = useState('roof');
+  const [showroomSelectedTrimKind, setShowroomSelectedTrimKind] = useState({
+    accents: null,
+    doors: 'garage_doors',
+    gutters: 'gutters',
+  });
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(true);
   const [shellNotice, setShellNotice] = useState('');
   const [projectActionStatus, setProjectActionStatus] = useState('');
@@ -204,6 +231,7 @@ export default function App({ currentUser = null }) {
     tenantPreference: companySettings?.show_expert_mode,
   });
   const [defaultCatalogsSettled, setDefaultCatalogsSettled] = useState(false);
+  const [libraryOptionsSettled, setLibraryOptionsSettled] = useState(false);
   // Business identity/contact (name, phone, address, website/social) — on
   // the `users` row (see AuthGate.jsx's signup fields), not `settings`.
   // Fetched only for the PDF cover page; hidden there when blank.
@@ -236,6 +264,10 @@ export default function App({ currentUser = null }) {
   // non-customer views since the customer-facing route is unauthenticated.
   const [customServiceLines, setCustomServiceLines] = useState([]);
   const [customServiceCatalog, setCustomServiceCatalog] = useState([]);
+  // Selection-only DTO from the authenticated Library adapter. It remains
+  // separate from the legacy catalogs above until each consumer migrates.
+  const [libraryOptions, setLibraryOptions] = useState({ products: [], services: [] });
+  const libraryOptionsRequestRef = useRef(false);
   // Current project's attachments — kept in App state (not just inside
   // AttachmentsPanel) so PDF/text export can read them at export-click time
   // without a second fetch.
@@ -344,6 +376,7 @@ export default function App({ currentUser = null }) {
       wallColorId,
       ...Object.values(facetOverrides).map((override) => override?.colorId),
       ...trimAccents.map((record) => record.colorId),
+      ...trimAccents.flatMap((record) => record.compatibleColorIds ?? []),
     ],
   }), [
     catalogSnapshot, colorsCatalog, facetOverrides, materialsCatalog, roofColorId,
@@ -393,16 +426,23 @@ export default function App({ currentUser = null }) {
   // default selections have all settled. The normalizer owns a serialized
   // copy, so later project opens and edits cannot alter this fallback.
   useEffect(() => {
-    if (stableDesignNormalizerRef.current || isCustomerView || !companySettingsSettled || !defaultCatalogsSettled) return;
+    if (
+      stableDesignNormalizerRef.current
+      || isCustomerView
+      || !companySettingsSettled
+      || !defaultCatalogsSettled
+      || !libraryOptionsSettled
+    ) return;
     const accountDefaults = buildAccountDefaultDesignSnapshot({
       companySettings,
       customServiceCatalog,
+      libraryOptions,
       effectivePricingSettings,
     });
     stableDesignNormalizerRef.current = createStableDesignNormalizer(accountDefaults);
     projectDesignApplicationRef.current.setReady((snapshot) => applyDesignSnapshot(snapshot, false));
     setDesignDefaultsReady(true);
-  }, [companySettings, companySettingsSettled, customServiceCatalog, defaultCatalogsSettled, effectivePricingSettings, isCustomerView]);
+  }, [companySettings, companySettingsSettled, customServiceCatalog, defaultCatalogsSettled, effectivePricingSettings, isCustomerView, libraryOptions, libraryOptionsSettled]);
 
   const buildDesignSnapshot = () => currentDesignSnapshot;
   const currentDesignFingerprint = useMemo(
@@ -545,6 +585,7 @@ export default function App({ currentUser = null }) {
     if (initialPublicEntryRef.current.kind) {
       setCompanySettingsSettled(true);
       setDefaultCatalogsSettled(true);
+      setLibraryOptionsSettled(true);
       return;
     }
     fetchJson('/api/settings')
@@ -559,6 +600,17 @@ export default function App({ currentUser = null }) {
     ];
     Promise.allSettled(defaultCatalogRequests).then(() => setDefaultCatalogsSettled(true));
   }, []);
+
+  useEffect(() => {
+    if (!currentUser || initialPublicEntryRef.current.kind) return;
+    if (libraryOptionsRequestRef.current) return;
+    libraryOptionsRequestRef.current = true;
+    fetchJson('/api/custom-services?action=library-options').then(setLibraryOptions)
+      .catch((error) => (
+        showLoadNotice('Failed to load Library options:', 'Library selections are unavailable. Refresh to try again.', error)
+      ))
+      .finally(() => setLibraryOptionsSettled(true));
+  }, [currentUser]);
 
   // Re-parses only when a layer's content/visibility/order changes (offset
   // nudges are tracked separately in layerOffsets so dragging a slider never
@@ -699,6 +751,7 @@ export default function App({ currentUser = null }) {
     const newProjectDesign = buildNewProjectDesignSnapshot({
       companySettings,
       customServiceCatalog,
+      libraryOptions,
     });
     applyCurrentDesignState(newProjectDesign);
     setPhotoOverlay(null);
@@ -1199,6 +1252,7 @@ export default function App({ currentUser = null }) {
   const trimsContent = (
     <TrimsPanel
       records={trimAccents}
+      libraryOptions={libraryOptions.products}
       onChange={handleTrimAccentsChange}
       unitSystem={effectiveUnitSystem}
       readOnly={isCustomerView}
@@ -1222,6 +1276,7 @@ export default function App({ currentUser = null }) {
       customServiceLines={customServiceLines}
       onCustomServiceLinesChange={handleCustomServiceLinesChange}
       customServiceCatalog={customServiceCatalog}
+      libraryOptions={libraryOptions.services}
       unitSystem={effectiveUnitSystem}
     />
   );
@@ -1343,6 +1398,7 @@ export default function App({ currentUser = null }) {
     ? `${parseFailures.length === 1 ? 'An imported XML layer could' : 'Some imported XML layers could'} not be read. Your design changes are still here; review the Project imports to replace or remove the affected layer${parseFailures.length === 1 ? '' : 's'}.`
     : '';
   const configuratorActive = activeSection === 'configurator';
+  const administrativeWorkspace = !isCustomerView && isAdministrativeSection(activeSection);
   const handleOpenProjectTools = () => {
     setActiveSection('configurator');
     returnToSales();
@@ -1396,10 +1452,20 @@ export default function App({ currentUser = null }) {
       }
     }
   };
+  const authenticatedPresentation = workspaceState.presentationSource === 'authenticated';
+  const presentationEditable = derivePresentationEditable({
+    currentUser,
+    isCustomerView,
+    session: workspaceState,
+  });
   const administrativeContent = !isCustomerView && (
     <>
       {activeSection === 'settings' && (
-        <SettingsPanel onSaved={setCompanySettings} customServiceCatalog={customServiceCatalog} />
+        <SettingsPanel
+          onSaved={setCompanySettings}
+          customServiceCatalog={customServiceCatalog}
+          libraryOptions={libraryOptions}
+        />
       )}
       {activeSection === 'discounts' && <DiscountsPanel onSaved={setCompanySettings} />}
       {activeSection === 'customServices' && (
@@ -1417,41 +1483,172 @@ export default function App({ currentUser = null }) {
     </>
   );
   const showroomViewModel = useMemo(() => {
+    const categories = [
+      { key: 'roof', label: 'Roof', available: hasRoofFaces, unavailableReason: 'No roof surfaces in this model' },
+      { key: 'siding', label: 'Siding', available: hasWallFaces, unavailableReason: 'No siding surfaces in this model' },
+      { key: 'accents', label: 'Accents', available: false, unavailableReason: 'Accent geometry is not available in this 3D model; estimate selections are still editable.' },
+      { key: 'doors', label: 'Doors', available: false, unavailableReason: 'Door finishes are not rendered separately in this 3D model; estimate selections are still editable.' },
+      { key: 'gutters', label: 'Gutters', available: false, unavailableReason: 'Gutter geometry is not available in this 3D model; estimate selections are still editable.' },
+    ];
+    const selectedCategory = categories.find((category) => category.key === showroomSelectedCategory)
+      ?? categories[0];
     const categoryIsRenderable = (showroomSelectedCategory === 'roof' && hasRoofFaces)
       || (showroomSelectedCategory === 'siding' && hasWallFaces);
+
+    const materialKindById = new Map(effectiveMaterialsCatalog.map((material) => [
+      material.id,
+      material.kind === 'wall' ? 'wall' : 'roof',
+    ]));
+    const materialById = new Map(effectiveMaterialsCatalog.map((material) => [material.id, material]));
+    const rawProductOptions = [
+      ...allRoofProducts().map((product) => presentationCatalogOption(product, 'roof', {
+        source: materialById.get(product.id) ? 'material' : 'built-in',
+        profiles: ROOF_PROFILES[product.id] ?? materialById.get(product.id)?.profiles ?? [],
+        colorIds: materialById.get(product.id)?.colorIds ?? [],
+      })),
+      ...allWallProducts().map((product) => presentationCatalogOption(product, 'siding', {
+        source: materialById.get(product.id) ? 'material' : 'built-in',
+        profiles: WALL_PROFILES[product.id] ?? materialById.get(product.id)?.profiles ?? [],
+        colorIds: materialById.get(product.id)?.colorIds ?? [],
+      })),
+      ...libraryOptions.products.flatMap((option) => {
+        const category = presentationCategoryForOption(option, materialKindById);
+        return category ? [presentationCatalogOption(option, category)] : [];
+      }),
+      ...GUTTER_OPTIONS.map((option) => presentationCatalogOption(option, 'gutters', {
+        source: 'built-in',
+        trimKind: 'gutters',
+        unit: 'LF',
+      })),
+      ...DOWNSPOUT_OPTIONS.map((option) => presentationCatalogOption(option, 'gutters', {
+        source: 'built-in',
+        trimKind: 'downspouts',
+        unit: 'LF',
+      })),
+      ...trimAccents.flatMap((record) => {
+        const option = presentationCatalogOptionFromTrimRecord(record);
+        return option ? [option] : [];
+      }),
+    ];
+    const productOptions = mergePresentationCatalogOptions(rawProductOptions);
+    const productOptionMap = new Map(productOptions.map((option) => [
+      `${option.category}:${option.id}`,
+      option,
+    ]));
+    const categoryTrimKinds = PRESENTATION_TRIM_KINDS[showroomSelectedCategory];
+    const categoryTrimRecords = categoryTrimKinds
+      ? trimAccents.filter((record) => categoryTrimKinds.has(record.kind))
+      : [];
+    const preferredTrimKind = showroomSelectedTrimKind[showroomSelectedCategory];
+    const selectedTrimRecord = categoryTrimRecords.find((record) => (
+      record.kind === preferredTrimKind && record.selected && record.productId
+    ))
+      ?? categoryTrimRecords.find((record) => record.kind === preferredTrimKind && record.selected)
+      ?? categoryTrimRecords.find((record) => record.selected && record.productId)
+      ?? categoryTrimRecords.find((record) => record.selected)
+      ?? categoryTrimRecords[0];
+    const selectedProductId = showroomSelectedCategory === 'roof'
+      ? services.roof === false ? undefined : roofProductId
+      : showroomSelectedCategory === 'siding'
+        ? services.wall === false ? undefined : wallProductId
+        : selectedTrimRecord?.selected === false ? undefined : selectedTrimRecord?.productId;
+    const selectedProfile = showroomSelectedCategory === 'roof'
+      ? roofProfile
+      : showroomSelectedCategory === 'siding' ? wallProfile : selectedTrimRecord?.profile;
     const selectedColorId = showroomSelectedCategory === 'roof'
       ? roofColorId
-      : showroomSelectedCategory === 'siding' ? wallColorId : undefined;
-    const selectColor = showroomSelectedCategory === 'roof' && hasRoofFaces
-      ? setRoofColorId
-      : showroomSelectedCategory === 'siding' && hasWallFaces
-        ? setWallColorId
-        : undefined;
-    const selectedProductId = showroomSelectedCategory === 'roof'
-      ? roofProductId
-      : showroomSelectedCategory === 'siding' ? wallProductId : undefined;
-    const applicableColorIds = effectiveMaterialsCatalog.find((material) => material.id === selectedProductId)?.colorIds;
-    const showroomColors = categoryIsRenderable
+      : showroomSelectedCategory === 'siding' ? wallColorId : selectedTrimRecord?.colorId;
+    const selectedProductOption = productOptionMap.get(`${showroomSelectedCategory}:${selectedProductId}`);
+    const applicableColorIds = selectedProductOption?.colorIds?.length
+      ? selectedProductOption.colorIds
+      : effectiveMaterialsCatalog.find((material) => material.id === selectedProductId)?.colorIds;
+    const categoryCanChooseFinish = categoryIsRenderable
+      || (presentationEditable && Boolean(selectedProductId));
+    const showroomColors = categoryCanChooseFinish
       ? applicableColorIds?.length
         ? allColors().filter((color) => applicableColorIds.includes(color.id))
         : allColors()
       : [];
 
+    const replaceSelectedTrim = (patch) => {
+      if (!selectedTrimRecord) return;
+      handleTrimAccentsChange(trimAccents.map((record) => (
+        record.id === selectedTrimRecord.id ? createTrimAccent({
+          ...record,
+          baseProductLabel: productBaseLabel(selectedTrimRecord.productLabel, selectedTrimRecord.profile),
+          ...patch,
+        }) : record
+      )));
+    };
+    const addOrSelectProduct = (optionId) => {
+      const option = productOptionMap.get(`${showroomSelectedCategory}:${optionId}`);
+      if (!option) return;
+      if (showroomSelectedCategory === 'roof') {
+        handleRoofProductChange(option.id);
+        if (!ROOF_PROFILES[option.id]?.length) setRoofProfile(option.profiles?.[0] || '');
+        setServices((current) => ({ ...current, roof: true }));
+        return;
+      }
+      if (showroomSelectedCategory === 'siding') {
+        handleWallProductChange(option.id);
+        if (!WALL_PROFILES[option.id]?.length) setWallProfile(option.profiles?.[0] || '');
+        setServices((current) => ({ ...current, wall: true }));
+        return;
+      }
+      if (!option.trimKind) return;
+      setShowroomSelectedTrimKind((current) => ({
+        ...current,
+        [showroomSelectedCategory]: option.trimKind,
+      }));
+      const nextRecords = selectLibraryTrimProduct(trimAccents, option, {
+        quantities: {
+          soffit: measurements.soffitSqft,
+          fascia: measurements.fasciaLf,
+          gutters: measurements.gutterLf,
+          downspouts: measurements.downspoutLf,
+          garage_doors: measurements.garageDoorCappingLf,
+          other_trims: measurements.capFlashingLf,
+        },
+      });
+      if (option.trimKind === 'gutters' && GUTTER_OPTIONS.some((gutter) => gutter.id === option.id)) {
+        setGutterOptionId(option.id);
+      }
+      if (option.trimKind === 'downspouts' && DOWNSPOUT_OPTIONS.some((downspout) => downspout.id === option.id)) {
+        setDownspoutOptionId(option.id);
+      }
+      handleTrimAccentsChange(nextRecords);
+    };
+    const removeProduct = () => {
+      if (showroomSelectedCategory === 'roof') {
+        setServices((current) => ({ ...current, roof: false }));
+      } else if (showroomSelectedCategory === 'siding') {
+        setServices((current) => ({ ...current, wall: false }));
+      } else if (selectedTrimRecord?.customLabel !== undefined) {
+        handleTrimAccentsChange(trimAccents.filter((record) => record.id !== selectedTrimRecord.id));
+      } else if (selectedTrimRecord) {
+        replaceSelectedTrim({ selected: false });
+      }
+    };
+    const changeProfile = (profile) => {
+      if (showroomSelectedCategory === 'roof') setRoofProfile(profile);
+      else if (showroomSelectedCategory === 'siding') setWallProfile(profile);
+      else replaceSelectedTrim({ profile });
+    };
+    const changeColor = (colorId) => {
+      if (showroomSelectedCategory === 'roof') setRoofColorId(colorId);
+      else if (showroomSelectedCategory === 'siding') setWallColorId(colorId);
+      else replaceSelectedTrim({ colorId });
+    };
+
     return buildShowroomViewModel({
-      categories: [
-        { key: 'roof', label: 'Roof', available: hasRoofFaces, unavailableReason: 'No roof surfaces in this model' },
-        { key: 'siding', label: 'Siding', available: hasWallFaces, unavailableReason: 'No siding surfaces in this model' },
-        { key: 'accents', label: 'Accents', available: false, unavailableReason: 'Accent geometry is not available in this 3D model' },
-        { key: 'doors', label: 'Doors', available: false, unavailableReason: 'Door geometry is not available in this 3D model' },
-        { key: 'gutters', label: 'Gutters', available: false, unavailableReason: 'Gutter geometry is not available in this 3D model' },
-      ],
+      categories,
       selectedCategory: showroomSelectedCategory,
       onCategoryChange: setShowroomSelectedCategory,
       materials: buildShowroomMaterials({
         colors: showroomColors,
         allowedColorIds: applicableColorIds,
         selectedColorId,
-        onSelect: selectColor,
+        onSelect: presentationEditable ? changeColor : undefined,
       }),
       estimate: {
         label: 'Estimated project total',
@@ -1468,8 +1665,25 @@ export default function App({ currentUser = null }) {
           : projectOperations.canShare ? handleExportHtml : undefined,
         shareUnavailableReason: isCustomerView ? showroomShareTarget.unavailableReason : undefined,
       },
+      presentationEditable: !isCustomerView && presentationEditable,
+      presentationControls: presentationEditable ? {
+        selectedCategory: showroomSelectedCategory,
+        selectedProductId,
+        selectedProfile,
+        selectedColorId,
+        unavailableReason: selectedCategory.available === false
+          ? selectedCategory.unavailableReason
+          : undefined,
+        productOptions,
+        profileOptions: selectedProductOption?.profiles ?? [],
+        onProductChange: addOrSelectProduct,
+        onProfileChange: changeProfile,
+        onRemoveProduct: removeProduct,
+        onRemoveProfile: () => changeProfile(''),
+        onRemoveColor: () => changeColor(''),
+      } : undefined,
     });
-  }, [approvedAt, catalogRenderVersion, currentProjectId, effectiveMaterialsCatalog, estimate.total, hasRoofFaces, hasWallFaces, isCustomerView, publicQuoteTotal, roofColorId, roofProductId, showroomSelectedCategory, showroomShareTarget.unavailableReason, showroomShareTarget.url, wallColorId, wallProductId]);
+  }, [approvedAt, catalogRenderVersion, currentProjectId, effectiveMaterialsCatalog, estimate.total, hasRoofFaces, hasWallFaces, isCustomerView, libraryOptions.products, measurements.capFlashingLf, measurements.downspoutLf, measurements.fasciaLf, measurements.garageDoorCappingLf, measurements.gutterLf, measurements.soffitSqft, presentationEditable, publicQuoteTotal, roofColorId, roofProductId, roofProfile, services.roof, services.wall, showroomSelectedCategory, showroomSelectedTrimKind, showroomShareTarget.unavailableReason, showroomShareTarget.url, trimAccents, wallColorId, wallProductId, wallProfile]);
   const sharedViewerStage = (
     <ViewerStage
       mode={workspaceState.mode}
@@ -1518,8 +1732,16 @@ export default function App({ currentUser = null }) {
     returnToSales();
     setMobileInspectorOpen(true);
   };
+  const handleCloseAdministration = () => {
+    setActiveSection('configurator');
+    if (workspaceState.presentationSource !== 'authenticated') returnToSales();
+    setMobileInspectorOpen(true);
+  };
   const handleOpenWorkspaceNavigation = (event) => {
     openWorkspaceNavigation(workspaceState.mode, event);
+  };
+  const handleOpenAdminNavigation = (event) => {
+    openWorkspaceNavigation('admin', event);
   };
   const applicationNavigation = (
     <>
@@ -1604,6 +1826,7 @@ export default function App({ currentUser = null }) {
   );
   const salesViewModel = {
     topBar: applicationTopBar,
+    detailsOpen: mobileInspectorOpen,
     steps: STUDIO_STEPS,
     activeStep: activeStudioStep,
     onStepChange: setActiveStudioStep,
@@ -1630,6 +1853,7 @@ export default function App({ currentUser = null }) {
     expertEntitled: workspaceSecurityContext.expertEntitled,
     showExpertMode: workspaceSecurityContext.showExpertMode,
     topBar: applicationTopBar,
+    detailsOpen: Boolean(selectedFacet),
     activeTool: activeExpertTool,
     onToolChange: setActiveExpertTool,
     surfaceInspector: expertSurfaceInspector,
@@ -1639,7 +1863,6 @@ export default function App({ currentUser = null }) {
     onPresent: handlePresentToCustomer,
     onOpenNavigation: handleOpenWorkspaceNavigation,
   };
-  const authenticatedPresentation = workspaceState.presentationSource === 'authenticated';
   const showroomShellViewModel = {
     sessionType: authenticatedPresentation ? 'authenticated-presentation' : 'public',
     categories: showroomViewModel.categories,
@@ -1648,6 +1871,8 @@ export default function App({ currentUser = null }) {
     materials: showroomViewModel.materials,
     estimate: showroomViewModel.estimate,
     customerActions: showroomViewModel.customerActions,
+    presentationEditable: !isCustomerView && presentationEditable,
+    ...(presentationEditable ? { presentationControls: showroomViewModel.presentationControls } : {}),
     onExitPresentation: authenticatedPresentation ? handleExitPresentation : undefined,
     status: isCustomerView ? publicEntryState.status : 'ready',
     errorMessage: publicEntryState.status === 'invalid'
@@ -1657,13 +1882,26 @@ export default function App({ currentUser = null }) {
 
   return (
     <div className="app" style={{ '--brand-accent': brand.accent, '--brand-accent-dark': brand.accentDark }}>
-      <AppWorkspace
-        workspaceState={workspaceState}
-        viewerStage={isCustomerView && publicEntryState.status !== 'ready' ? null : sharedViewerStage}
-        salesViewModel={salesViewModel}
-        expertViewModel={expertViewModel}
-        showroomViewModel={showroomShellViewModel}
-      />
+      {administrativeWorkspace ? (
+        <div className="workspace-root admin-workspace" data-studio-skin="ironwrap">
+          <AdminWorkspaceShell
+            title={NAV_SECTIONS.find(({ key }) => key === activeSection)?.label || 'Platform'}
+            onClose={handleCloseAdministration}
+            topBar={applicationTopBar}
+            onOpenNavigation={handleOpenAdminNavigation}
+          >
+            {administrativeContent}
+          </AdminWorkspaceShell>
+        </div>
+      ) : (
+        <AppWorkspace
+          workspaceState={workspaceState}
+          viewerStage={isCustomerView && publicEntryState.status !== 'ready' ? null : sharedViewerStage}
+          salesViewModel={salesViewModel}
+          expertViewModel={expertViewModel}
+          showroomViewModel={showroomShellViewModel}
+        />
+      )}
     </div>
   );
 }

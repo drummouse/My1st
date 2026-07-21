@@ -76,7 +76,7 @@ test('metric estimate summary converts displayed quantities without changing tot
   assert.doesNotMatch(markup, /100 sqft/);
 });
 
-test('metric service rows show metres and converted prices per metre', () => {
+test('metric trim rows show metres while legacy type appears in the Product field', () => {
   const markup = renderToStaticMarkup(React.createElement(servicesModule.default, {
     services: { gutters: true },
     onServicesChange: noop,
@@ -98,8 +98,8 @@ test('metric service rows show metres and converted prices per metre', () => {
   }));
 
   assert.match(markup, /30\.48/);
-  assert.match(markup, /\$32\.81\/m/);
-  assert.doesNotMatch(markup, /\/LF/);
+  assert.match(markup, /value="5&quot; K-Style Eavestrough"/);
+  assert.doesNotMatch(markup, /\/LF|Eavestrough profile|<select/);
 });
 
 test('metric custom services display converted quantity and price while edits stay canonical', () => {
@@ -128,15 +128,18 @@ test('metric custom services display converted quantity and price while edits st
   assert.equal(changes[0].unitPrice, 10);
 });
 
-test('metric custom-service add picker converts catalog unit prices and units', () => {
+test('Library service add action keeps price details inside the selected snapshot', () => {
   const markup = renderToStaticMarkup(React.createElement(extrasModule.default, {
     services: {},
     customServiceLines: [],
-    catalog: [{ id: 'flashing', name: 'Flashing', price: 10, unit: 'LF' }],
+    libraryOptions: [{
+      id: 'flashing', source: 'library', kind: 'service', label: 'Flashing',
+      unit: 'LF', unitPrice: 10, profileLabel: null, colorIds: [], active: true,
+    }],
     onCustomServiceLinesChange: noop,
     unitSystem: 'metric',
   }));
 
-  assert.match(markup, /Flashing — \$32\.81\/m/);
-  assert.doesNotMatch(markup, /\$10\.00\/LF/);
+  assert.match(markup, /Add Service/);
+  assert.doesNotMatch(markup, /Flashing|unitPrice|\$10\.00\/LF/);
 });
