@@ -104,6 +104,23 @@ Run against the redeployed preview (`3c79459`, `preview/claude/scanner-flexible-
 
 This is the functional/tenant-isolation/persistence evidence the D-057 incident required — the original 22/22 smoke result only ever proved the routes 401 without auth. Superadmin-visibility and concurrent-creation-race checks were not exercised live (covered by the unit test suite's service-layer tests instead); the platform-wide `settings` signup bug found incidentally during this run (D-062) is unrelated and out of scope.
 
+## Final rebase + merge readiness (2026-07-21)
+
+PR #26 (D-063, the `settings` singleton-primary-key fix found incidentally
+during the live verification above) was merged into `claude/development`
+first (squash commit `ef7b853`). This branch was rebased a second time onto
+that new tip; the only conflict was ordering in `CAPTURE_DECISION_LOG.md`
+(resolved by keeping every entry, newest-first — nothing dropped from either
+side). New head: `f3fa97b`.
+
+| Check | Result |
+| --- | --- |
+| `npm test` | 251/251 pass |
+| `npm run build` | Succeeds (both the main app and the artifact bundle) |
+| `git diff --check` | Clean |
+| `npm run smoke` against the redeployed preview (`ironwrap-estimator-git-claude-scanne-ad48c0-drummouses-projects.vercel.app`, READY, commit `f3fa97b`) | 29/29 pass, including the `/api/capture/tags` auth-guard checks |
+| PR #25 `mergeable_state` | `unstable` (mergeable; the unrelated GPT-lab preview was still building at check time — not a blocker for the Claude lane) |
+
 ## Honest gaps
 
 - No platform seed tag set — `capture_tags` is tenant-scoped only in this
