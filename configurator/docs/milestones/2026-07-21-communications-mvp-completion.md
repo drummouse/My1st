@@ -63,9 +63,11 @@ defect. A fresh empty-commit redeploy then succeeded cleanly.
 
 ## Historical rows preserved
 
-Confirmed via direct query: the 3 rows from 2026-07-17 remain `status =
+Confirmed via direct query: the rows from 2026-07-17 remain `status =
 'failed'`, untouched, unmodified, not retried, still visible via
-`GET /api/superadmin?action=notifications&status=failed`.
+`GET /api/superadmin?action=notifications&status=failed`. Recorded as 3 at
+the time this doc was written; the correct, final count is **4** — see
+decision log D-070 (a follow-up correction, `claude/communications-mvp-hardening`).
 
 ## Confirmations
 

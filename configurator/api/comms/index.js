@@ -7,7 +7,8 @@ import { buildDeliverers } from '../_lib/commsDelivery.js';
 import { deliverNotification } from '../_lib/notifications.js';
 import { redactRecipientFromText } from '../_lib/commsValidation.js';
 import {
-  verifySchedulerSecret, nextRowState, clampBatchLimit, CLAIM_LEASE_SECONDS, MAX_RUNTIME_MS,
+  verifySchedulerSecret, nextRowState, clampBatchLimit, providerTimeoutFor,
+  CLAIM_LEASE_SECONDS, MAX_RUNTIME_MS, MIN_ROW_BUDGET_MS,
 } from '../_lib/commsScheduler.js';
 
 // Consolidated multi-tenant comms function — a reseller/owner's own
@@ -116,7 +117,7 @@ async function applyRowState(id, state) {
   `;
 }
 
-async function attemptDelivery(row, deliverers) {
+async function attemptDelivery(row, deliverers, timeoutMs) {
   let identity = null;
   if (row.sender_user_id) {
     // Business notice — resolveClientNotifier re-confirms notify_mode is
@@ -134,7 +135,7 @@ async function attemptDelivery(row, deliverers) {
   }
   const destination = row.to_email || row.to_phone || row.payload?.destination;
   try {
-    const outcome = await deliverNotification(row, deliverers, { destination, identity });
+    const outcome = await deliverNotification(row, deliverers, { destination, identity, timeoutMs });
     return outcome.status === 'sent'
       ? { status: 'sent' }
       : { status: 'error', category: 'not_configured', error: outcome.error };
@@ -156,12 +157,19 @@ async function runDrain(limit) {
   const result = { claimed: claimed.length, sent: 0, retried: 0, failed: 0, skipped: 0 };
   const startedAt = Date.now();
   for (const row of claimed) {
-    if (Date.now() - startedAt > MAX_RUNTIME_MS) {
+    // D-071: bound *this row's* provider request to whatever's actually
+    // left of the invocation's own time budget — previously only the
+    // "have we already blown the budget" check below existed, with no
+    // limit on how long a single fetch could hang, so one stuck request
+    // could consume (or exceed) the entire remaining window with nothing
+    // left to release the rest of the batch safely.
+    const remainingMs = MAX_RUNTIME_MS - (Date.now() - startedAt);
+    if (remainingMs < MIN_ROW_BUDGET_MS) {
       await releaseRow(row.id);
       result.skipped++;
       continue;
     }
-    const outcome = await attemptDelivery(row, deliverers);
+    const outcome = await attemptDelivery(row, deliverers, providerTimeoutFor(remainingMs));
     const state = nextRowState({ attemptCount: row.attempt_count, outcome });
     await applyRowState(row.id, state);
     if (state.status === 'sent') result.sent++;
@@ -209,7 +217,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    await ensureSchema();
+    // D-071: no ensureSchema() here — requireCapability() -> requireActiveUser()
+    // -> getAuthenticatedUser() only calls it once a syntactically valid
+    // session cookie exists (see api/_lib/access.js); a request with no/an
+    // invalid session is rejected on the JWT check alone, before any
+    // database work at all. Calling it unconditionally here (as before)
+    // meant even a fully unauthenticated manual-path request executed
+    // schema DDL — this branch now does no DB work until a session/
+    // capability check has actually passed.
     const actor = await requireCapability(req, res, capability);
     if (!actor) return;
     if (action === 'identity') return handleIdentity(req, res, actor);

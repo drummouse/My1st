@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-  verifySchedulerSecret, nextRowState, clampBatchLimit, MAX_ATTEMPTS, DEFAULT_BATCH_LIMIT, MAX_BATCH_LIMIT,
+  verifySchedulerSecret, nextRowState, clampBatchLimit, providerTimeoutFor,
+  MAX_ATTEMPTS, DEFAULT_BATCH_LIMIT, MAX_BATCH_LIMIT, PROVIDER_TIMEOUT_MS,
 } from '../api/_lib/commsScheduler.js';
 
 test('scheduler secret: correct secret authenticates, wrong/missing/unconfigured all reject', () => {
@@ -66,6 +67,27 @@ test('a transient failure is retried with backoff, bounded by MAX_ATTEMPTS', () 
   assert.equal(last.status, 'permanently_failed');
   assert.equal(last.attemptCount, MAX_ATTEMPTS);
   assert.equal(last.errorCategory, 'max_attempts_exceeded');
+});
+
+// D-071 regression: a 429 (rate limited) is classified 'transient' by
+// commsDelivery.js — confirms that classification, fed through
+// nextRowState, produces a real retry with backoff rather than
+// permanently_failed. (commsDelivery.test.mjs separately confirms the HTTP
+// status -> category mapping itself.)
+test('a transient outcome from a 429 rate-limit response gets retry backoff, not permanently_failed', () => {
+  const outcome = { status: 'error', category: 'transient', error: 'Twilio send failed: HTTP 429 Too Many Requests' };
+  const state = nextRowState({ attemptCount: 0, outcome });
+  assert.equal(state.status, 'pending');
+  assert.equal(state.terminal, false);
+  assert.ok(state.backoffSeconds > 0);
+  assert.notEqual(state.status, 'permanently_failed');
+});
+
+test('providerTimeoutFor caps at PROVIDER_TIMEOUT_MS and never exceeds the remaining drain budget', () => {
+  assert.equal(providerTimeoutFor(10_000), PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutFor(1000), 1000);
+  assert.equal(providerTimeoutFor(0), 0);
+  assert.equal(providerTimeoutFor(-500), 0);
 });
 
 test('clampBatchLimit bounds the requested batch size', () => {
