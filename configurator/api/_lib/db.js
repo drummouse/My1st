@@ -1,10 +1,12 @@
 import { neon } from '@neondatabase/serverless';
 
-// PROJECTS_DATABASE_URL is provisioned by the Vercel Neon Postgres
-// integration (see db/schema.sql). Uses the HTTP-based neon() driver rather
-// than a raw TCP client since Vercel serverless functions and this driver's
-// fetch-based transport are the standard pairing for Neon.
-export const sql = neon(process.env.PROJECTS_DATABASE_URL);
+// GPT_DATABASE_URL is the isolated GPT sandbox connection. Keep
+// PROJECTS_DATABASE_URL as the compatibility fallback for existing Vercel
+// deployments. Uses the HTTP-based neon() driver rather than a raw TCP client
+// since Vercel serverless functions and this driver's fetch-based transport
+// are the standard pairing for Neon.
+const databaseUrl = process.env.GPT_DATABASE_URL ?? process.env.PROJECTS_DATABASE_URL;
+export const sql = neon(databaseUrl);
 
 let schemaReady;
 
