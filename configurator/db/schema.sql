@@ -232,6 +232,10 @@ create table if not exists capture_sessions (
   published_record_id uuid references library_records(id),
   published_version integer,
   submitted_at timestamptz,
+  -- R2.5: material-ready schematic proof — additive/nullable.
+  material_zone_state jsonb,
+  texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+  studio_validation jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -253,6 +257,9 @@ create table if not exists capture_assets (
   height integer,
   capture_metadata jsonb not null default '{}'::jsonb,
   upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+  -- R2.2: points a superseded (replaced) source asset at its replacement.
+  -- The superseded row's other columns are never changed — see D-039.
+  superseded_by uuid references capture_assets(id),
   created_at timestamptz not null default now()
 );
 create index if not exists capture_assets_session_id_idx on capture_assets (session_id);
@@ -296,6 +303,27 @@ create table if not exists capture_measurements (
   created_at timestamptz not null default now()
 );
 create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id);
+
+-- Claude adaptive-guidance attempts (Scanner R2.4, D-044) — one immutable,
+-- append-only row per attempt. 'findings' only populated for
+-- status='advisory'; every other status carries a non-sensitive
+-- 'diagnostic' instead. No image bytes ever stored here.
+create table if not exists capture_claude_analyses (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  status text not null check (status in
+    ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
+  model text,
+  prompt_version text,
+  schema_version integer,
+  source_asset_ids jsonb not null default '[]'::jsonb,
+  findings jsonb,
+  diagnostic jsonb not null default '{}'::jsonb,
+  fulfilled_asset_id uuid references capture_assets(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id);
 create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
 
 create table if not exists library_migrations (

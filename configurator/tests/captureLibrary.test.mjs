@@ -82,6 +82,7 @@ function makeStore(session) {
     listAssets: async () => assetsDto().map((a) => ({ ...a, session_id: 'sess-1', size_bytes: 10 })),
     listComments: async () => [],
     listMeasurements: async () => [],
+    listClaudeAnalyses: async () => [],
     updateSessionStatus: async (id, from, to) => {
       state.statusWrites.push({ from, to });
       state.session = { ...state.session, status: to };

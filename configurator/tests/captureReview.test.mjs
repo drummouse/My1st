@@ -26,6 +26,7 @@ function makeStore(session) {
     listAssets: async () => [],
     listComments: async () => state.comments,
     listMeasurements: async () => [],
+    listClaudeAnalyses: async () => [],
     listReviewQueue: async (filters) => { state.queueFilters = filters; return state.session ? [state.session] : []; },
     updateSessionStatus: async (id, from, to) => { state.writes.push({ id, from, to }); return { ...state.session, status: to }; },
     insertComment: async (change) => { state.comments.push(change); return change; },

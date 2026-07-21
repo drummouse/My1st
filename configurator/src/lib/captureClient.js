@@ -18,6 +18,12 @@ async function request(path, { method = 'GET', body } = {}) {
   return result;
 }
 
+// The connected Blob store is private-only — an asset's stored `url` is not
+// directly fetchable. Every <img>/<a> that displays a Capture asset routes
+// through this authenticated, session-scoped proxy instead (D-051); the
+// browser's session cookie rides along automatically (same-origin).
+export const captureAssetBlobUrl = (sessionId, assetId) => `/api/capture/sessions/${sessionId}/assets/${assetId}/blob`;
+
 export const captureApi = {
   list: (status) => request(`/api/capture/sessions${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   create: (input) => request('/api/capture/sessions', { method: 'POST', body: input }),
@@ -26,6 +32,7 @@ export const captureApi = {
   archive: (id, reason) => request(`/api/capture/sessions/${id}`, { method: 'PATCH', body: { status: 'archived', reason } }),
   addAsset: (id, asset) => request(`/api/capture/sessions/${id}/assets`, { method: 'POST', body: asset }),
   removeAsset: (id, assetId) => request(`/api/capture/sessions/${id}/assets/${assetId}`, { method: 'DELETE' }),
+  replaceAsset: (id, assetId, asset) => request(`/api/capture/sessions/${id}/assets/${assetId}/replace`, { method: 'POST', body: asset }),
   validate: (id) => request(`/api/capture/sessions/${id}/validate`),
   submit: (id) => request(`/api/capture/sessions/${id}/submit`, { method: 'POST' }),
   reviewQueue: (status) => request(`/api/capture/review${status ? `?status=${encodeURIComponent(status)}` : ''}`),
@@ -38,6 +45,11 @@ export const captureApi = {
   addMeasurement: (id, measurement) => request(`/api/capture/sessions/${id}/measurements`, { method: 'POST', body: measurement }),
   removeMeasurement: (id, measurementId) => request(`/api/capture/sessions/${id}/measurements/${measurementId}`, { method: 'DELETE' }),
   evidence: (id) => request(`/api/capture/sessions/${id}/evidence`),
+  claudeGuidance: (id) => request(`/api/capture/sessions/${id}/claude-guidance`, { method: 'POST' }),
+  saveMaterialZone: (id, input) => request(`/api/capture/sessions/${id}/material-zone`, { method: 'POST', body: input }),
+  saveTextureDirection: (id, textureDirection) => request(`/api/capture/sessions/${id}/texture-direction`, { method: 'POST', body: { textureDirection } }),
+  evaluateStudioValidation: (id) => request(`/api/capture/sessions/${id}/studio-validation`, { method: 'POST' }),
+  dryRunMaterialPackage: (id) => request(`/api/capture/sessions/${id}/material-package/dry-run`),
 };
 
 // Stable per-draft idempotency key, generated once when the user starts a

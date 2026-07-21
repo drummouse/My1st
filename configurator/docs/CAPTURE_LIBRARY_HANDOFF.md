@@ -1,62 +1,79 @@
 # Capture/Scanner → Library Core Handoff
 
+**Status note (R2.6, 2026-07-20):** this document originally described an
+aspirational submission contract that the shipped implementation did not
+end up following exactly. It has been corrected below to match actual
+behavior as of Capture Stage 5 (PR #21) and Scanner R2. See
+`configurator/docs/CAPTURE_STUDIO_CONTRACT.md` for the authoritative
+Studio-facing contract and `configurator/docs/CAPTURE_DECISION_LOG.md`
+(D-029–D-032, D-043–D-046) for the decisions behind the actual design.
+
 ## Objective
 
-The urgent IronWrap Capture/Scanner prototype submits measured profiles, sampled colors, and captured products into a tenant-private review queue. It does not publish directly to the global Library.
+IronWrap Capture submits measured profiles, sampled colors, and captured
+products into a tenant-private Library record. It does not publish
+directly to the global Library.
 
-## Submission Contract
+## What actually happens today (two distinct steps, not one)
 
-Every submission uses:
+**1. Approve → Publish (existing, unchanged by R2).** Once a capture
+session is reviewed and **approved** (Stage 4's review workflow), an
+explicit publish action (`POST /api/capture/review/:id/publish`,
+capability `capture.publish.tenant`) creates a tenant-private
+`library_records` row **directly with `review_status = 'approved'`** —
+*not* via a `pending_review` intake queue. This is a deliberate, audited,
+create-only, idempotent action (`external_reference = capture:<sessionId>`,
+safe to retry, never overwrites an existing record) — see decision D-029 in
+the decision log. There is no separate Library-side review step after
+Capture's own review approves it.
 
-- `scope: tenant` with the authenticated tenant ID.
+**2. Material-package dry-run (new in R2.6).** Before submission, a
+contributor may call `GET /api/capture/sessions/:id/material-package/dry-run`
+(capability `capture.create`) to validate the shape of a *proposed* future
+submission — the R2 material-package manifest subset (identity, evidence,
+calibration/measurement, deterministic analysis, Claude analysis,
+reviewer-reserved, material readiness). This call is **strictly
+side-effect-free**: it creates no Library record, changes no session
+status, transitions no review status, and publishes nothing. Its
+`identity.proposedReviewStatus` field is always the literal string
+`pending_review` — describing what a *future* real submission would
+target, not something this call writes anywhere. The session's actual
+current status (`draft`, `submitted`, `approved`, `published`, …) is
+reported separately and is the only authoritative lifecycle value.
+
+So: `pending_review` as a genuine intake state that a human reviewer acts
+on does **not** exist in the shipped system — Capture's own multi-step
+review (submitted → in_review → approved/changes_requested/rejected) is
+that gate, and publication happens straight to `approved` afterward. The
+dry-run's use of `pending_review` is deliberately a *label describing
+proposed intent*, not a live database state, and must not be read as
+resurrecting the older intake-queue design this document used to describe.
+
+## Submission-time fields (what a session's own review/publish flow uses)
+
+- `scope: tenant` with the authenticated tenant ID (enforced in SQL, not just in DTOs).
 - `sourceType: capture`.
-- `reviewStatus: pending_review`.
-- `qualityLevel: test`, `low`, `standard`, or `verified` based on configured evidence rules.
-- `captureConfidence` from `0` through `1` inside the versioned scanner metadata namespace.
-- Contributor attribution plus non-secret device and session references.
-- External HTTP(S) thumbnail, texture, or geometry URLs; binary upload is outside Library Core.
-- Stable source lineage retained through review, merge, approval, and future publication.
+- `review_status: approved` at the moment of publish (see above — not `pending_review`).
+- `qualityLevel`: not currently modeled as a discrete field on the published record.
+- `captureConfidence`: available server-side (`evaluateProfileEvidence().confidence`) but not yet written onto the published `library_records` row — R2's dry-run manifest exposes it under `identity.captureConfidence` for inspection.
+- Contributor attribution plus non-secret device and session references — carried through `capturePublish.js`'s DTO mapping.
+- External Blob (thumbnail today; texture/geometry remain null pending later stages) URLs; binary upload never passes through Library Core.
+- Stable source lineage (`external_reference`) retained through republish/retry.
 
-Valid schema-version-1 example:
+## Review Lifecycle (as implemented)
 
-```json
-{
-  "recordType": "profile",
-  "scope": "tenant",
-  "tenantId": "00000000-0000-0000-0000-000000000001",
-  "name": "Captured standing-seam profile",
-  "reviewStatus": "pending_review",
-  "qualityLevel": "test",
-  "sourceType": "capture",
-  "attribution": "Contributor display name",
-  "geometryUrl": "https://assets.example/profile.glb",
-  "metadata": {
-    "scanner": {
-      "schemaVersion": 1,
-      "captureConfidence": 0.82,
-      "deviceReference": "device-anonymous-7",
-      "sessionReference": "capture-session-42",
-      "measurements": { "unit": "mm", "points": [] }
-    }
-  }
-}
-```
+1. Contributor drafts and submits a capture session (`submitted`).
+2. A reviewer claims it (`in_review`), then approves, requests changes, or rejects.
+3. On approval, an explicit publish action creates the tenant-private Library record directly (no separate intake queue).
+4. Global/cross-tenant publication is a separate, more privileged action outside Capture's scope entirely.
+5. Contributor attribution and original capture/session references survive via provenance metadata on the published record.
 
-## Review Lifecycle
+## R2 Prototype Acceptance (what R1+R2 actually prove)
 
-1. Capture submits tenant-private `pending_review` data.
-2. The submitting tenant may later use its private pending record when contractor Library controls are introduced.
-3. A reviewer may approve, reject, request revision, or identify an existing matching record.
-4. Merge and global publication are separate privileged actions; review approval alone never publishes globally.
-5. Contributor attribution and original capture/session references survive merge through provenance metadata.
+- Capture one physical profile and produce a measured schematic + confidence result (not a photographic/geometric reconstruction — see D-036, D-046).
+- Resume an interrupted capture session without creating duplicate submissions (checksum-based asset idempotency, D-041; session `client_ref` idempotency).
+- Validate a proposed submission's shape via the side-effect-free material-package dry-run and receive stable, row-level errors (D-046, this stage).
+- Display review status and the eventual review outcome through Capture's own review workflow.
+- Never expose another tenant's submissions, device identifiers, or raw private capture data.
 
-## Prototype Acceptance Targets
-
-- Capture one physical profile and produce reproducible geometry/measurements.
-- Capture one physical color/finish with source imagery and confidence metadata.
-- Resume an interrupted capture session without creating duplicate submissions.
-- Submit through Library dry-run validation and receive row-level stable errors.
-- Display pending review status and the eventual review outcome.
-- Never expose another tenant’s submissions, device identifiers, or raw private capture data.
-
-Contributor incentives remain configurable and inactive until the business rules are approved.
+Color/finish capture, contributor incentives, and a true `pending_review` intake queue (if ever needed) remain out of scope for R1/R2 and are not implemented.

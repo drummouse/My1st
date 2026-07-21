@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { CAPTURE_STATUSES, CAPTURE_TYPES, ASSET_PURPOSES, FIELD_SOURCES } from '../api/_lib/capturePolicy.js';
 
-const requiredTables = ['capture_sessions', 'capture_assets', 'capture_fields', 'capture_review_comments'];
+const requiredTables = [
+  'capture_sessions', 'capture_assets', 'capture_fields', 'capture_review_comments',
+  'capture_measurements', 'capture_claude_analyses',
+];
 
 async function schemas() {
   return Promise.all([
