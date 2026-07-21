@@ -5,6 +5,12 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-21 — Fix: settings table's stale singleton primary key
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-063 | `settings.singleton boolean primary key default true` was the table's original single-global-row design; when `owner_id`-scoped multi-tenancy replaced it (its own column + `settings_owner_id_key` unique index), the `singleton` primary key was never dropped. Since every row's `singleton` value defaults to the same literal `true`, the table was silently capped at exactly one row **platform-wide** — every signup after the first hit a `settings_pkey` duplicate-key violation on its settings-seed insert (visible in production runtime logs since 2026-07-11, `count=38 users=26` on `/api/settings` alone, plus repeated `Signup error` occurrences). Fix: `id uuid` (already added in an earlier migration but never made authoritative) becomes the real primary key — backfill any pre-existing row missing `id`, `set not null`, drop the stale `singleton`-based `settings_pkey`, add a new one on `id`. `singleton` itself is left in place as an inert column, matching this codebase's non-destructive-migration convention; only its primary-key-ness is removed. | A stale constraint silently blocking a core signup path is a real, live bug, not a hypothetical one — found incidentally while doing genuine live verification for PR #25 (see that PR's D-062) and fixed immediately rather than carried forward as a backlog item, since the fix is small, additive-safe, and fully understood. | Dropping the `singleton` column entirely (rejected: unnecessary churn for a harmless inert column, and this codebase's stated policy is to never do destructive migrations); a new dedicated migration/backfill script outside `ensureSchema()` (rejected: this repo has exactly one migration mechanism and every other fix in its history uses it). |
+
 ## 2026-07-20 — Communications (multi-tenant client notifications)
 
 | # | Decision | Rationale | Alternatives considered |

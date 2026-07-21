@@ -190,14 +190,18 @@ export function ensureSchema() {
       // new-project defaults) — deliberately separate from the per-project
       // `design` JSONB, since these apply across every project rather than
       // describing one design. Originally a single global row (`singleton`
-      // primary key); now one row per owner instead. The `singleton` column
-      // is left in place for any table created by that earlier shape rather
-      // than dropped (this codebase never does destructive migrations) —
-      // it's simply unused going forward, and every real query filters by
-      // `owner_id` via its own unique index, not by `singleton`.
+      // primary key); now one row per owner instead. `singleton` is left in
+      // place as a plain column for any table created by that earlier shape
+      // rather than dropped (this codebase never does destructive
+      // migrations) — but it is NOT the primary key: `id` is (fixed below,
+      // see the drop/re-add block — the original comment here believed
+      // "left in place, unused" made `singleton` harmless, but a stale
+      // PRIMARY KEY still blocks every second row from ever being inserted
+      // regardless of what real queries filter by).
       await sql`
         create table if not exists settings (
-          singleton boolean primary key default true check (singleton),
+          id uuid primary key default gen_random_uuid(),
+          singleton boolean default true,
           gst_rate numeric not null default 0.05,
           full_wrap_discount_pct numeric not null default 0.07,
           soffit_fascia_discount_pct numeric not null default 0.5,
@@ -212,6 +216,17 @@ export function ensureSchema() {
         )
       `;
       await sql`alter table settings add column if not exists id uuid default gen_random_uuid()`;
+      // Fix: `singleton`'s PRIMARY KEY (every row defaulting to the same
+      // value `true`) was never dropped when owner_id-scoped multi-tenancy
+      // replaced the single-global-row design, so only one settings row
+      // could ever exist platform-wide — every signup after the first hit
+      // a duplicate-key error on its settings-seed insert. Backfill any
+      // pre-existing row missing `id` (created before that column existed),
+      // then move the primary key from `singleton` to `id`.
+      await sql`update settings set id = gen_random_uuid() where id is null`;
+      await sql`alter table settings alter column id set not null`;
+      await sql`alter table settings drop constraint if exists settings_pkey`;
+      await sql`alter table settings add constraint settings_pkey primary key (id)`;
       await sql`alter table settings add column if not exists owner_id uuid references users(id)`;
       await sql`create unique index if not exists settings_owner_id_key on settings (owner_id)`;
       await sql`alter table settings add column if not exists logo_url text`;

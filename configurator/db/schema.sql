@@ -106,11 +106,14 @@ create index if not exists projects_owner_id_idx on projects (owner_id);
 -- Company-wide defaults (GST rate, package-deal percentages, and new-project
 -- defaults), separate from the per-project `design` JSONB since these apply
 -- across every project rather than describing one design. Originally a
--- single global row (`singleton` primary key); now one row per owner —
--- `singleton` is left in place rather than dropped (no destructive
--- migrations in this schema), just unused going forward.
+-- single global row (`singleton` primary key); now one row per owner.
+-- `singleton` is left in place as a plain column rather than dropped (no
+-- destructive migrations in this schema) but is NOT the primary key — `id`
+-- is (a stale PRIMARY KEY on `singleton`, every row defaulting to the same
+-- value `true`, silently capped this table at one row platform-wide).
 create table if not exists settings (
-  singleton boolean primary key default true check (singleton),
+  id uuid primary key default gen_random_uuid(),
+  singleton boolean default true,
   gst_rate numeric not null default 0.05,
   full_wrap_discount_pct numeric not null default 0.07,
   soffit_fascia_discount_pct numeric not null default 0.5,
@@ -125,6 +128,10 @@ create table if not exists settings (
 );
 
 alter table settings add column if not exists id uuid default gen_random_uuid();
+update settings set id = gen_random_uuid() where id is null;
+alter table settings alter column id set not null;
+alter table settings drop constraint if exists settings_pkey;
+alter table settings add constraint settings_pkey primary key (id);
 alter table settings add column if not exists owner_id uuid references users(id);
 create unique index if not exists settings_owner_id_key on settings (owner_id);
 
