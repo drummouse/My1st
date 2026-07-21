@@ -51,13 +51,14 @@ test('account restriction updates status, audits, and queues notifications in on
 });
 
 test('restriction queues email and sms with reason and support reference', () => {
-  const rows = buildRestrictionNotifications(
+  const { notifications: rows, skipped } = buildRestrictionNotifications(
     { id: 'u1', email: 'owner@example.com', phone: '+17805550123' },
     'frozen',
     'Security review',
     'IW-ABC123',
   );
   assert.deepEqual(rows.map((row) => row.channel), ['in_app', 'email', 'sms']);
+  assert.deepEqual(skipped, []);
   for (const row of rows) {
     assert.equal(row.payload.reason, 'Security review');
     assert.equal(row.supportReference, 'IW-ABC123');
@@ -82,13 +83,14 @@ test('configured provider marks delivery sent', async () => {
 });
 
 test('a design-approved notice is only queued per channel the project actually has, signed with the resolved brand', () => {
-  const withBoth = buildDesignApprovedNotifications(
+  const { notifications: withBoth, skipped: withBothSkipped } = buildDesignApprovedNotifications(
     { id: 'p1', job_number: '26-180-ER', customer_name: 'Jim', customer_email: 'jim@example.com', customer_phone: '+17805550123' },
     'IW-ABC123',
     'https://example.com/?p=p1',
     'Acme Roofing',
   );
   assert.deepEqual(withBoth.map((row) => row.channel), ['email', 'sms']);
+  assert.deepEqual(withBothSkipped, []);
   assert.equal(withBoth[0].destination, 'jim@example.com');
   assert.equal(withBoth[1].destination, '+17805550123');
   for (const row of withBoth) {
@@ -98,14 +100,15 @@ test('a design-approved notice is only queued per channel the project actually h
     assert.equal(row.payload.shareUrl, 'https://example.com/?p=p1');
   }
 
-  const emailOnly = buildDesignApprovedNotifications(
+  const { notifications: emailOnly } = buildDesignApprovedNotifications(
     { id: 'p2', customer_email: 'only@example.com' }, 'IW-DEF456', 'https://example.com/?p=p2', 'Acme Roofing',
   );
   assert.deepEqual(emailOnly.map((row) => row.channel), ['email']);
   assert.match(emailOnly[0].payload.message, /^Hello, /);
 
-  const neither = buildDesignApprovedNotifications({ id: 'p3' }, 'IW-GHI789', 'https://example.com/?p=p3', 'Acme Roofing');
+  const { notifications: neither, skipped: neitherSkipped } = buildDesignApprovedNotifications({ id: 'p3' }, 'IW-GHI789', 'https://example.com/?p=p3', 'Acme Roofing');
   assert.deepEqual(neither, []);
+  assert.deepEqual(neitherSkipped, []);
 });
 
 test('deliverNotification resolves destination/identity from an explicit context, not a nonexistent row.destination column', async () => {

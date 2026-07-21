@@ -29,6 +29,14 @@ test('runtime and reference schemas widen notification_outbox for business-facin
   }
 });
 
+test('runtime and reference schemas add scheduled-drain support columns to notification_outbox', () => {
+  for (const source of [runtimeSchema, referenceSchema]) {
+    for (const fragment of ['claimed_at timestamptz', 'error_category text']) {
+      assert.equal(source.includes(fragment), true, `missing: ${fragment}`);
+    }
+  }
+});
+
 test('runtime and reference schemas add optional customer contact to projects', () => {
   for (const source of [runtimeSchema, referenceSchema]) {
     assert.equal(source.includes('customer_email text'), true);

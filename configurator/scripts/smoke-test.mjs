@@ -188,6 +188,48 @@ await check('auth guard /api/library/products', '/api/library/products', (respon
   return true;
 });
 await check(
+  'auth guard /api/comms identity',
+  '/api/comms/identity',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+);
+await check(
+  'auth guard /api/comms/drain (no session, no scheduler secret)',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+// Deliberately wrong scheduler secret — proves the scheduler auth path
+// itself is live and rejects before any database/provider work, without
+// ever needing a valid secret (never send a real message from smoke).
+await check(
+  'scheduler auth guard /api/comms/drain (wrong secret)',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-comms-scheduler-secret': 'smoke-test-invalid-secret' },
+    body: JSON.stringify({}),
+  },
+);
+await check(
+  'scheduler auth guard /api/comms/drain rejects GET before checking the secret',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 405) return `expected 405, received ${response.status}`;
+    return true;
+  },
+  { method: 'GET', headers: { 'x-comms-scheduler-secret': 'smoke-test-invalid-secret' } },
+);
+await check(
   'auth guard /api/capture publish',
   '/api/capture/review/smoke-test/publish',
   (response) => {

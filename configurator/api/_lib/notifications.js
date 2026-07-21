@@ -1,3 +1,5 @@
+import { normalizePhoneE164, normalizeEmail } from './commsValidation.js';
+
 function restrictionMessage(state, reason, supportReference) {
   return {
     subject: `IronWrap account ${state}`,
@@ -8,21 +10,45 @@ function restrictionMessage(state, reason, supportReference) {
   };
 }
 
+// Returns { notifications, skipped } rather than a bare array — the D-066
+// fix. A channel is only ever queued with a destination that has already
+// passed the same validator commsDelivery.js re-checks before provider
+// dispatch (defense in depth, not redundancy: this is the earliest point a
+// user's stored phone/email is actually used for delivery, so it's the
+// right place to catch legacy bad data too). No channel is ever silently
+// substituted with a default — an invalid recipient is skipped and reported
+// in `skipped`, and the other channel (if requested) is queued regardless,
+// per D-066 ("do not block email because SMS validation failed").
 export function buildRestrictionNotifications(user, state, reason, supportReference) {
   const payload = restrictionMessage(state, reason, supportReference);
   const notifications = [{
     userId: user.id, channel: 'in_app', template: 'account-restricted',
     destination: user.id, payload, supportReference,
   }];
-  if (user.email) notifications.push({
-    userId: user.id, channel: 'email', template: 'account-restricted',
-    destination: user.email, payload, supportReference,
-  });
-  if (user.phone) notifications.push({
-    userId: user.id, channel: 'sms', template: 'account-restricted',
-    destination: user.phone, payload, supportReference,
-  });
-  return notifications;
+  const skipped = [];
+  if (user.email) {
+    const email = normalizeEmail(user.email);
+    if (email) {
+      notifications.push({
+        userId: user.id, channel: 'email', template: 'account-restricted',
+        destination: email, payload, supportReference,
+      });
+    } else {
+      skipped.push({ channel: 'email', reason: 'invalid_recipient' });
+    }
+  }
+  if (user.phone) {
+    const phone = normalizePhoneE164(user.phone);
+    if (phone) {
+      notifications.push({
+        userId: user.id, channel: 'sms', template: 'account-restricted',
+        destination: phone, payload, supportReference,
+      });
+    } else {
+      skipped.push({ channel: 'sms', reason: 'invalid_recipient' });
+    }
+  }
+  return { notifications, skipped };
 }
 
 // "Dear <name>, <message> Best wishes, <Brand> team." — the shared voice
@@ -51,13 +77,24 @@ export function buildDesignApprovedNotifications(project, supportReference, shar
     shareUrl,
   };
   const notifications = [];
-  if (project.customer_email) notifications.push({
-    channel: 'email', template: 'design-approved', destination: project.customer_email, payload, supportReference,
-  });
-  if (project.customer_phone) notifications.push({
-    channel: 'sms', template: 'design-approved', destination: project.customer_phone, payload, supportReference,
-  });
-  return notifications;
+  const skipped = [];
+  if (project.customer_email) {
+    const email = normalizeEmail(project.customer_email);
+    if (email) {
+      notifications.push({ channel: 'email', template: 'design-approved', destination: email, payload, supportReference });
+    } else {
+      skipped.push({ channel: 'email', reason: 'invalid_recipient' });
+    }
+  }
+  if (project.customer_phone) {
+    const phone = normalizePhoneE164(project.customer_phone);
+    if (phone) {
+      notifications.push({ channel: 'sms', template: 'design-approved', destination: phone, payload, supportReference });
+    } else {
+      skipped.push({ channel: 'sms', reason: 'invalid_recipient' });
+    }
+  }
+  return { notifications, skipped };
 }
 
 // context.destination/context.identity are the drain worker's resolved

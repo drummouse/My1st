@@ -5,6 +5,7 @@ import { requireCapability } from '../_lib/access.js';
 import { assertAccountTransition, normalizeEmail } from '../_lib/superadminPolicy.js';
 import { createSupportReference } from '../_lib/accountAdministration.js';
 import { buildRestrictionNotifications } from '../_lib/notifications.js';
+import { normalizePhoneE164, normalizeEmail as normalizeRecipientEmail } from '../_lib/commsValidation.js';
 import { toAuditEvent, toNotification, toProjectDiagnostic, toTenantSummary } from '../_lib/superadminDto.js';
 import { handleLibraryAction } from '../_lib/libraryRoutes.js';
 import { LibraryValidationError } from '../_lib/libraryPolicy.js';
@@ -36,10 +37,15 @@ function method(res, expected) {
   res.status(405).json({ error: 'Method not allowed' });
 }
 
+// D-066: an invalid stored phone/email is skipped, never enqueued — this is
+// the same enqueue-time boundary buildRestrictionNotifications uses for the
+// account-restriction path; password-reset notices go through this
+// module-local helper instead, so the same check is applied here too. A
+// channel skipped for one recipient never blocks the other.
 function notificationQueries(user, template, payload, supportReference) {
   const destinations = [
-    user.email && ['email', user.email],
-    user.phone && ['sms', user.phone],
+    user.email && normalizeRecipientEmail(user.email) && ['email', normalizeRecipientEmail(user.email)],
+    user.phone && normalizePhoneE164(user.phone) && ['sms', normalizePhoneE164(user.phone)],
   ].filter(Boolean);
   return destinations.map(([channel, destination]) => sql`
     insert into notification_outbox (user_id, channel, template, payload, support_reference)
@@ -57,15 +63,20 @@ function auditQuery(actor, action, targetId, reason, requestId, supportReference
 }
 
 async function handleSummary(res) {
-  const [accounts, projects, pending] = await Promise.all([
+  const [accounts, projects, pending, permanentlyFailed] = await Promise.all([
     sql`select status, count(*)::int as count from users group by status`,
     sql`select count(*)::int as count from projects`,
-    sql`select count(*)::int as count from notification_outbox where status in ('pending', 'failed')`,
+    // 'failed' is excluded on purpose — it's the frozen, pre-scheduler
+    // legacy status (D-066/D-067); it's no longer actionable, so it
+    // shouldn't read as a live operational backlog.
+    sql`select count(*)::int as count from notification_outbox where status in ('pending', 'processing')`,
+    sql`select count(*)::int as count from notification_outbox where status = 'permanently_failed'`,
   ]);
   res.status(200).json({
     accounts: Object.fromEntries(accounts.map((row) => [row.status || 'active', Number(row.count)])),
     projectCount: Number(projects[0]?.count || 0),
     pendingNotifications: Number(pending[0]?.count || 0),
+    permanentlyFailedNotifications: Number(permanentlyFailed[0]?.count || 0),
   });
 }
 
@@ -151,7 +162,7 @@ async function handleStatus(req, res, actor) {
   const authorized = await requireCapability(req, res, needed);
   if (!authorized) return;
   const supportReference = createSupportReference();
-  const noticeRows = buildRestrictionNotifications(target, nextStatus, transition.reason, supportReference);
+  const { notifications: noticeRows, skipped } = buildRestrictionNotifications(target, nextStatus, transition.reason, supportReference);
   const deletion = nextStatus === 'deleted';
   const queries = [
     sql`update users set status = ${nextStatus}, status_reason = ${transition.reason},
@@ -166,7 +177,7 @@ async function handleStatus(req, res, actor) {
     `),
   ];
   await sql.transaction(queries);
-  res.status(200).json({ ok: true, status: nextStatus, supportReference, notificationsQueued: noticeRows.length });
+  res.status(200).json({ ok: true, status: nextStatus, supportReference, notificationsQueued: noticeRows.length, notificationsSkipped: skipped });
 }
 
 async function handlePasswordReset(req, res, actor) {
@@ -195,9 +206,16 @@ async function handleAudit(req, res) {
   res.status(200).json({ events: rows.map(toAuditEvent) });
 }
 
+const NOTIFICATION_STATUSES = ['pending', 'processing', 'sent', 'permanently_failed', 'failed'];
+
 async function handleNotifications(req, res, actor) {
   if (req.method === 'GET') {
-    const rows = await sql`select * from notification_outbox order by created_at desc limit ${cleanLimit(req.query.limit)}`;
+    const status = String(req.query.status || '');
+    const rows = status
+      ? (NOTIFICATION_STATUSES.includes(status)
+        ? await sql`select * from notification_outbox where status = ${status} order by created_at desc limit ${cleanLimit(req.query.limit)}`
+        : [])
+      : await sql`select * from notification_outbox order by created_at desc limit ${cleanLimit(req.query.limit)}`;
     res.status(200).json({ notifications: rows.map(toNotification) });
     return;
   }
@@ -207,7 +225,7 @@ async function handleNotifications(req, res, actor) {
   if (!reason) return res.status(400).json({ error: 'A reason is required' });
   const supportReference = createSupportReference();
   await sql.transaction([
-    sql`update notification_outbox set status = 'pending', next_attempt_at = now(), last_error = null where id = ${id}`,
+    sql`update notification_outbox set status = 'pending', next_attempt_at = now(), last_error = null, error_category = null where id = ${id}`,
     auditQuery(actor, 'notification.retry', null, reason, requestIdFor(req), supportReference, { notificationId: id }),
   ]);
   res.status(200).json({ ok: true, supportReference });

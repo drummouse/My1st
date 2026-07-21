@@ -9,6 +9,7 @@ import {
   roleForBootstrap,
 } from '../_lib/superadminPolicy.js';
 import { requireActiveUser } from '../_lib/access.js';
+import { normalizePhoneE164 } from '../_lib/commsValidation.js';
 
 // Merged signup/login/logout/me/profile into one function (dispatched on
 // the [action] path segment) — Vercel's Hobby plan caps the number of
@@ -69,6 +70,17 @@ export default async function handler(req, res) {
     }
     if (!phone?.trim()) {
       res.status(400).json({ error: 'Phone number is required' });
+      return;
+    }
+    // D-066: the earliest trustworthy boundary for a Canadian/US phone
+    // number this app will later use as an SMS destination — root-caused
+    // an incident where an unvalidated signup phone (stored verbatim, no
+    // format check at all) permanently failed every SMS attempt against it.
+    // Free-text country/region fields elsewhere aren't in scope; the app is
+    // CA/US-only per regionByCode below, matching this validator's NANP
+    // assumption.
+    if (!normalizePhoneE164(phone)) {
+      res.status(400).json({ error: 'Enter a valid Canadian or US phone number' });
       return;
     }
     if (!addressLine?.trim() || !city?.trim() || !regionCode?.trim() || !postalCode?.trim()) {
@@ -256,6 +268,10 @@ export default async function handler(req, res) {
       }
       if (!phone?.trim()) {
         res.status(400).json({ error: 'Phone number is required' });
+        return;
+      }
+      if (!normalizePhoneE164(phone)) {
+        res.status(400).json({ error: 'Enter a valid Canadian or US phone number' });
         return;
       }
       if (!addressLine?.trim() || !city?.trim() || !regionCode?.trim() || !postalCode?.trim()) {

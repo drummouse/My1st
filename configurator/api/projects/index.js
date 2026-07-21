@@ -157,7 +157,7 @@ export default async function handler(req, res) {
         try {
           const notifier = await resolveClientNotifier(row.owner_id);
           if (notifier) {
-            const notices = buildDesignApprovedNotifications(row, createSupportReference(), shareUrl, notifier.brandName);
+            const { notifications: notices, skipped } = buildDesignApprovedNotifications(row, createSupportReference(), shareUrl, notifier.brandName);
             for (const notice of notices) {
               await sql`
                 insert into notification_outbox
@@ -167,6 +167,13 @@ export default async function handler(req, res) {
                   ${notice.channel === 'email' ? notice.destination : null},
                   ${notice.channel === 'sms' ? notice.destination : null})
               `;
+            }
+            // D-066: an invalid customer_email/customer_phone never blocks the
+            // approval response the customer sees, and never blocks the other
+            // channel — it's simply not queued, logged here (no recipient
+            // value) so a real invalid-contact-data case is discoverable.
+            if (skipped.length) {
+              console.warn(`Approval notice skipped for invalid recipient: project=${id} channels=${skipped.map((s) => s.channel).join(',')}`);
             }
           }
         } catch (err) {
