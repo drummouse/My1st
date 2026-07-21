@@ -13,6 +13,13 @@ const capabilityByAction = {
   session: 'capture.create',
   assets: 'capture.create',
   asset: 'capture.create',
+  'asset.blob': 'capture.create',
+  'asset.replace': 'capture.create',
+  'claude.guidance': 'capture.create',
+  materialZone: 'capture.create',
+  textureDirection: 'capture.create',
+  studioValidation: 'capture.create',
+  'materialPackage.dryRun': 'capture.create',
   validate: 'capture.create',
   submit: 'capture.create',
   calibration: 'capture.create',
@@ -38,6 +45,8 @@ const ERROR_STATUS = {
   CAPTURE_TRANSITION_INVALID: 409,
   CAPTURE_SESSION_LOCKED: 409,
   CAPTURE_NOT_AUTHORIZED: 403,
+  CAPTURE_ASSET_NOT_REPLACEABLE: 409,
+  CAPTURE_ASSET_ALREADY_SUPERSEDED: 409,
 };
 
 export default async function handler(req, res) {
@@ -108,8 +117,8 @@ export default async function handler(req, res) {
     if (action === 'assets') {
       const id = String(req.query.id || '');
       if (req.method === 'POST') {
-        const { asset } = await service.addAsset(actor, id, req.body || {});
-        return res.status(201).json({ asset });
+        const { asset, duplicate } = await service.addAsset(actor, id, req.body || {});
+        return res.status(duplicate ? 200 : 201).json({ asset, duplicate });
       }
       return methodNotAllowed(res, 'POST');
     }
@@ -123,6 +132,51 @@ export default async function handler(req, res) {
       return methodNotAllowed(res, 'DELETE');
     }
 
+    // /api/capture/sessions/<id>/assets/<assetId>/blob — D-051: streams a
+    // Capture asset's bytes server-side. The connected Blob store is
+    // private-only (no public-access mode), so this is the read-side
+    // counterpart to captureUpload.js's access: 'private' uploads —
+    // authorized the same way every other Capture route is (owner or
+    // superadmin), then fetched with the platform's own credentials.
+    if (action === 'asset.blob') {
+      if (req.method === 'GET') {
+        const { stream, contentType } = await service.getAssetBlob(
+          actor, String(req.query.id || ''), String(req.query.assetId || ''),
+        );
+        res.setHeader('Content-Type', contentType || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        const { Readable } = await import('node:stream');
+        Readable.fromWeb(stream).pipe(res);
+        return;
+      }
+      return methodNotAllowed(res, 'GET');
+    }
+
+    // /api/capture/sessions/<id>/assets/<assetId>/replace — R2.2: preserve
+    // the prior accepted image (superseded_by lineage) instead of deleting
+    // it when the contributor replaces a shot with a better photo.
+    if (action === 'asset.replace') {
+      if (req.method === 'POST') {
+        const { asset, supersededAssetId } = await service.replaceAsset(
+          actor, String(req.query.id || ''), String(req.query.assetId || ''), req.body || {},
+        );
+        return res.status(201).json({ asset, supersededAssetId });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/claude-guidance — R2.4: advisory Claude
+    // semantic guidance, kill-switched, timeout/failure-safe, always
+    // recorded as an immutable capture_claude_analyses row regardless of
+    // outcome. Never blocks capture completion.
+    if (action === 'claude.guidance') {
+      if (req.method === 'POST') {
+        const { analysis } = await service.requestGuidance(actor, String(req.query.id || ''));
+        return res.status(201).json({ analysis });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
     // /api/capture/sessions/<id>/calibration — save calibration evidence
     // and the known reference measurement (Slice R1).
     if (action === 'calibration') {
@@ -131,6 +185,46 @@ export default async function handler(req, res) {
         return res.status(200).json({ calibration });
       }
       return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/material-zone — R2.5: confirm the single
+    // required main_visible_face zone.
+    if (action === 'materialZone') {
+      if (req.method === 'POST') {
+        const { session } = await service.saveMaterialZone(actor, String(req.query.id || ''), req.body || {});
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/texture-direction — R2.5.
+    if (action === 'textureDirection') {
+      if (req.method === 'POST') {
+        const { session } = await service.saveTextureDirection(actor, String(req.query.id || ''), req.body || {});
+        return res.status(200).json({ session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/studio-validation — R2.5: honest flat-wall
+    // technical compatibility check (schematic, not reconstructed geometry).
+    if (action === 'studioValidation') {
+      if (req.method === 'POST') {
+        const { validation, session } = await service.evaluateStudioValidation(actor, String(req.query.id || ''));
+        return res.status(200).json({ validation, session });
+      }
+      return methodNotAllowed(res, 'POST');
+    }
+
+    // /api/capture/sessions/<id>/material-package/dry-run — R2.6: side-
+    // effect-free validation of the R2 material-package manifest subset.
+    // GET, not POST — nothing here is ever written.
+    if (action === 'materialPackage.dryRun') {
+      if (req.method === 'GET') {
+        const result = await service.dryRunMaterialPackage(actor, String(req.query.id || ''));
+        return res.status(200).json(result);
+      }
+      return methodNotAllowed(res, 'GET');
     }
 
     // /api/capture/sessions/<id>/measurements — confirmed measurement rows.

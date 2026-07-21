@@ -4,17 +4,22 @@ import { readFile } from 'node:fs/promises';
 import {
   normalizeCalibration,
   normalizeMeasurementInput,
+  normalizeMaterialZoneState,
+  normalizeTextureDirection,
   validateCompleteness,
   PROFILE_INITIAL_VIEWS,
   PROFILE_ADAPTIVE_VIEW,
   CAPTURE_TYPES,
   ASSET_PURPOSES,
+  REQUIRED_MATERIAL_ZONE,
+  TEXTURE_DIRECTIONS,
 } from '../api/_lib/capturePolicy.js';
 import {
   evaluateProfileEvidence,
   buildProfilePreviewSvg,
   SHOT_GUIDES,
 } from '../api/_lib/captureEvidence.js';
+import { evaluateFlatWallValidation, FLAT_WALL_PREVIEW_LABEL } from '../api/_lib/captureStudioValidation.js';
 import { createCaptureService } from '../api/_lib/captureService.js';
 
 const OWNER = { id: 'user-a', role: 'owner' };
@@ -67,6 +72,46 @@ test('measurement input is validated: feature, value, unit, method, axis', () =>
   assert.throws(() => normalizeMeasurementInput({ feature: 'x', value: 5, unit: 'mm', axis: 'diagonal' }), { code: 'CAPTURE_MEASUREMENT_INVALID' });
 });
 
+test('R2.5: material zone confirmation requires an explicit true, and only ever produces main_visible_face', () => {
+  const state = normalizeMaterialZoneState({ mainVisibleFaceConfirmed: true });
+  assert.deepEqual(state.zones, [{ zoneId: REQUIRED_MATERIAL_ZONE, confirmed: true }]);
+  assert.equal(REQUIRED_MATERIAL_ZONE, 'main_visible_face');
+  assert.ok(state.confirmedAt);
+
+  assert.throws(() => normalizeMaterialZoneState({}), { code: 'CAPTURE_MATERIAL_ZONE_INVALID' });
+  assert.throws(() => normalizeMaterialZoneState({ mainVisibleFaceConfirmed: 'yes' }), { code: 'CAPTURE_MATERIAL_ZONE_INVALID' });
+  assert.throws(() => normalizeMaterialZoneState({ mainVisibleFaceConfirmed: false }), { code: 'CAPTURE_MATERIAL_ZONE_INVALID' });
+});
+
+test('R2.5: texture direction is one of the four supported values', () => {
+  for (const direction of TEXTURE_DIRECTIONS) {
+    assert.equal(normalizeTextureDirection(direction), direction);
+  }
+  assert.throws(() => normalizeTextureDirection('diagonal'), { code: 'CAPTURE_TEXTURE_DIRECTION_INVALID' });
+  assert.throws(() => normalizeTextureDirection(''), { code: 'CAPTURE_TEXTURE_DIRECTION_INVALID' });
+});
+
+test('R2.5: flat-wall validation is "ready" only once dimensions, material zone, and texture direction all exist', () => {
+  const width = { axis: 'width', value: 450, unit: 'mm' };
+  const height = { axis: 'height', value: 38, unit: 'mm' };
+  const zone = normalizeMaterialZoneState({ mainVisibleFaceConfirmed: true });
+
+  const nothing = evaluateFlatWallValidation({});
+  assert.equal(nothing.status, 'needs_attention');
+  assert.deepEqual(nothing.issues.map((i) => i.code).sort(), ['DIMENSIONS_MISSING', 'MATERIAL_ZONE_MISSING', 'TEXTURE_DIRECTION_MISSING']);
+  assert.equal(nothing.label, FLAT_WALL_PREVIEW_LABEL);
+  assert.match(nothing.label, /not reconstructed geometry/i);
+  assert.match(nothing.label, /not fabrication grade/i);
+
+  const partial = evaluateFlatWallValidation({ measurements: [width, height], materialZoneState: zone });
+  assert.equal(partial.status, 'needs_attention');
+  assert.deepEqual(partial.issues.map((i) => i.code), ['TEXTURE_DIRECTION_MISSING']);
+
+  const ready = evaluateFlatWallValidation({ measurements: [width, height], materialZoneState: zone, textureDirection: 'along_run' });
+  assert.equal(ready.status, 'ready');
+  assert.deepEqual(ready.issues, []);
+});
+
 test('evidence gates in order: calibration, initial views, adaptive view, complete', () => {
   const uncalibrated = evaluateProfileEvidence({ fields: [], assets: [], measurements: [] });
   assert.equal(uncalibrated.phase, 'calibration');
@@ -103,6 +148,27 @@ test('evidence gates in order: calibration, initial views, adaptive view, comple
   assert.deepEqual(done.shotRequests, []);
 });
 
+test('R2.2: a superseded (replaced) source asset no longer satisfies its view', () => {
+  const supersededLeftEnd = { id: 'a0', purpose: 'left_end', classification: 'source', supersededBy: 'a-new' };
+  const currentLeftEndReplacement = { id: 'a-new', purpose: 'left_end', classification: 'source' };
+
+  // Only the superseded asset exists — the view still reads as missing.
+  const withOnlySuperseded = evaluateProfileEvidence({
+    fields: [calibrationField()],
+    assets: [supersededLeftEnd, ...viewAssets(['right_end', 'front', 'iso_front_left'])],
+    measurements: [],
+  });
+  assert.ok(withOnlySuperseded.shotRequests.some((r) => r.view === 'left_end'), 'a superseded asset must not count as satisfying the view');
+
+  // The current replacement satisfies it again.
+  const withReplacement = evaluateProfileEvidence({
+    fields: [calibrationField()],
+    assets: [supersededLeftEnd, currentLeftEndReplacement, ...viewAssets(['right_end', 'front', 'iso_front_left'])],
+    measurements: [],
+  });
+  assert.ok(!withReplacement.shotRequests.some((r) => r.view === 'left_end'), 'the current (non-superseded) replacement satisfies the view');
+});
+
 test('every shot request carries the full prompt contract', () => {
   for (const guide of Object.values(SHOT_GUIDES)) {
     for (const key of ['view', 'title', 'position', 'angle', 'distance', 'orientation', 'requiredFeature', 'reason']) {
@@ -123,6 +189,55 @@ test('evidence confidence is deterministic and bounded', () => {
   assert.equal(empty.confidence, 0);
 });
 
+test('R2.3: deterministic quality findings surface in evidence output additively, without touching confidence', () => {
+  const cleanAssets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]);
+  const withoutFindings = evaluateProfileEvidence({
+    fields: [calibrationField()], assets: cleanAssets, measurements: [confirmedMeasurement()],
+  });
+
+  const flaggedAssets = cleanAssets.map((a, i) => (i === 0 ? {
+    ...a,
+    captureMetadata: {
+      deterministicQuality: {
+        pipelineVersion: 1,
+        findings: [{ type: 'sharpness_estimate', severity: 'warning', value: 12 }],
+      },
+    },
+  } : a));
+  const withFindings = evaluateProfileEvidence({
+    fields: [calibrationField()], assets: flaggedAssets, measurements: [confirmedMeasurement()],
+  });
+
+  // Same coverage/measurements → identical R1 contract fields, quality
+  // findings never leak into them.
+  assert.equal(withFindings.phase, withoutFindings.phase);
+  assert.equal(withFindings.complete, withoutFindings.complete);
+  assert.equal(withFindings.confidence, withoutFindings.confidence, 'quality findings must never affect the deterministic evidence score');
+  assert.deepEqual(withFindings.shotRequests, withoutFindings.shotRequests);
+
+  // But the findings ARE surfaced, additively.
+  assert.equal(withoutFindings.assetQuality.length, 0);
+  assert.equal(withFindings.assetQuality.length, 1);
+  assert.equal(withFindings.assetQuality[0].findings[0].type, 'sharpness_estimate');
+  assert.equal(withFindings.qualitySummary.issueCount, 1);
+  assert.equal(withFindings.qualitySummary.hasPossibleDuplicates, false);
+});
+
+test('R2.3: possible-duplicate findings roll up into qualitySummary, and superseded assets are excluded', () => {
+  const assets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]).map((a, i) => (i === 0 ? {
+    ...a,
+    captureMetadata: {
+      deterministicQuality: { pipelineVersion: 1, findings: [{ type: 'possible_duplicate_indication', severity: 'info', value: 2 }] },
+    },
+  } : a));
+  const evidence = evaluateProfileEvidence({ fields: [calibrationField()], assets, measurements: [confirmedMeasurement()] });
+  assert.equal(evidence.qualitySummary.hasPossibleDuplicates, true);
+
+  const superseded = assets.map((a, i) => (i === 0 ? { ...a, supersededBy: 'newer-asset' } : a));
+  const evidenceAfterReplace = evaluateProfileEvidence({ fields: [calibrationField()], assets: superseded, measurements: [confirmedMeasurement()] });
+  assert.equal(evidenceAfterReplace.assetQuality.length, 0, 'a superseded asset\'s findings drop out once replaced');
+});
+
 test('profile_geometry completeness requires calibration, all views, and a measurement — not category', () => {
   const session = { captureType: 'profile_geometry', title: 'Standing seam 450', category: null };
   const incomplete = validateCompleteness({ session, fields: [], assets: [], measurements: [] });
@@ -140,6 +255,19 @@ test('profile_geometry completeness requires calibration, all views, and a measu
   });
   assert.deepEqual(complete.errors, []);
   assert.equal(complete.score, 100);
+});
+
+test('R2.2: completeness treats a superseded source asset as not covering its view', () => {
+  const session = { captureType: 'profile_geometry', title: 'Standing seam 450', category: null };
+  const assets = viewAssets([...PROFILE_INITIAL_VIEWS, PROFILE_ADAPTIVE_VIEW]);
+  assets[0] = { ...assets[0], supersededBy: 'replacement-id' }; // left_end is now superseded, no replacement present
+  const result = validateCompleteness({
+    session,
+    fields: [calibrationField()],
+    assets,
+    measurements: [confirmedMeasurement()],
+  });
+  assert.ok(result.errors.some((e) => e.code === 'SHOT_COVERAGE_INCOMPLETE'));
 });
 
 test('the measured preview SVG appears only with width and height and carries real values', () => {
@@ -170,11 +298,18 @@ function makeStore(session) {
     listAssets: async () => [],
     listComments: async () => [],
     listMeasurements: async () => state.measurements,
+    listClaudeAnalyses: async () => [],
     upsertField: async (id, fieldKey, value) => { state.fields.push({ field_key: fieldKey, value }); },
     insertMeasurement: async (change) => { state.measurements.push(change); return { ...change, confirmed_at: 'now' }; },
     getMeasurement: async (id) => state.measurements.find((m) => m.id === id) || null,
     deleteMeasurement: async (id) => { state.measurements = state.measurements.filter((m) => m.id !== id); },
     appendAudit: async (event) => { state.audits.push(event); },
+    updateMaterialReadiness: async (id, patch) => {
+      if (patch.materialZoneState) state.session.material_zone_state = patch.materialZoneState;
+      if (patch.textureDirection) state.session.texture_direction = patch.textureDirection;
+      if (patch.studioValidation) state.session.studio_validation = patch.studioValidation;
+      return state.session;
+    },
   };
 }
 
@@ -211,9 +346,40 @@ test('measurements are owner-scoped, confirmed by their author, and locked with 
     { code: 'CAPTURE_SESSION_LOCKED' });
 });
 
+test('R2.5: saveMaterialZone/saveTextureDirection/evaluateStudioValidation orchestrate the pure normalizers correctly', async () => {
+  const store = makeStore();
+  const service = createCaptureService({ store });
+
+  const { session: afterZone } = await service.saveMaterialZone(OWNER, 's1', { mainVisibleFaceConfirmed: true });
+  assert.deepEqual(afterZone.materialZoneState.zones, [{ zoneId: REQUIRED_MATERIAL_ZONE, confirmed: true }]);
+  await assert.rejects(service.saveMaterialZone(OWNER, 's1', {}), { code: 'CAPTURE_MATERIAL_ZONE_INVALID' });
+
+  const { session: afterDirection } = await service.saveTextureDirection(OWNER, 's1', { textureDirection: 'along_run' });
+  assert.equal(afterDirection.textureDirection, 'along_run');
+  await assert.rejects(service.saveTextureDirection(OWNER, 's1', { textureDirection: 'sideways' }),
+    { code: 'CAPTURE_TEXTURE_DIRECTION_INVALID' });
+
+  // Not yet ready: no confirmed measurements in this store.
+  const { validation: notReady } = await service.evaluateStudioValidation(OWNER, 's1');
+  assert.equal(notReady.status, 'needs_attention');
+  assert.ok(notReady.issues.some((i) => i.code === 'DIMENSIONS_MISSING'));
+
+  await service.addMeasurement(OWNER, 's1', { feature: 'overall width', axis: 'width', value: 450, unit: 'mm', method: 'ruler' });
+  await service.addMeasurement(OWNER, 's1', { feature: 'rib height', axis: 'height', value: 38, unit: 'mm', method: 'ruler' });
+  const { validation: ready, session: finalSession } = await service.evaluateStudioValidation(OWNER, 's1');
+  assert.equal(ready.status, 'ready');
+  assert.deepEqual(ready.issues, []);
+  assert.equal(finalSession.studioValidation.status, 'ready');
+
+  const locked = makeStore({ id: 's1', owner_id: 'user-a', status: 'submitted', capture_type: 'profile_geometry' });
+  const lockedService = createCaptureService({ store: locked });
+  await assert.rejects(lockedService.saveMaterialZone(OWNER, 's1', { mainVisibleFaceConfirmed: true }), { code: 'CAPTURE_SESSION_LOCKED' });
+  await assert.rejects(lockedService.saveTextureDirection(OWNER, 's1', { textureDirection: 'along_run' }), { code: 'CAPTURE_SESSION_LOCKED' });
+});
+
 test('scanner routes are capability-mapped, rewritten, smoke-guarded, and schema-backed', async () => {
   const route = await readFile(new URL('../api/capture/index.js', import.meta.url), 'utf8');
-  for (const action of ['calibration', 'measurements', 'measurement', 'evidence']) {
+  for (const action of ['calibration', 'measurements', 'measurement', 'evidence', 'materialZone', 'textureDirection', 'studioValidation']) {
     assert.match(route, new RegExp(`${action}: 'capture\\.create'`));
   }
 
@@ -224,6 +390,9 @@ test('scanner routes are capability-mapped, rewritten, smoke-guarded, and schema
     '/api/capture/sessions/:id/measurements',
     '/api/capture/sessions/:id/measurements/:measurementId',
     '/api/capture/sessions/:id/evidence',
+    '/api/capture/sessions/:id/material-zone',
+    '/api/capture/sessions/:id/texture-direction',
+    '/api/capture/sessions/:id/studio-validation',
   ]) {
     assert.ok(sources.includes(path), `missing rewrite for ${path}`);
     assert.ok(sources.indexOf(path) < sources.indexOf('/api/capture/sessions/:id'),
@@ -232,6 +401,9 @@ test('scanner routes are capability-mapped, rewritten, smoke-guarded, and schema
 
   const smoke = await readFile(new URL('../scripts/smoke-test.mjs', import.meta.url), 'utf8');
   assert.match(smoke, /auth guard \/api\/capture evidence/);
+  assert.match(smoke, /auth guard \/api\/capture material-zone/);
+  assert.match(smoke, /auth guard \/api\/capture texture-direction/);
+  assert.match(smoke, /auth guard \/api\/capture studio-validation/);
 
   for (const source of [
     await readFile(new URL('../api/_lib/db.js', import.meta.url), 'utf8'),
@@ -239,6 +411,8 @@ test('scanner routes are capability-mapped, rewritten, smoke-guarded, and schema
   ]) {
     assert.match(source, /create table if not exists capture_measurements/);
     assert.match(source, /'profile_geometry','color_finish'/);
+    assert.match(source, /material_zone_state jsonb/);
+    assert.match(source, /'along_run','across_coverage','custom','not_applicable'/);
   }
   // The widening must drop-and-re-add the constraints for existing tables.
   const runtime = await readFile(new URL('../api/_lib/db.js', import.meta.url), 'utf8');

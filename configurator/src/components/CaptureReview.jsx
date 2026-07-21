@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { captureApi } from '../lib/captureClient.js';
+import { captureApi, captureAssetBlobUrl } from '../lib/captureClient.js';
 
 const QUEUE_STATUSES = [
   ['', 'All'], ['submitted', 'Submitted'], ['in_review', 'In review'],
@@ -121,10 +121,10 @@ export default function CaptureReview() {
             {sources.map((asset) => (
               <div className="capture-photo-slot" key={asset.id}>
                 <div className="capture-photo-slot-title">{asset.purpose}</div>
-                <a href={asset.url} target="_blank" rel="noreferrer">
+                <a href={captureAssetBlobUrl(session.id, asset.id)} target="_blank" rel="noreferrer">
                   <img
                     className="capture-photo-thumb"
-                    src={(thumbFor(asset) || asset).url}
+                    src={captureAssetBlobUrl(session.id, (thumbFor(asset) || asset).id)}
                     alt={`${asset.purpose} photo — opens full size for zoom`}
                   />
                 </a>

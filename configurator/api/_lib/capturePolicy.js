@@ -49,6 +49,11 @@ export const DIMENSION_UNITS = Object.freeze(['mm', 'cm', 'in', 'ft']);
 // cannot be estimated against, so it blocks submission for those
 // categories only.
 export const EXPOSURE_CATEGORIES = Object.freeze(['roofing', 'siding']);
+// R2.5: the only material zone R2 requires — see the R2 authorization's
+// explicit scope ("Required main_visible_face material zone"). Backside/
+// cut-edge/custom zones are R4+ per the Material Package Specification.
+export const REQUIRED_MATERIAL_ZONE = 'main_visible_face';
+export const TEXTURE_DIRECTIONS = Object.freeze(['along_run', 'across_coverage', 'custom', 'not_applicable']);
 
 export class CaptureValidationError extends Error {
   constructor(code, message, details = {}) {
@@ -145,8 +150,11 @@ export function validateCompleteness({ session = {}, fields = [], assets = [], m
   const warnings = [];
   const field = (key) => fields.find((f) => (f.fieldKey ?? f.field_key) === key)?.value ?? null;
   const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
+  // A superseded (replaced) source asset no longer counts as "the" photo
+  // for its view — only the current, non-superseded one does (R2.2).
   const hasPhoto = (purpose) => assets.some((a) => a.purpose === purpose
-    && (a.classification || 'source') === 'source');
+    && (a.classification || 'source') === 'source'
+    && !(a.supersededBy ?? a.superseded_by));
   const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
   const add = (list, code, message) => list.push({ code, message });
   const captureType = session.captureType ?? session.capture_type;
@@ -280,6 +288,56 @@ export function normalizeMeasurementInput(input = {}) {
   };
 }
 
+// R2.5: material zone + texture direction — deliberately minimal. R2
+// requires confirming exactly one zone (main_visible_face); it does not
+// implement the full geometry-behavior/dimension-behavior model, backside/
+// cut-edge zones, or UV/procedural mapping — those remain R4+.
+export const MATERIAL_ZONE_SCHEMA_VERSION = 1;
+export function normalizeMaterialZoneState(input = {}) {
+  if (input.mainVisibleFaceConfirmed !== true) {
+    throw new CaptureValidationError('CAPTURE_MATERIAL_ZONE_INVALID',
+      'Confirm the main visible face material zone before continuing');
+  }
+  return {
+    schemaVersion: MATERIAL_ZONE_SCHEMA_VERSION,
+    zones: [{ zoneId: REQUIRED_MATERIAL_ZONE, confirmed: true }],
+    confirmedAt: new Date().toISOString(),
+  };
+}
+
+export function normalizeTextureDirection(input) {
+  const value = clean(input);
+  if (!TEXTURE_DIRECTIONS.includes(value)) {
+    throw new CaptureValidationError('CAPTURE_TEXTURE_DIRECTION_INVALID',
+      `Texture direction must be one of: ${TEXTURE_DIRECTIONS.join(', ')}`);
+  }
+  return value;
+}
+
+const REQUESTED_POSE_TEXT_MAX = 300;
+
+// Bounded, best-effort normalization of the requested-pose contract (§9:
+// position/angle/distance/orientation/requiredFeature/rulerVisible/reason)
+// recorded alongside an accepted photo, so an asset's lineage always shows
+// what shot was actually asked for — not just what was uploaded (R2.2).
+// Deliberately not validated against SHOT_GUIDES verbatim so both the
+// deterministic guide and a future Claude-sourced request populate it the
+// same way.
+function normalizeRequestedPose(pose) {
+  if (!pose || typeof pose !== 'object') return null;
+  const text = (value) => clean(value).slice(0, REQUESTED_POSE_TEXT_MAX) || null;
+  const normalized = {
+    position: text(pose.position),
+    angle: text(pose.angle),
+    distance: text(pose.distance),
+    orientation: text(pose.orientation),
+    requiredFeature: text(pose.requiredFeature),
+    rulerVisible: pose.rulerVisible == null ? null : Boolean(pose.rulerVisible),
+    reason: text(pose.reason),
+  };
+  return Object.values(normalized).some((value) => value !== null) ? normalized : null;
+}
+
 // Finalize-upload input for one capture asset. The image itself already
 // went straight to Blob storage via the signed direct-upload flow — this
 // validates the metadata row we are about to trust. The URL must point at
@@ -322,6 +380,12 @@ export function normalizeAssetInput(input = {}) {
     }
     return result;
   };
+  const captureMetadata = input.captureMetadata && typeof input.captureMetadata === 'object' && !Array.isArray(input.captureMetadata)
+    ? { ...input.captureMetadata } : {};
+  const requestedPose = normalizeRequestedPose(input.requestedPose ?? captureMetadata.requestedPose);
+  if (requestedPose) captureMetadata.requestedPose = requestedPose;
+  else delete captureMetadata.requestedPose;
+
   return {
     purpose,
     classification,
@@ -332,8 +396,7 @@ export function normalizeAssetInput(input = {}) {
     sizeBytes,
     width: dimension(input.width, 'width'),
     height: dimension(input.height, 'height'),
-    captureMetadata: input.captureMetadata && typeof input.captureMetadata === 'object' && !Array.isArray(input.captureMetadata)
-      ? input.captureMetadata : {},
+    captureMetadata,
   };
 }
 

@@ -508,10 +508,20 @@ export function ensureSchema() {
           published_record_id uuid references library_records(id),
           published_version integer,
           submitted_at timestamptz,
+          material_zone_state jsonb,
+          texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+          studio_validation jsonb,
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
         )
       `;
+      // R2.5: additive/nullable — existing sessions are unaffected.
+      await sql`alter table capture_sessions add column if not exists material_zone_state jsonb`;
+      await sql`alter table capture_sessions add column if not exists texture_direction text`;
+      await sql`alter table capture_sessions drop constraint if exists capture_sessions_texture_direction_check`;
+      await sql`alter table capture_sessions add constraint capture_sessions_texture_direction_check
+        check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable'))`;
+      await sql`alter table capture_sessions add column if not exists studio_validation jsonb`;
       await sql`create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null`;
       await sql`create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status)`;
 
@@ -531,10 +541,17 @@ export function ensureSchema() {
           height integer,
           capture_metadata jsonb not null default '{}'::jsonb,
           upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+          superseded_by uuid references capture_assets(id),
           created_at timestamptz not null default now()
         )
       `;
       await sql`create index if not exists capture_assets_session_id_idx on capture_assets (session_id)`;
+      // R2.2: an accepted source image is never overwritten. Replacing it
+      // inserts a fresh immutable asset and points the OLD row at the new
+      // one via this column — additive metadata only, every other column on
+      // the superseded row (url/checksum/capture_metadata/timestamps) stays
+      // exactly as originally accepted (decision D-039).
+      await sql`alter table capture_assets add column if not exists superseded_by uuid references capture_assets(id)`;
 
       await sql`
         create table if not exists capture_fields (
@@ -594,6 +611,37 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id)`;
+
+      // Claude adaptive-guidance attempts (R2.4, D-044) — one immutable,
+      // append-only row per attempt (success or not), kept in its own
+      // namespace: 'findings' only populated for status='advisory'
+      // (validated, policy-passed responses); every other status carries a
+      // non-sensitive 'diagnostic' instead. No image bytes ever stored here.
+      await sql`
+        create table if not exists capture_claude_analyses (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          owner_id uuid not null references users(id),
+          status text not null check (status in
+            ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
+          model text,
+          prompt_version text,
+          schema_version integer,
+          source_asset_ids jsonb not null default '[]'::jsonb,
+          findings jsonb,
+          diagnostic jsonb not null default '{}'::jsonb,
+          fulfilled_asset_id uuid references capture_assets(id),
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id)`;
+      // Release-readiness fixup: 'configuration_error' added for the
+      // required-CAPTURE_CLAUDE_MODEL correction — widen the existing
+      // constraint for preview branches that already created this table
+      // with the narrower list (same drop-and-re-add idiom as D-035).
+      await sql`alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check`;
+      await sql`alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
+        ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'))`;
     })().catch((err) => {
       schemaReady = undefined;
       throw err;

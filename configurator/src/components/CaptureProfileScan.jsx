@@ -1,12 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { captureApi } from '../lib/captureClient.js';
-import { uploadCaptureImage } from '../lib/captureUpload.js';
+import { captureApi, captureAssetBlobUrl } from '../lib/captureClient.js';
+import { uploadCaptureImage, replaceCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
+import { createCaptureLocalStore, createIndexedDbDriver, createMemoryDriver } from '../lib/captureLocalStore.js';
 // Shared with the server (D-021): the guidance shown is the guidance the
 // submit gate enforces.
 import { evaluateProfileEvidence, buildProfilePreviewSvg, SHOT_GUIDES } from '../../api/_lib/captureEvidence.js';
 import { validateCompleteness, DIMENSION_UNITS } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
+import CaptureFlatWallPreview from './CaptureFlatWallPreview.jsx';
+
+const MM_PER_UNIT = { mm: 1, cm: 10, in: 25.4, ft: 304.8 };
+const toMm = (measurement) => (measurement ? Number(measurement.value) * (MM_PER_UNIT[measurement.unit] || 1) : null);
+
+// IndexedDB may be unavailable (locked-down browsing contexts, some test
+// harnesses) — degrade to an in-memory driver rather than crash the scan.
+// Local durability is a resilience layer, not the primary source of truth.
+function createBrowserLocalStore() {
+  try {
+    return createCaptureLocalStore({ driver: createIndexedDbDriver() });
+  } catch {
+    return createCaptureLocalStore({ driver: createMemoryDriver() });
+  }
+}
 
 const PHASES = [
   ['setup', 'Setup'],
@@ -33,6 +49,7 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [cameraFor, setCameraFor] = useState(null); // view id | null
+  const [replaceAssetId, setReplaceAssetId] = useState(null); // set when cameraFor is a replacement shot
   const [queueItems, setQueueItems] = useState([]);
   const [calibrationForm, setCalibrationForm] = useState({
     units: 'mm', knownValue: '', knownFeature: 'overall width', rulerConfirmed: false,
@@ -56,12 +73,50 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     return next;
   };
 
+  // R2.4 — advisory only. The deterministic evidence gate above is
+  // completely unaffected by whatever this returns (or whether it's asked
+  // for at all): Claude may explain an unclear feature and suggest one
+  // additional shot, but it is never authoritative and never blocks
+  // capture. Capturing the suggested shot reuses the ordinary camera flow
+  // manually in R2 (no dedicated "capture this Claude shot" button yet —
+  // a known, documented R2 limitation).
+  const [claudeBusy, setClaudeBusy] = useState(false);
+  const latestClaudeAnalysis = (detail.claudeAnalyses || [])[0] || null;
+  const handleClaudeGuidance = () => {
+    setClaudeBusy(true);
+    captureApi.claudeGuidance(session.id)
+      .then(() => refresh())
+      .catch((err) => setStatus(err.message))
+      .finally(() => setClaudeBusy(false));
+  };
+
+  const localStoreRef = useRef(null);
+  if (!localStoreRef.current) localStoreRef.current = createBrowserLocalStore();
+
   const queueRef = useRef(null);
   if (!queueRef.current) {
     queueRef.current = createUploadQueue({
-      performUpload: (job) => uploadCaptureImage(job),
+      performUpload: (job) => (job.replaceAssetId
+        ? replaceCaptureImage(job)
+        : uploadCaptureImage(job)),
       onChange: (items) => {
         setQueueItems(items);
+        // Local durability tracks the SAME status the upload queue reports
+        // (R2.2): a reload rehydrates from this, not from memory. Local
+        // evidence is pruned only on 'done' — a server-confirmed finalize —
+        // never on 'failed' or optimistically (confirmation-before-prune).
+        items.forEach((item) => {
+          if (!item.job.localId) return;
+          localStoreRef.current.saveQueueEntry({
+            id: item.job.localId, sessionId: item.job.sessionId, status: item.status,
+            attempts: item.attempts, lastError: item.error,
+          }).catch(() => {});
+          if (item.status === 'done') {
+            localStoreRef.current.confirmSynced(item.job.sessionId, item.job.localId, {
+              serverAssetId: item.result?.asset?.id,
+            }).catch(() => {});
+          }
+        });
         if (items.some((item) => item.status === 'done' && item.job.sessionId === detailRef.current.session.id)) {
           captureApi.get(detailRef.current.session.id).then(onDetailChange).catch(() => {});
         }
@@ -71,8 +126,52 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
 
   useEffect(() => {
     if (calibration && phase === 'setup') setPhase('geometry');
+    // Resume anything interrupted by a reload/close: normalize stuck
+    // "uploading" rows back to "waiting" and re-enqueue every resumable
+    // pending photo from durable storage, exactly as it was accepted.
+    (async () => {
+      const resumable = await localStoreRef.current.rehydrateQueue(session.id).catch(() => []);
+      for (const entry of resumable) {
+        // eslint-disable-next-line no-await-in-loop
+        const pending = await localStoreRef.current.getPendingAsset(entry.id).catch(() => null);
+        if (!pending) continue;
+        queueRef.current.enqueue({
+          sessionId: pending.sessionId,
+          purpose: pending.purpose,
+          file: pending.blob,
+          requestedPose: pending.requestedPose || null,
+          replaceAssetId: pending.replaceAssetId || null,
+          oldAssetId: pending.replaceAssetId || undefined,
+          localId: pending.id,
+          priorHashes: [],
+        });
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Non-superseded, non-derived accepted photos' perceptual hashes, so a
+  // new accept can be compared against everything already captured in this
+  // session (R2.2 near-duplicate indication).
+  const priorHashesFor = () => (detail.assets || [])
+    .filter((a) => a.classification === 'source' && !a.supersededBy && a.captureMetadata?.perceptualHash)
+    .map((a) => ({ hash: a.captureMetadata.perceptualHash }));
+
+  // Write-through to durable local storage BEFORE enqueueing the network
+  // upload — "Saved on device" must be true the instant the user accepts a
+  // photo, not once the upload finishes (R2.2/R2.1).
+  const acceptPhoto = async (file, view, oldAssetId) => {
+    const localId = (crypto.randomUUID ? crypto.randomUUID() : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const requestedPose = SHOT_GUIDES[view] || null;
+    await localStoreRef.current.savePendingAsset({
+      id: localId, sessionId: session.id, purpose: view, blob: file, requestedPose, replaceAssetId: oldAssetId || null,
+    });
+    await localStoreRef.current.enqueueForSync({ pendingAssetId: localId, sessionId: session.id });
+    queueRef.current.enqueue({
+      sessionId: session.id, purpose: view, file, requestedPose,
+      replaceAssetId: oldAssetId || null, oldAssetId, localId, priorHashes: priorHashesFor(),
+    });
+  };
 
   const act = async (work) => {
     setBusy(true);
@@ -117,13 +216,43 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     setSubmitted(result);
   });
 
+  // R2.5 — material-ready schematic proof. None of this affects the
+  // deterministic evidence gate above; it's a separate, additive readiness
+  // check for the flat-wall technical compatibility preview.
+  const materialZoneConfirmed = session.materialZoneState?.zones?.[0]?.confirmed === true;
+  const handleConfirmMaterialZone = () => act(async () => {
+    await captureApi.saveMaterialZone(session.id, { mainVisibleFaceConfirmed: true });
+    await refresh();
+  });
+  const handleTextureDirection = (value) => act(async () => {
+    await captureApi.saveTextureDirection(session.id, value);
+    await refresh();
+  });
+  const handleRunValidation = () => act(async () => {
+    await captureApi.evaluateStudioValidation(session.id);
+    await refresh();
+  });
+
+  // R2.6 — side-effect-free: this never creates a Library record, never
+  // changes session/review status, never publishes anything.
+  const [dryRunResult, setDryRunResult] = useState(null);
+  const handleDryRun = () => act(async () => {
+    const result = await captureApi.dryRunMaterialPackage(session.id);
+    setDryRunResult(result);
+  });
+
   const pendingFor = (view) => queueItems.find((item) => item.job.sessionId === session.id
     && item.job.purpose === view && item.status !== 'done');
-  const shotDone = (view) => (detail.assets || []).some((a) => a.purpose === view && a.classification === 'source');
+  // A superseded (replaced) source asset no longer counts as "the" photo
+  // for its view — only the current, non-superseded one does (R2.2).
+  const currentSourceFor = (view) => (detail.assets || [])
+    .find((a) => a.purpose === view && a.classification === 'source' && !a.supersededBy);
+  const shotDone = (view) => Boolean(currentSourceFor(view));
   const thumbFor = (view) => {
-    const source = (detail.assets || []).find((a) => a.purpose === view && a.classification === 'source');
+    const source = currentSourceFor(view);
     const thumb = source && (detail.assets || []).find((a) => a.classification === 'derived' && a.sourceAssetId === source.id);
-    return (thumb || source)?.url || null;
+    const shown = thumb || source;
+    return shown ? captureAssetBlobUrl(session.id, shown.id) : null;
   };
 
   const pendingCount = queueItems.filter((i) => i.job.sessionId === session.id && i.status !== 'done').length;
@@ -136,7 +265,19 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
     <div className="capture-photo-slot" key={guide.view}>
       <div className="capture-photo-slot-title">{guide.title}</div>
       {shotDone(guide.view) ? (
-        <img className="capture-photo-thumb" src={thumbFor(guide.view)} alt={`${guide.title} — captured`} />
+        <>
+          <img className="capture-photo-thumb" src={thumbFor(guide.view)} alt={`${guide.title} — captured`} />
+          {editable && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={busy}
+              onClick={() => { setReplaceAssetId(currentSourceFor(guide.view).id); setCameraFor(guide.view); }}
+            >
+              Replace This Photo
+            </button>
+          )}
+        </>
       ) : pendingFor(guide.view) ? (
         <div className="control-sublabel" role="status">
           {SYNC_LABELS[pendingFor(guide.view).status] || pendingFor(guide.view).status}
@@ -258,8 +399,40 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
               ? Object.values(SHOT_GUIDES).filter((g) => shotDone(g.view)).map(shotCard)
               : evidence.shotRequests.map(shotCard)}
           </div>
+          {evidence.qualitySummary.issueCount > 0 && (
+            <div className="control-sublabel" role="status">
+              {evidence.qualitySummary.issueCount} deterministic quality note{evidence.qualitySummary.issueCount === 1 ? '' : 's'}
+              {evidence.qualitySummary.hasPossibleDuplicates ? ' — including a possible duplicate view' : ''} — estimates only, not blocking.
+            </div>
+          )}
           {evidence.complete && (
             <div className="control-sublabel" role="status">All required views captured.</div>
+          )}
+          {!evidence.needsCalibration && editable && (
+            <>
+              <button type="button" className="btn-secondary" disabled={busy || claudeBusy} onClick={handleClaudeGuidance}>
+                {claudeBusy ? 'Asking…' : 'Ask Claude for Guidance (optional)'}
+              </button>
+              {latestClaudeAnalysis && (
+                <div className="control-sublabel" role="status">
+                  {latestClaudeAnalysis.status === 'advisory' ? (
+                    <>
+                      {latestClaudeAnalysis.findings.reviewerSummary || 'No summary provided.'}
+                      {latestClaudeAnalysis.findings.unclearFeatures.length > 0 && (
+                        <> Unclear: {latestClaudeAnalysis.findings.unclearFeatures.map((f) => f.feature).join(', ')}.</>
+                      )}
+                      {latestClaudeAnalysis.findings.shotRequest && (
+                        <> Suggested shot — {latestClaudeAnalysis.findings.shotRequest.position}, {latestClaudeAnalysis.findings.shotRequest.angle},
+                          {' '}{latestClaudeAnalysis.findings.shotRequest.distance}. Why: {latestClaudeAnalysis.findings.shotRequest.reason}</>
+                      )}
+                      {' '}(advisory — deterministic evidence above remains the actual requirement.)
+                    </>
+                  ) : (
+                    <>Claude guidance unavailable ({latestClaudeAnalysis.status}) — deterministic guidance above is unaffected.</>
+                  )}
+                </div>
+              )}
+            </>
           )}
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={() => setPhase('setup')} disabled={busy}>
@@ -280,8 +453,13 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
       {cameraFor && (
         <CaptureCamera
           purposeLabel={SHOT_GUIDES[cameraFor]?.title || cameraFor}
-          onAccept={(file) => queueRef.current.enqueue({ sessionId: session.id, purpose: cameraFor, file })}
-          onClose={() => setCameraFor(null)}
+          onAccept={(file) => {
+            const oldAssetId = replaceAssetId;
+            setCameraFor(null);
+            setReplaceAssetId(null);
+            acceptPhoto(file, cameraFor, oldAssetId).catch((err) => setStatus(err.message));
+          }}
+          onClose={() => { setCameraFor(null); setReplaceAssetId(null); }}
         />
       )}
 
@@ -380,6 +558,62 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
             Schematic from your confirmed measurements — not a photographic reconstruction.
             Evidence confidence: {(evidence.confidence * 100).toFixed(0)}%.
           </div>
+
+          <div className="field-label">Material zone</div>
+          <div className="control-sublabel">
+            Confirm the main visible face — the required material zone for R2. Backside and cut-edge
+            zones are not part of this technical proof.
+          </div>
+          {materialZoneConfirmed ? (
+            <div className="control-sublabel" role="status">Main visible face confirmed.</div>
+          ) : editable && (
+            <button type="button" className="btn-secondary" disabled={busy} onClick={handleConfirmMaterialZone}>
+              Confirm Main Visible Face
+            </button>
+          )}
+
+          <div className="field-label">Texture direction</div>
+          <select
+            className="control-select"
+            value={session.textureDirection || ''}
+            disabled={busy || !editable}
+            onChange={(e) => e.target.value && handleTextureDirection(e.target.value)}
+          >
+            <option value="" disabled>Choose a direction…</option>
+            <option value="along_run">Along installation run</option>
+            <option value="across_coverage">Across coverage width</option>
+            <option value="custom">Custom direction</option>
+            <option value="not_applicable">Not applicable</option>
+          </select>
+
+          <div className="field-label">Flat-wall technical compatibility preview</div>
+          {session.studioValidation ? (
+            <>
+              <div className="control-sublabel" role="status">
+                Status: {session.studioValidation.status === 'ready' ? 'Ready' : 'Needs attention'}
+              </div>
+              {session.studioValidation.issues.length > 0 && (
+                <ul className="capture-check-list">
+                  {session.studioValidation.issues.map((issue) => <li key={issue.code}>{issue.message}</li>)}
+                </ul>
+              )}
+              {session.studioValidation.status === 'ready' && (
+                <CaptureFlatWallPreview
+                  widthMm={toMm((detail.measurements || []).find((m) => m.axis === 'width'))}
+                  heightMm={toMm((detail.measurements || []).find((m) => m.axis === 'height' || m.axis === 'depth'))}
+                  textureDirection={session.textureDirection}
+                />
+              )}
+            </>
+          ) : (
+            <div className="control-sublabel">Not yet checked.</div>
+          )}
+          {editable && (
+            <button type="button" className="btn-secondary" disabled={busy} onClick={handleRunValidation}>
+              Run Technical Compatibility Check
+            </button>
+          )}
+
           <div className="export-buttons">
             <button type="button" className="btn-secondary" onClick={() => setPhase('measurements')} disabled={busy}>
               Back
@@ -414,6 +648,28 @@ export default function CaptureProfileScan({ detail, onDetailChange, onExit }) {
               <div className="control-sublabel">
                 Completeness {completeness.score}% · visibility: private to your company.
               </div>
+
+              <div className="field-label">Material package (dry run)</div>
+              <div className="control-sublabel">
+                Side-effect-free check — validates the proposed tenant-private submission shape.
+                Does not create a Library record, change status, or publish anything.
+              </div>
+              <button type="button" className="btn-secondary" disabled={busy} onClick={handleDryRun}>
+                Preview Material Package (Dry Run)
+              </button>
+              {dryRunResult && (
+                <>
+                  <div className="control-sublabel" role="status">
+                    {dryRunResult.validation.valid ? 'Package shape valid.' : `${dryRunResult.validation.errors.length} issue(s) found:`}
+                  </div>
+                  {dryRunResult.validation.errors.length > 0 && (
+                    <ul className="capture-check-list capture-check-errors">
+                      {dryRunResult.validation.errors.map((e, i) => <li key={`${e.code}-${i}`}>{e.message}</li>)}
+                    </ul>
+                  )}
+                </>
+              )}
+
               {editable && (
                 <button
                   type="button"
