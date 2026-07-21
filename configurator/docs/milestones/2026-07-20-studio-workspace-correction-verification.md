@@ -2,21 +2,21 @@
 
 ## Milestone
 
-Local visual-contract and build evidence for the red-direction Studio workspace correction. This
-record is not publication, deployment, Preview verification, interactive acceptance, or release
-approval.
+Evidence for the red-direction Studio workspace correction. Local validation and a protected GPT
+Preview deployment are recorded separately from the still-pending authenticated interactive
+acceptance pass.
 
 | Field | Value |
 | --- | --- |
 | Date | 2026-07-20 |
-| Verification scope | Local source-contract, complete test-suite, production/PWA/artifact/snapshot build, and whitespace checks |
+| Verification scope | Local source-contract, complete test-suite, production/PWA/artifact/snapshot build, whitespace checks, protected GPT Preview deployment, and unauthenticated API smoke |
 | Approved visual reference | `ui-concept-04-red-direction.png` |
-| Branch | `gpt-pr17-test` |
-| Exact implementation commit | `1ae760f5e0b4cdd8885ea0a28e5c917c9b2b1746` (`fix: preserve restrained Studio red direction`) |
-| Exact implementation tree | `bb5fac411b93848458712cb6c30530d7bbde9a80` |
-| Publication | **Pending — this task did not push or publish.** |
-| GPT Preview deployment | **Pending — no Task 7 Preview was created or provided.** |
-| Release decision | **HOLD — exact-tree Preview and interactive acceptance remain pending.** |
+| Branch | `chatgpt/configurator-gpt-lab` |
+| Published implementation commit | `ed6d1c7e503a902f1903e748a94e594d41d502cd` (`feat: complete Studio workspace correction`) |
+| Published implementation tree | `cf6030bea89fd5f2f42332807ead581d5e3fadc6` |
+| Publication | Published to GPT acceptance branch on 2026-07-21 |
+| GPT Preview deployment | `dpl_H2royo4oB2P252W5xamuV4Jn11LV` — READY — `ironwrap-configurator-gpt-a7igwsk3m-drummouses-projects.vercel.app` |
+| Release decision | **HOLD — authenticated interactive acceptance remains pending.** |
 
 The correction keeps graphite workspace framing and compact desktop rails, warm-white desktop
 inspectors, and red on primary or selected controls rather than page surfaces or full-width
@@ -44,14 +44,19 @@ Runtime: Node `v24.14.0`, npm `11.9.0`.
 | Production/PWA/artifact/snapshot build | Pass | `npm run build` exited 0. Main build transformed 709 modules; the PWA service worker transformed 70 modules and generated `dist/sw.js`; the Share artifact transformed 708 modules; `dist/snapshot-template.html` was written at 2491 KB. |
 | Whitespace validation | Pass | `git diff --check` exited 0 with no output before the implementation commit. It is rerun against the final documentation change before the documentation commit. |
 
+The final local correction wave subsequently passed `npm test` with 381 tests passed and 0 failed,
+and repeated the production/PWA/artifact/snapshot build and whitespace check successfully.
+
 The build retained the existing non-blocking chunk-size advisory. npm also emitted its existing
 `http-proxy` configuration and update notices; none changed a command exit status.
 
 ## GPT Preview and Interactive Acceptance
 
-No Task 7 deployment was authorized or created, and no exact-tree Preview URL or deployment ID was
-provided. The rows below remain pending; local source contracts and builds do not substitute for
-interactive evidence.
+The protected GPT Preview listed above reached READY for the exact published implementation tree.
+`GET /api/auth/me` returned the expected JSON `401 {"error":"Not authenticated"}` rather than
+a platform error or plain-text response. Runtime logs for that deployment contained no application
+5xx entry; the observed unauthenticated 401 entries were expected. The interactive rows below
+remain pending because no authenticated acceptance session was run by this milestone.
 
 | Required behavior | Status | Exact Preview evidence still required |
 | --- | --- | --- |
@@ -68,6 +73,7 @@ interactive evidence.
 
 ## Release Boundary
 
-The exact implementation commit must be published to the GPT project, produce a ready Preview, and
-pass every pending interactive row before release approval. No database, environment, credential,
-Claude-lane, PR #17, Preview, Production, or remote branch change was performed by this milestone.
+The exact implementation commit has been published to the GPT project and produced the documented
+ready Preview. Every pending authenticated interactive row must pass before release approval. This
+milestone did not change a database, environment variable, credential, Claude lane, PR #17, or
+Production deployment.
