@@ -3,7 +3,7 @@
 Date: 2026-07-21
 Branch: `claude/communications-mvp-hardening` (PR #29 → `claude/development`)
 Starting SHA: `81c27b1043643bec78324133a0df3ec997d0d6e2`
-Final head SHA: `cefbad032b090a4113203e8ae58b9237f12dad5f`
+Final head SHA: `77876686c034a91b4ec33084a4b040499fccbefd`
 Related: decision log D-070–D-072, `docs/COMMUNICATIONS_RUNBOOK.md`.
 
 ## Scope delivered
@@ -20,13 +20,24 @@ Related: decision log D-070–D-072, `docs/COMMUNICATIONS_RUNBOOK.md`.
 4. **Historical-row-count correction** — D-065/D-068 said "3"; the correct
    count is **4**. Runbook and milestone docs corrected directly; decision
    log entries left as historical record with a new D-070 entry.
+5. **Amendment (D-072)** — an independent reproduction found the D-071
+   provider-timeout fix didn't actually cover response-body consumption:
+   `fetchWithDeadline` cleared its timer the instant `fetch()` resolved
+   (headers arrived), before `.json()`/`.text()` had even been called, so a
+   hung body read ran unguarded. Fixed by restructuring the helper (renamed
+   `withProviderDeadline`) to wrap the caller's *entire* unit of work —
+   fetch plus whichever body method it needs — under one `AbortController`,
+   clearing the timer only once that whole task settles. Also removed a
+   `.catch(() => '')` around the failure-path `.text()` read that would
+   have silently swallowed an abort and misclassified the result by the
+   pre-abort HTTP status instead of `transient`.
 
 ## Automated verification
 
 | Check | Result |
 | --- | --- |
 | `npm ci` | Clean install |
-| `npm test` | 303/303 (289 baseline + 14 new) |
+| `npm test` | 306/306 (289 baseline + 14 hardening + 3 body-timeout amendment) |
 | `npm run build` | Succeeds locally — both bundles, no Workbox/Terser failure this run |
 | `git diff --check` | Clean |
 
@@ -34,10 +45,14 @@ New regression coverage: 429/408 classification for both providers (7
 tests), genuine-4xx-still-permanent, a hung-request timeout test for both
 providers (a fetch that never resolves until aborted, proving a real
 deadline fires), a 429→retry-backoff-not-permanently_failed check at the
-state-decision level, `providerTimeoutFor` bounds, and 5 **handler-level**
+state-decision level, `providerTimeoutFor` bounds, 5 **handler-level**
 tests (not source-text ordering) using Node's
 `--experimental-test-module-mocks` to mock `db.js`'s `sql`/`ensureSchema`
-and invoke the real exported `handler` directly across both auth paths.
+and invoke the real exported `handler` directly across both auth paths,
+and 3 body-read-timeout tests (D-072) — a hung Twilio success JSON body, a
+hung Twilio error-text body, and a hung SendGrid error-text body — all
+proving the deadline now aborts an in-progress body read, not just a
+hung request.
 
 ## Live verification
 
@@ -55,6 +70,19 @@ and invoke the real exported `handler` directly across both auth paths.
 Not investigated or touched: `ironwrap-configurator-gpt-lab`'s deployment
 for this same commit errored (unrelated Vercel/Neon project, GPT lane) —
 explicitly out of scope per this session's lane boundaries.
+
+## Amendment (D-072) — live verification
+
+| Check | Result |
+| --- | --- |
+| Final-head Claude-lane deployment | `dpl_GHqJZbx45aMNiU24SN7L6PLAJst6`, same preview alias, READY |
+| `npm run smoke` | 32/32 |
+
+No further Neon mutation or real-provider delivery test performed for this
+amendment, per instruction — the schema/counts/historical-row verification
+above from the prior commit still holds (no schema, data, or provider
+credential surface changed by this amendment, only in-process request
+handling).
 
 ## Confirmations
 
