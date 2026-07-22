@@ -28,17 +28,28 @@ function classifyProviderStatus(status) {
   return 'permanent';
 }
 
-// Every provider fetch gets a hard deadline — previously only the drain
+// Every provider request gets a hard deadline — previously only the drain
 // loop's overall time budget was checked, and only *before* starting a row;
-// the fetch itself could hang indefinitely, risking the function being
+// the request itself could hang indefinitely, risking the function being
 // killed mid-request with no chance to release the row. `timeoutMs` is the
 // caller's remaining budget for this attempt (see commsScheduler.js's
 // providerTimeoutFor); undefined falls back to the provider default.
-async function fetchWithDeadline(url, options, timeoutMs = PROVIDER_TIMEOUT_MS) {
+//
+// D-072: the deadline must stay armed for the *entire* operation, not just
+// the fetch() call — fetch() resolves as soon as response headers arrive,
+// before the body has been read. `task(signal)` is the caller's full unit
+// of work (fetch + whichever body-read method it needs: .json() on
+// success, .text() on failure), so the same AbortController that gated the
+// request also gates the body read; the timer is only cleared once `task`
+// has fully settled either way. Aborting mid-body-read rejects the
+// in-progress .json()/.text() call with an AbortError, exactly like
+// aborting mid-request does — the same signal governs the whole response
+// lifecycle per the Fetch spec, not just the initial headers.
+async function withProviderDeadline(timeoutMs, task) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.max(0, timeoutMs));
+  const timer = setTimeout(() => controller.abort(), Math.max(0, timeoutMs ?? PROVIDER_TIMEOUT_MS));
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await task(controller.signal);
   } finally {
     clearTimeout(timer);
   }
@@ -78,24 +89,32 @@ async function sendTwilioSms({ to, body, timeoutMs }) {
   if (!auth) throw new DeliveryError('TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN not configured', 'not_configured');
   const fromNumber = process.env.PLATFORM_DEFAULT_PHONE;
   if (!fromNumber) throw new DeliveryError('PLATFORM_DEFAULT_PHONE not configured', 'not_configured');
-  let res;
+  let outcome;
   try {
-    res = await fetchWithDeadline(`${TWILIO_API}/Accounts/${auth.sid}/Messages.json`, {
-      method: 'POST',
-      headers: { Authorization: auth.header, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ To: destination, From: fromNumber, Body: body || '' }),
-    }, timeoutMs);
+    outcome = await withProviderDeadline(timeoutMs, async (signal) => {
+      const res = await fetch(`${TWILIO_API}/Accounts/${auth.sid}/Messages.json`, {
+        method: 'POST',
+        headers: { Authorization: auth.header, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ To: destination, From: fromNumber, Body: body || '' }),
+        signal,
+      });
+      // No .catch() here — a body-read failure (including the deadline
+      // aborting mid-read) must propagate out to the try/catch below, not
+      // be silently swallowed into an empty string, which would classify
+      // a timeout using the pre-abort HTTP status instead of 'transient'.
+      if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
+      return { ok: true, json: await res.json() };
+    });
   } catch (networkErr) {
     if (networkErr.name === 'AbortError') {
       throw new DeliveryError(`Twilio request timed out after ${timeoutMs ?? PROVIDER_TIMEOUT_MS}ms`, 'transient');
     }
     throw new DeliveryError(`Twilio request failed: ${networkErr.message}`, 'transient');
   }
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new DeliveryError(redactRecipientFromText(`Twilio send failed: HTTP ${res.status} ${text}`), classifyProviderStatus(res.status));
+  if (!outcome.ok) {
+    throw new DeliveryError(redactRecipientFromText(`Twilio send failed: HTTP ${outcome.status} ${outcome.text}`), classifyProviderStatus(outcome.status));
   }
-  return res.json();
+  return outcome.json;
 }
 
 async function sendGridEmail({ to, subject, text, fromName, replyTo, timeoutMs }) {
@@ -107,28 +126,36 @@ async function sendGridEmail({ to, subject, text, fromName, replyTo, timeoutMs }
   if (!apiKey) throw new DeliveryError('SENDGRID_API_KEY not configured', 'not_configured');
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
   if (!fromEmail) throw new DeliveryError('SENDGRID_FROM_EMAIL not configured', 'not_configured');
-  let res;
+  let outcome;
   try {
-    res = await fetchWithDeadline(SENDGRID_API, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: destination }] }],
-        from: { email: fromEmail, name: fromName },
-        ...(replyTo ? { reply_to: { email: replyTo } } : {}),
-        subject: subject || 'Notification',
-        content: [{ type: 'text/plain', value: text || '' }],
-      }),
-    }, timeoutMs);
+    outcome = await withProviderDeadline(timeoutMs, async (signal) => {
+      const res = await fetch(SENDGRID_API, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: destination }] }],
+          from: { email: fromEmail, name: fromName },
+          ...(replyTo ? { reply_to: { email: replyTo } } : {}),
+          subject: subject || 'Notification',
+          content: [{ type: 'text/plain', value: text || '' }],
+        }),
+        signal,
+      });
+      // No .catch() here — a body-read failure (including the deadline
+      // aborting mid-read) must propagate out to the try/catch below, not
+      // be silently swallowed into an empty string, which would classify
+      // a timeout using the pre-abort HTTP status instead of 'transient'.
+      if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
+      return { ok: true };
+    });
   } catch (networkErr) {
     if (networkErr.name === 'AbortError') {
       throw new DeliveryError(`SendGrid request timed out after ${timeoutMs ?? PROVIDER_TIMEOUT_MS}ms`, 'transient');
     }
     throw new DeliveryError(`SendGrid request failed: ${networkErr.message}`, 'transient');
   }
-  if (!res.ok) {
-    const text2 = await res.text().catch(() => '');
-    throw new DeliveryError(redactRecipientFromText(`SendGrid send failed: HTTP ${res.status} ${text2}`), classifyProviderStatus(res.status));
+  if (!outcome.ok) {
+    throw new DeliveryError(redactRecipientFromText(`SendGrid send failed: HTTP ${outcome.status} ${outcome.text}`), classifyProviderStatus(outcome.status));
   }
 }
 

@@ -4,14 +4,14 @@ Date: 2026-07-21
 Branch: `claude/communications-mvp-hardening` (PR #29 → `claude/development`)
 Starting SHA: `81c27b1043643bec78324133a0df3ec997d0d6e2`
 Final head SHA: `cefbad032b090a4113203e8ae58b9237f12dad5f`
-Related: decision log D-070–D-071, `docs/COMMUNICATIONS_RUNBOOK.md`.
+Related: decision log D-070–D-072, `docs/COMMUNICATIONS_RUNBOOK.md`.
 
 ## Scope delivered
 
 1. **429/408 → transient**, not permanent (`classifyProviderStatus`). Every
    other 4xx stays permanent.
 2. **Real provider timeout** — `AbortController` deadline on every
-   Twilio/SendGrid fetch (`fetchWithDeadline`), bounded by the invocation's
+   Twilio/SendGrid fetch (`withProviderDeadline`), bounded by the invocation's
    remaining time budget (`providerTimeoutFor`); a row with too little
    budget left is released, unattempted.
 3. **Auth-before-schema ordering** — removed the manual (non-scheduler)
