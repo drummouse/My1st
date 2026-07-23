@@ -62,6 +62,8 @@ and SendGrid, not just a successful outbox insert.
   plan, per PR #24) — a real deployment needs something (superadmin action,
   or an external scheduler) to call `?action=drain` periodically, or queued
   notices will sit `pending` indefinitely.
-- Found, but did not touch: 3 pre-existing `failed` SMS rows from
-  2026-07-17 with an invalid placeholder destination number, unrelated to
-  this verification (D-065).
+- Found, but did not touch: pre-existing `failed` SMS rows from 2026-07-17
+  with an invalid placeholder destination number, unrelated to this
+  verification (D-065). Counted as 3 at the time this doc was written
+  (checked mid-way through this session's own drain runs); the correct,
+  final count is 4 — see D-070.

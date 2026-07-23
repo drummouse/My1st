@@ -4,8 +4,10 @@ Operational reference for the Twilio SMS / SendGrid email pipeline. Covers
 the outbox lifecycle, scheduled draining, recipient validation, SuperAdmin
 inspection, provider cost alerts, and incident response. See decision log
 D-040–D-045 (original design), D-062–D-065 (Twilio/SendGrid live
-verification), and D-066–D-069 (this MVP-completion slice) for the full
-rationale trail.
+verification), D-066–D-069 (the MVP-completion slice), and D-070–D-072
+(hardening: historical-row-count correction, 429/408 classification,
+provider timeout, auth-before-schema ordering) for the full rationale
+trail.
 
 ## Architecture
 
@@ -59,7 +61,27 @@ pending ──(claimed by drain)──► processing ──(delivered)──► 
 - `validation` — the recipient failed our own format check; never reached the provider.
 - `not_configured` — the platform's Twilio/SendGrid credentials are missing; not a per-message problem, held with no backoff.
 - `permanent` — the provider itself rejected the request (bad number, unverified trial recipient, blocked sender, etc.); retrying the same input can't succeed.
-- `transient` — network error or provider 5xx; retried with backoff (1m, 5m, 15m, 1h, 6h) up to 5 attempts, then `permanently_failed` as `max_attempts_exceeded`.
+- `transient` — network error, a provider request that hit its own deadline (see "Provider timeout" below), a provider 5xx, or a 429 (rate limited) / 408 (request timeout) response — 429/408 are the one exception to the "4xx = permanent" rule (D-071), since the identical request can succeed once the rate window clears or the network hiccup passes. Retried with backoff (1m, 5m, 15m, 1h, 6h) up to 5 attempts, then `permanently_failed` as `max_attempts_exceeded`.
+
+### Provider timeout
+
+Every Twilio/SendGrid request carries an `AbortController` deadline — at
+most `PROVIDER_TIMEOUT_MS` (5s), and further capped at whatever's actually
+left of the drain invocation's own 7s time budget for that row
+(`providerTimeoutFor`, `api/_lib/commsScheduler.js`). A row with less than
+`MIN_ROW_BUDGET_MS` (500ms) of budget remaining is released back to
+`pending` without being attempted at all, rather than risk starting a
+request with no realistic chance of a response in time. A timed-out
+request classifies `transient` and retries with the normal backoff — it is
+not treated as a recipient-side failure.
+
+The deadline covers the *entire* request — including reading the response
+body, not just waiting for headers (D-072). `fetch()` resolves as soon as
+headers arrive; a naive timer cleared at that point would leave a hung
+`.json()`/`.text()` call completely unguarded. `withProviderDeadline`
+(`api/_lib/commsDelivery.js`) instead wraps the caller's whole unit of work
+— the fetch and whichever body method it needs — under one
+`AbortController`, clearing the timer only once that entire task settles.
 
 ## External scheduled draining
 
@@ -169,7 +191,7 @@ stopped it from being retried.
 
 ## Historical failed rows (do not touch)
 
-The 3 rows from 2026-07-17 (`account-restricted` SMS notices to the
+The 4 rows from 2026-07-17 (`account-restricted` SMS notices to the
 invalid `users.phone` above) are preserved exactly as they were —
 untouched, not deleted, not modified, not retried by any automated path.
 The drain claim query's eligibility (`status in ('pending', 'processing')`)
@@ -300,7 +322,7 @@ live endpoint, and code review, not another real send.
 
 - Owner-facing delivery-status UI (SuperAdmin-only visibility for now).
 - An in-app cost/usage dashboard (provider dashboards are authoritative).
-- Deletion of the 3 historical failed rows (needs separate, explicit owner
+- Deletion of the 4 historical failed rows (needs separate, explicit owner
   approval).
 - Advanced communication analytics (open/click tracking, delivery-rate
   trends, etc.).

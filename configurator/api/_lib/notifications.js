@@ -110,6 +110,6 @@ export async function deliverNotification(row, deliverers, context = {}) {
   const deliver = deliverers[row.channel];
   if (!deliver) return { status: 'pending', error: 'Provider is not configured' };
   const destination = context.destination || row.destination || row.payload?.destination;
-  await deliver(row.payload, destination, context.identity || null);
+  await deliver(row.payload, destination, context.identity || null, context.timeoutMs);
   return { status: 'sent', error: null };
 }

@@ -11,9 +11,49 @@
 // one dependency the earlier Gmail-SMTP design added).
 
 import { normalizePhoneE164, normalizeEmail, redactRecipientFromText } from './commsValidation.js';
+import { PROVIDER_TIMEOUT_MS } from './commsScheduler.js';
 
 const TWILIO_API = 'https://api.twilio.com/2010-04-01';
 const SENDGRID_API = 'https://api.sendgrid.com/v3/mail/send';
+
+// D-071: HTTP 429 (rate limited) and 408 (request timeout) are transient —
+// the exact same request can succeed on a later attempt once the provider's
+// rate window clears or the network hiccup passes. Every other 4xx (bad
+// number, unverified trial recipient, blocked sender, malformed request,
+// auth failure, etc.) means retrying the identical input can't succeed —
+// permanent. 5xx stays transient (provider-side failure).
+function classifyProviderStatus(status) {
+  if (status >= 500) return 'transient';
+  if (status === 429 || status === 408) return 'transient';
+  return 'permanent';
+}
+
+// Every provider request gets a hard deadline — previously only the drain
+// loop's overall time budget was checked, and only *before* starting a row;
+// the request itself could hang indefinitely, risking the function being
+// killed mid-request with no chance to release the row. `timeoutMs` is the
+// caller's remaining budget for this attempt (see commsScheduler.js's
+// providerTimeoutFor); undefined falls back to the provider default.
+//
+// D-072: the deadline must stay armed for the *entire* operation, not just
+// the fetch() call — fetch() resolves as soon as response headers arrive,
+// before the body has been read. `task(signal)` is the caller's full unit
+// of work (fetch + whichever body-read method it needs: .json() on
+// success, .text() on failure), so the same AbortController that gated the
+// request also gates the body read; the timer is only cleared once `task`
+// has fully settled either way. Aborting mid-body-read rejects the
+// in-progress .json()/.text() call with an AbortError, exactly like
+// aborting mid-request does — the same signal governs the whole response
+// lifecycle per the Fetch spec, not just the initial headers.
+async function withProviderDeadline(timeoutMs, task) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(0, timeoutMs ?? PROVIDER_TIMEOUT_MS));
+  try {
+    return await task(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // category drives how the drain worker treats the row:
 //   'validation'    — destination fails our own format check; never reaches
@@ -40,7 +80,7 @@ function twilioAuth() {
   return { sid, header: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}` };
 }
 
-async function sendTwilioSms({ to, body }) {
+async function sendTwilioSms({ to, body, timeoutMs }) {
   const destination = normalizePhoneE164(to);
   if (!destination) {
     throw new DeliveryError('Recipient phone number failed E.164/NANP validation', 'validation');
@@ -49,25 +89,35 @@ async function sendTwilioSms({ to, body }) {
   if (!auth) throw new DeliveryError('TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN not configured', 'not_configured');
   const fromNumber = process.env.PLATFORM_DEFAULT_PHONE;
   if (!fromNumber) throw new DeliveryError('PLATFORM_DEFAULT_PHONE not configured', 'not_configured');
-  let res;
+  let outcome;
   try {
-    res = await fetch(`${TWILIO_API}/Accounts/${auth.sid}/Messages.json`, {
-      method: 'POST',
-      headers: { Authorization: auth.header, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ To: destination, From: fromNumber, Body: body || '' }),
+    outcome = await withProviderDeadline(timeoutMs, async (signal) => {
+      const res = await fetch(`${TWILIO_API}/Accounts/${auth.sid}/Messages.json`, {
+        method: 'POST',
+        headers: { Authorization: auth.header, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ To: destination, From: fromNumber, Body: body || '' }),
+        signal,
+      });
+      // No .catch() here — a body-read failure (including the deadline
+      // aborting mid-read) must propagate out to the try/catch below, not
+      // be silently swallowed into an empty string, which would classify
+      // a timeout using the pre-abort HTTP status instead of 'transient'.
+      if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
+      return { ok: true, json: await res.json() };
     });
   } catch (networkErr) {
+    if (networkErr.name === 'AbortError') {
+      throw new DeliveryError(`Twilio request timed out after ${timeoutMs ?? PROVIDER_TIMEOUT_MS}ms`, 'transient');
+    }
     throw new DeliveryError(`Twilio request failed: ${networkErr.message}`, 'transient');
   }
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    const category = res.status >= 500 ? 'transient' : 'permanent';
-    throw new DeliveryError(redactRecipientFromText(`Twilio send failed: HTTP ${res.status} ${text}`), category);
+  if (!outcome.ok) {
+    throw new DeliveryError(redactRecipientFromText(`Twilio send failed: HTTP ${outcome.status} ${outcome.text}`), classifyProviderStatus(outcome.status));
   }
-  return res.json();
+  return outcome.json;
 }
 
-async function sendGridEmail({ to, subject, text, fromName, replyTo }) {
+async function sendGridEmail({ to, subject, text, fromName, replyTo, timeoutMs }) {
   const destination = normalizeEmail(to);
   if (!destination) {
     throw new DeliveryError('Recipient email address failed validation', 'validation');
@@ -76,26 +126,36 @@ async function sendGridEmail({ to, subject, text, fromName, replyTo }) {
   if (!apiKey) throw new DeliveryError('SENDGRID_API_KEY not configured', 'not_configured');
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
   if (!fromEmail) throw new DeliveryError('SENDGRID_FROM_EMAIL not configured', 'not_configured');
-  let res;
+  let outcome;
   try {
-    res = await fetch(SENDGRID_API, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: destination }] }],
-        from: { email: fromEmail, name: fromName },
-        ...(replyTo ? { reply_to: { email: replyTo } } : {}),
-        subject: subject || 'Notification',
-        content: [{ type: 'text/plain', value: text || '' }],
-      }),
+    outcome = await withProviderDeadline(timeoutMs, async (signal) => {
+      const res = await fetch(SENDGRID_API, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: destination }] }],
+          from: { email: fromEmail, name: fromName },
+          ...(replyTo ? { reply_to: { email: replyTo } } : {}),
+          subject: subject || 'Notification',
+          content: [{ type: 'text/plain', value: text || '' }],
+        }),
+        signal,
+      });
+      // No .catch() here — a body-read failure (including the deadline
+      // aborting mid-read) must propagate out to the try/catch below, not
+      // be silently swallowed into an empty string, which would classify
+      // a timeout using the pre-abort HTTP status instead of 'transient'.
+      if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
+      return { ok: true };
     });
   } catch (networkErr) {
+    if (networkErr.name === 'AbortError') {
+      throw new DeliveryError(`SendGrid request timed out after ${timeoutMs ?? PROVIDER_TIMEOUT_MS}ms`, 'transient');
+    }
     throw new DeliveryError(`SendGrid request failed: ${networkErr.message}`, 'transient');
   }
-  if (!res.ok) {
-    const text2 = await res.text().catch(() => '');
-    const category = res.status >= 500 ? 'transient' : 'permanent';
-    throw new DeliveryError(redactRecipientFromText(`SendGrid send failed: HTTP ${res.status} ${text2}`), category);
+  if (!outcome.ok) {
+    throw new DeliveryError(redactRecipientFromText(`SendGrid send failed: HTTP ${outcome.status} ${outcome.text}`), classifyProviderStatus(outcome.status));
   }
 }
 
@@ -109,7 +169,7 @@ export function buildDeliverers() {
     // The row itself is the notification (read via the superadmin
     // notifications list); there's nothing further to deliver.
     in_app: async () => {},
-    email: async (payload, destination, identity) => {
+    email: async (payload, destination, identity, timeoutMs) => {
       const brandName = (typeof identity === 'string' ? identity : identity?.brandName)
         || process.env.PLATFORM_DEFAULT_FROM_NAME || 'IronWrap 3D Configurator';
       const replyTo = typeof identity === 'object' ? identity?.replyTo : undefined;
@@ -119,10 +179,11 @@ export function buildDeliverers() {
         text: payload?.message,
         fromName: brandName,
         replyTo,
+        timeoutMs,
       });
     },
-    sms: async (payload, destination) => {
-      await sendTwilioSms({ to: destination, body: payload?.message || payload?.subject || 'Notification' });
+    sms: async (payload, destination, identity, timeoutMs) => {
+      await sendTwilioSms({ to: destination, body: payload?.message || payload?.subject || 'Notification', timeoutMs });
     },
   };
 }

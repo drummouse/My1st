@@ -16,6 +16,26 @@ export const MAX_BATCH_LIMIT = 50;
 // Vercel Hobby functions cap out at 10s; leave headroom to write back any
 // claimed-but-unprocessed rows before the function itself gets killed.
 export const MAX_RUNTIME_MS = 7000;
+// Per-provider-request deadline (D-071 hardening) — the drain time budget
+// above only checked *before* starting a row; the provider fetch itself had
+// no timeout, so one hung request could consume the entire remaining
+// budget (or run past it, risking the function being killed mid-request).
+// Every Twilio/SendGrid call gets an AbortController deadline of at most
+// this, further capped by whatever's actually left of the drain's own
+// budget for that row.
+export const PROVIDER_TIMEOUT_MS = 5000;
+// Below this much remaining budget, don't even start a row — release it
+// back to pending immediately rather than attempt a request with too
+// little time to plausibly get a real response.
+export const MIN_ROW_BUDGET_MS = 500;
+
+// Bounds the per-request provider timeout to whatever's actually left of
+// the drain invocation's own time budget, so a request can never run the
+// function past its safe execution window. Pure — takes the already-computed
+// remaining-ms value rather than reading the clock itself.
+export function providerTimeoutFor(remainingBudgetMs) {
+  return Math.max(0, Math.min(PROVIDER_TIMEOUT_MS, remainingBudgetMs));
+}
 
 // Constant-time-ish secret comparison: hashing both sides first means the
 // comparison itself (timingSafeEqual) always compares equal-length buffers,
