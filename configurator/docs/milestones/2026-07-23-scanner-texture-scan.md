@@ -63,6 +63,45 @@ evidence model this scan type needs:
 | `npm test` | 325/325 pass (319 baseline on this branch + 6 new in `captureTextureScan.test.mjs`) |
 | `npm run build` | Succeeds |
 | `git diff --check` | Clean |
+| `npm run smoke` against the deployed preview | 32/32 pass |
+
+## A real bug caught by live verification (not by the unit suite)
+
+The title input's `onBlur` handler triggered an async, `busy`-locking save
+the instant focus left the field — moving focus to the "Take photo" button
+right below it (the very next natural action) raced that save's re-render
+against the click, and in practice the click never registered: the
+Playwright run hung on `setInputFiles` timing out because the camera modal
+never opened. This is UI event-ordering, not policy logic, so no unit test
+would have caught it — only driving the actual component in a real browser
+did. Fixed by removing the `onBlur` auto-save entirely and adding an
+explicit **Save Draft** button, matching the pattern `CaptureColorScan.jsx`
+already used. Re-verified live after the fix — full flow passes end to end.
+
+## Live browser verification (2026-07-23)
+
+Run against the deployed preview (`ironwrap-estimator-git-claude-scanne-b2c6ce-drummouses-projects.vercel.app`,
+READY, deployment `7iQ9UHqj5Dx478ye6Ad3JNPusXeB` — the fix commit) via
+Playwright, same approach as the Tag UI and Color & Finish slices. Headless
+Chromium has no camera, so the flow exercised `CaptureCamera`'s gallery
+fallback with a real generated JPEG (a banded canvas image standing in for
+a woodgrain texture), not a mocked upload.
+
+| Step | Result |
+| --- | --- |
+| Create a Texture scan session | "Texture scan" appears in the type chooser; the dedicated flow renders |
+| Name the sample, upload a real source photo | Photo renders in the panel |
+| Fill calibration (units, feature, value, ruler confirmed), Save Calibration | "Calibrated: plank width = 140 mm" confirmed |
+| Fill width/height, Save Width & Height | Accepted |
+| Confirm the main visible face material zone | "Main visible face confirmed." |
+| Choose a texture direction | Persisted (`along_run`) |
+| Run Technical Compatibility Check | Reports "Ready"; the `CaptureFlatWallPreview` Three.js schematic actually renders (a real WebGL canvas element appears on the page) |
+| Save Draft, Submit for review | Submit enables once all required evidence is present; succeeds ("Submitted for review with 1 warning(s)" — the expected `DESCRIPTION_MISSING` warning, non-blocking, correct) |
+| Reload, reopen the session | Title and texture direction both persisted correctly |
+| Console/page errors throughout | None |
+
+All steps passed. No real SMS/email was sent; no schema, historical rows,
+`main`, or the Codex/GPT lane were touched.
 
 ## Honest gaps
 
