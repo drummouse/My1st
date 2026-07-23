@@ -195,6 +195,27 @@ export function validateCompleteness({ session = {}, fields = [], assets = [], m
     return { errors, warnings, score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)) };
   }
 
+  // Color & Finish scan (first vertical slice of that scan type): a
+  // reusable color sample, not a product — no category, no dimensions, no
+  // identity requirement beyond the sample itself. Mirrors Profile
+  // Geometry's evidence-driven, flexible-classification framing (§10: tags/
+  // application relationships, never hard structure).
+  if (captureType === 'color_finish') {
+    if (!hasText(session.title)) add(errors, 'TITLE_REQUIRED', 'Name the color/finish.');
+    if (!hasPhoto('main')) add(errors, 'MAIN_PHOTO_REQUIRED', 'Add a source photo to sample the color from.');
+    const color = field('color');
+    if (!color || !hasText(color.hex) || !hasText(color.finish)) {
+      add(errors, 'COLOR_SAMPLE_REQUIRED', 'Sample a color from a photo and choose a finish.');
+    }
+    if (!hasText(color?.manufacturerName) && !hasText(color?.manufacturerCode)) {
+      add(warnings, 'COLOR_IDENTITY_MISSING', 'A manufacturer name or color code helps identification.');
+    }
+    if (!hasText(field('description'))) add(warnings, 'DESCRIPTION_MISSING', 'A short description helps the reviewer.');
+    const totalChecks = 5;
+    const failed = errors.length + warnings.length;
+    return { errors, warnings, score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)) };
+  }
+
   const guided = captureType !== 'quick';
   const category = session.category || null;
 
