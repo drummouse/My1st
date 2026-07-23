@@ -58,6 +58,33 @@ selected (`sample?.lab?.l` would have also worked, but showing partial LAB
 values before a finish is chosen is misleading anyway, so gating on
 `sample` truthiness is the better fix).
 
+## Live browser verification (2026-07-23)
+
+Run against the deployed preview (`ironwrap-estimator-git-claude-scanne-3cc2a4-drummouses-projects.vercel.app`,
+READY, deployment `EbeB7GHvAhjhckN9BnCPdmpK4wzY`) via Playwright, same
+approach as the Tag UI slice (local `npm run dev` has no working backend in
+this sandbox, so the live preview is the rigorous equivalent). Headless
+Chromium has no camera, so the flow exercised `CaptureCamera`'s gallery
+fallback with a real generated JPEG (a solid-fill 200×200 canvas image,
+written to disk and fed through the actual `<input type="file">`), not a
+mocked upload.
+
+| Step | Result |
+| --- | --- |
+| `npm run smoke` against the preview | 32/32 pass |
+| Create a Color & Finish scan session | "Color & Finish scan" appears in the type chooser; the dedicated flow renders |
+| Name the sample | Persisted |
+| Take/choose the source photo | Real file uploaded through the existing pipeline; photo renders in the panel |
+| Click the photo to sample a color | A real pixel read via canvas `getImageData` off the *actual rendered photo* — not a stub. Read back within JPEG-compression tolerance of the source fill color |
+| Hex/LAB derivation | A well-formed `#RRGGBB` hex and finite LAB values displayed, computed from the real sampled RGB |
+| Choose a finish, fill manufacturer name/code | All three persisted |
+| Save Draft, reload, reopen the session | Title, finish, manufacturer name/code, **and the exact sampled RGB** (byte-for-byte, not just tolerance) all persisted correctly |
+| Submit for review | Succeeded ("Submitted for review with 1 warning(s)" — the expected `DESCRIPTION_MISSING` warning, since this scan type has no description field; non-blocking, correct) |
+| Console/page errors throughout | None |
+
+All 8 steps passed. No real SMS/email was sent; no schema, historical rows,
+`main`, or the Codex/GPT lane were touched.
+
 ## Honest gaps
 
 - **No color-calibration-board CV** — every result is `visual-grade`
