@@ -9,6 +9,7 @@ import CaptureCamera from './CaptureCamera.jsx';
 import CaptureReview from './CaptureReview.jsx';
 import CaptureProfileScan from './CaptureProfileScan.jsx';
 import CaptureColorScan from './CaptureColorScan.jsx';
+import CaptureTextureScan from './CaptureTextureScan.jsx';
 
 const PHOTO_PURPOSES = [
   { id: 'main', label: 'Main photo', hint: 'The whole product, straight on' },
@@ -19,6 +20,7 @@ const PHOTO_PURPOSES = [
 const CAPTURE_TYPES = [
   { id: 'profile_geometry', label: 'Profile Geometry scan' },
   { id: 'color_finish', label: 'Color & Finish scan' },
+  { id: 'texture', label: 'Texture scan' },
   { id: 'guided_product', label: 'Guided product capture' },
   { id: 'quick', label: 'Quick capture' },
 ];
@@ -444,6 +446,19 @@ export default function CapturePanel({ canReview = false }) {
   if (open && open.session.captureType === 'color_finish') {
     return (
       <CaptureColorScan
+        detail={open}
+        onDetailChange={setOpen}
+        onExit={() => { setOpen(null); setForm(null); setStatus(''); load(); }}
+      />
+    );
+  }
+
+  // Texture scans reuse the R2.5 calibration/material-zone/texture-direction
+  // machinery, but as their own dedicated flow producing a reusable texture
+  // asset rather than a full guided-product record.
+  if (open && open.session.captureType === 'texture') {
+    return (
+      <CaptureTextureScan
         detail={open}
         onDetailChange={setOpen}
         onExit={() => { setOpen(null); setForm(null); setStatus(''); load(); }}

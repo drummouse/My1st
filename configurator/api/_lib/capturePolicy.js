@@ -216,6 +216,34 @@ export function validateCompleteness({ session = {}, fields = [], assets = [], m
     return { errors, warnings, score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)) };
   }
 
+  // Texture scan (first vertical slice of that scan type): a reusable
+  // texture asset, not a product — reuses the same calibration/material-zone/
+  // texture-direction machinery R2.5 built for Profile Geometry's flat-wall
+  // technical-compatibility proof, except here those ARE the scan's core
+  // evidence (not an optional extra layer). No category/dimensions/exposure
+  // requirement, same flexible-classification framing as the other scan
+  // types.
+  if (captureType === 'texture') {
+    if (!hasText(session.title)) add(errors, 'TITLE_REQUIRED', 'Name the texture.');
+    if (!hasPhoto('main')) add(errors, 'MAIN_PHOTO_REQUIRED', 'Add a flat, square-on source photo.');
+    const calibration = field('calibration');
+    if (!calibration || calibration.rulerConfirmed !== true || !positive(calibration.knownMeasurement?.value)) {
+      add(errors, 'CALIBRATION_REQUIRED', 'Complete calibration: units, ruler placement, and one known measurement.');
+    }
+    const materialZoneState = session.materialZoneState ?? session.material_zone_state;
+    if (materialZoneState?.zones?.[0]?.confirmed !== true) {
+      add(errors, 'MATERIAL_ZONE_REQUIRED', 'Confirm the main visible face material zone.');
+    }
+    const textureDirection = session.textureDirection ?? session.texture_direction;
+    if (!textureDirection) {
+      add(errors, 'TEXTURE_DIRECTION_REQUIRED', 'Choose the texture direction.');
+    }
+    if (!hasText(field('description'))) add(warnings, 'DESCRIPTION_MISSING', 'A short description helps the reviewer.');
+    const totalChecks = 6;
+    const failed = errors.length + warnings.length;
+    return { errors, warnings, score: Math.max(0, Math.round(100 * (totalChecks - Math.min(failed, totalChecks)) / totalChecks)) };
+  }
+
   const guided = captureType !== 'quick';
   const category = session.category || null;
 
