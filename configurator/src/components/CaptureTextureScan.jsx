@@ -84,7 +84,7 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
     }
   };
 
-  const handleSaveTitle = () => act(async () => {
+  const handleSave = () => act(async () => {
     if (title.trim() && title !== session.title) await captureApi.update(session.id, { title });
     await refresh();
     setStatus('Draft saved.');
@@ -149,7 +149,6 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
         value={title}
         disabled={!editable || busy}
         onChange={(e) => setTitle(e.target.value)}
-        onBlur={handleSaveTitle}
         placeholder="e.g. Driftwood woodgrain texture"
       />
 
@@ -338,6 +337,7 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
 
       {editable && (
         <div className="export-buttons">
+          <button type="button" className="btn-secondary" onClick={handleSave} disabled={busy}>Save Draft</button>
           <button
             type="button"
             className="btn-primary"
