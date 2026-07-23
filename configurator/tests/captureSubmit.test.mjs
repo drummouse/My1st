@@ -184,5 +184,5 @@ test('routes: submit/validate are wired, PATCH cannot smuggle transitions, clien
   assert.match(smoke, /auth guard \/api\/capture submit/);
 
   const panel = await readFile(new URL('../src/components/CapturePanel.jsx', import.meta.url), 'utf8');
-  assert.match(panel, /import \{ validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES \} from '\.\.\/\.\.\/api\/_lib\/capturePolicy\.js'/);
+  assert.match(panel, /import \{ validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES, ITEM_TYPES, MAX_TAG_LENGTH, MAX_TAGS_PER_SESSION \} from '\.\.\/\.\.\/api\/_lib\/capturePolicy\.js'/);
 });

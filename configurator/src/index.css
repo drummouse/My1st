@@ -1129,3 +1129,49 @@ body {
   overflow-x: auto;
 }
 .capture-preview-svg svg { max-width: 100%; height: auto; display: block; }
+
+/* Flexible tags: chip picker on the guided-product editor. */
+.capture-tags { margin: 0.4rem 0 0.8rem; }
+.capture-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.capture-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #eef2ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.15rem 0.3rem 0.15rem 0.65rem;
+  font-size: 0.78rem;
+}
+.capture-tag-chip button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+.capture-tag-input-row { display: flex; gap: 0.4rem; }
+.capture-tag-input-row input { flex: 1; }
+.capture-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.capture-tag-suggestion {
+  border: 1px dashed #d1d5db;
+  background: #fff;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.capture-tag-suggestion:hover { border-color: #6366f1; color: #3730a3; }

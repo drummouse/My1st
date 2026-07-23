@@ -5,6 +5,12 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-22 — Scanner: flexible tags UI (item type + tag picker in the guided-product editor)
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-073 | The first Scanner UI slice on top of D-053–D-056's schema+CRUD: an "Item type" `<select>` (every `ITEM_TYPES` value, defaulting to "Not classified") and a tag chip picker, both added to `CapturePanel.jsx`'s existing guided-product editor (`Product identity` section) and saved through the already-existing draft-patch path (`itemType`/`tags` as top-level `patchFromForm` keys, matching `normalizeDraftPatch`'s contract exactly — no new API surface). The picker fetches the tenant's `capture_tags` vocabulary (`GET /api/capture/tags`) for suggestions/autocomplete, lets the user add an existing or brand-new tag (Enter or a suggestion chip), and remove one from the session (`×` on a chip) — removal only ever touches this session's own `tags` array, never the shared vocabulary table. Adding a genuinely new tag also best-effort registers it in the vocabulary (`POST /api/capture/tags`, idempotent) so it's suggested next time; that registration's success or failure never affects whether the tag is added to the session, since the session's own tags are never validated against the vocabulary (D-055). | Reuses 100% of the existing draft-patch mechanism and existing tag-CRUD endpoints — this is UI-only, zero new backend surface, matching the narrow "smallest next slice" framing this was scoped under. Best-effort vocabulary registration keeps the suggestion list useful over time without adding a second source of truth or a blocking round-trip to session tag edits. | A dedicated `PATCH .../tags` session-tag-only endpoint (rejected: the general draft-patch path already accepts `tags` by design, per D-055 — a second endpoint would duplicate it for no benefit); validating session tags against the vocabulary client-side before allowing add (rejected: contradicts D-055's explicit "not checked against the vocabulary at write time" decision — the UI shouldn't enforce a rule the server deliberately doesn't). |
+
 ## 2026-07-21 — Communications MVP hardening: transient classification, provider timeout, auth-before-schema ordering
 
 | # | Decision | Rationale | Alternatives considered |
