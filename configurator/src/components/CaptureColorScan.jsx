@@ -65,8 +65,17 @@ export default function CaptureColorScan({ detail, onDetailChange, onExit }) {
   const mainAsset = detail.assets.find((a) => a.purpose === 'main'
     && (a.classification || 'source') === 'source'
     && !(a.supersededBy ?? a.superseded_by));
-  const completeness = validateCompleteness(detail);
   const sample = rgb && finish ? normalizeColorSample({ rgb, finish, manufacturerName, manufacturerCode }) : null;
+  // Completeness must reflect what Submit is about to save, not the
+  // last-persisted session -- the sample/title only exist in local state
+  // until Save Draft/Submit, so the server-shaped `detail` alone is stale.
+  const completeness = validateCompleteness({
+    ...detail,
+    session: { ...session, title },
+    fields: sample
+      ? [...detail.fields.filter((f) => f.fieldKey !== 'color'), { fieldKey: 'color', value: sample }]
+      : detail.fields,
+  });
   const photoUploading = queueItems.some((item) => item.status !== 'done');
 
   // A photo just finished uploading while on the photo step — move on

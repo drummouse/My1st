@@ -70,7 +70,10 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
   const mainAsset = detail.assets.find((a) => a.purpose === 'main'
     && (a.classification || 'source') === 'source'
     && !(a.supersededBy ?? a.superseded_by));
-  const completeness = validateCompleteness(detail);
+  // Completeness must reflect what Submit is about to save, not the
+  // last-persisted session -- the title only exists in local state until
+  // Save Draft/Submit, so the server-shaped `detail` alone is stale.
+  const completeness = validateCompleteness({ ...detail, session: { ...session, title } });
   const materialZoneConfirmed = session.materialZoneState?.zones?.[0]?.confirmed === true;
   const photoUploading = queueItems.some((item) => item.status !== 'done');
 
