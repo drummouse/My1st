@@ -5,6 +5,9 @@ import { publicTenantAccess } from '../_lib/publicAccess.js';
 import { projectResponseWithRuntime } from '../_lib/projectRuntime.js';
 import { buildPublicProjectCatalog } from '../_lib/publicProjectCatalog.js';
 import { buildPublicProjectQuote } from '../_lib/publicProjectQuote.js';
+import { buildDesignApprovedNotifications } from '../_lib/notifications.js';
+import { createSupportReference } from '../_lib/accountAdministration.js';
+import { resolveClientNotifier } from '../_lib/commsIdentity.js';
 
 async function requirePublicProjectAccess(database, id, res) {
   const [project] = await database`
@@ -65,14 +68,14 @@ export function createProjectsHandler({
       }
 
       if (req.method === 'POST') {
-        const { jobNumber, customerName, address, design } = req.body || {};
+        const { jobNumber, customerName, address, customerEmail, customerPhone, design } = req.body || {};
         if (!design) {
           res.status(400).json({ error: 'design is required' });
           return;
         }
         const [row] = await database`
-          insert into projects (job_number, customer_name, address, design, owner_id)
-          values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${JSON.stringify(design)}::jsonb, ${userId})
+          insert into projects (job_number, customer_name, address, customer_email, customer_phone, design, owner_id)
+          values (${jobNumber || null}, ${customerName || null}, ${address || null}, ${customerEmail || null}, ${customerPhone || null}, ${JSON.stringify(design)}::jsonb, ${userId})
           returning id, job_number, customer_name, address, created_at, updated_at
         `;
         res.status(201).json(row);
@@ -106,7 +109,7 @@ export function createProjectsHandler({
         set approved_at = now(),
             approved_by_name = ${approvedByName || null}
         where id = ${id} and approved_at is null
-        returning id, owner_id, job_number, customer_name, address, approved_at, approved_by_name
+        returning id, owner_id, job_number, customer_name, address, customer_email, customer_phone, approved_at, approved_by_name
       `;
       const newlyApproved = Boolean(row);
 
@@ -114,7 +117,7 @@ export function createProjectsHandler({
       // timestamp/name and do not notify the webhook again.
       if (!row) {
         [row] = await database`
-          select id, owner_id, job_number, customer_name, address, approved_at, approved_by_name
+          select id, owner_id, job_number, customer_name, address, customer_email, customer_phone, approved_at, approved_by_name
           from projects
           where id = ${id}
         `;
@@ -128,11 +131,11 @@ export function createProjectsHandler({
       // failing webhook (or no owner/no URL configured) never changes the
       // approval response the customer sees. Only the first approval emits it.
       if (newlyApproved && row.owner_id) {
+        const proto = req.headers['x-forwarded-proto'] || 'https';
+        const shareUrl = `${proto}://${req.headers.host}/?p=${id}`;
         try {
           const [settingsRow] = await database`select notification_webhook_url from settings where owner_id = ${row.owner_id}`;
           if (settingsRow?.notification_webhook_url) {
-            const proto = req.headers['x-forwarded-proto'] || 'https';
-            const shareUrl = `${proto}://${req.headers.host}/?p=${id}`;
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
             await fetch(settingsRow.notification_webhook_url, {
@@ -154,6 +157,39 @@ export function createProjectsHandler({
           }
         } catch (err) {
           console.error('Approval webhook lookup failed:', err);
+        }
+
+        // Direct customer email/SMS, only when this owner has opted into
+        // 'platform' notify mode (see INTEGRATIONS.md's comms section) —
+        // separate from, and in addition to, the webhook above, which
+        // covers the 'self'/own-automation path independently. Skips
+        // silently for a 'self' owner, a project with no customer_email/
+        // customer_phone, or if the outbox insert itself fails (never
+        // blocks the approval response the customer sees).
+        try {
+          const notifier = await resolveClientNotifier(row.owner_id);
+          if (notifier) {
+            const { notifications: notices, skipped } = buildDesignApprovedNotifications(row, createSupportReference(), shareUrl, notifier.brandName);
+            for (const notice of notices) {
+              await sql`
+                insert into notification_outbox
+                  (channel, template, payload, support_reference, sender_user_id, to_email, to_phone)
+                values (${notice.channel}, ${notice.template}, ${JSON.stringify(notice.payload)}::jsonb,
+                  ${notice.supportReference}, ${row.owner_id},
+                  ${notice.channel === 'email' ? notice.destination : null},
+                  ${notice.channel === 'sms' ? notice.destination : null})
+              `;
+            }
+            // D-066: an invalid customer_email/customer_phone never blocks the
+            // approval response the customer sees, and never blocks the other
+            // channel — it's simply not queued, logged here (no recipient
+            // value) so a real invalid-contact-data case is discoverable.
+            if (skipped.length) {
+              console.warn(`Approval notice skipped for invalid recipient: project=${id} channels=${skipped.map((s) => s.channel).join(',')}`);
+            }
+          }
+        } catch (err) {
+          console.error('Approval customer-notification enqueue failed:', err);
         }
       }
       res.status(200).json({ id: row.id, approved_at: row.approved_at, approved_by_name: row.approved_by_name });
@@ -221,7 +257,7 @@ export function createProjectsHandler({
       }
 
       if (req.method === 'PUT') {
-        const { jobNumber, customerName, address, design } = req.body || {};
+        const { jobNumber, customerName, address, customerEmail, customerPhone, design } = req.body || {};
         if (!design) {
           res.status(400).json({ error: 'design is required' });
           return;
@@ -231,6 +267,8 @@ export function createProjectsHandler({
           set job_number = ${jobNumber || null},
               customer_name = ${customerName || null},
               address = ${address || null},
+              customer_email = ${customerEmail || null},
+              customer_phone = ${customerPhone || null},
               design = ${JSON.stringify(design)}::jsonb,
               owner_id = ${existing.owner_id || userId},
               updated_at = now()

@@ -60,12 +60,22 @@ export function ensureSchema() {
       await sql`alter table users add column if not exists must_change_password boolean not null default false`;
       await sql`alter table users add column if not exists deleted_at timestamptz`;
       await sql`alter table users add column if not exists purge_after timestamptz`;
-      await sql`
-        do $$ begin
-          alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
-        exception when duplicate_object then null;
-        end $$
-      `;
+      // Reseller tier: a reseller creates/manages its own owner accounts
+      // (scoped by this column — see api/superadmin/index.js's reseller
+      // checks) without visibility into any tenant's private project data.
+      // Null for accounts a superadmin created directly (or the reseller
+      // accounts themselves). Self-referencing like status_changed_by above.
+      await sql`alter table users add column if not exists reseller_id uuid references users(id)`;
+      await sql`create index if not exists users_reseller_id_idx on users (reseller_id)`;
+      // Billing/licensing isn't built yet — this is deliberately just a
+      // free-form stub column so a future plan/tier system has somewhere to
+      // land without another migration fire drill. Nothing reads it yet.
+      await sql`alter table users add column if not exists plan text`;
+      // A CHECK constraint can't be altered in place, so the existing one
+      // (if any) is dropped and re-added with the current allowed set every
+      // time — idempotent, and the only way to widen it as roles are added.
+      await sql`alter table users drop constraint if exists users_role_check`;
+      await sql`alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'))`;
       await sql`
         do $$ begin
           alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));
@@ -104,6 +114,58 @@ export function ensureSchema() {
           created_at timestamptz not null default now()
         )
       `;
+      // Widened for business-facing comms (a tenant notifying its own
+      // client, e.g. design.approved), not just platform account notices:
+      // user_id stays the "internal recipient" case (nullable now, since a
+      // business notice's recipient is a project's customer, not a `users`
+      // row), to_email/to_phone carry the actual destination for either
+      // case, and sender_user_id names whose sender identity (see
+      // sender_identities below) should send it — null means "the platform
+      // default identity," used for every existing account-notice call site
+      // unchanged.
+      await sql`alter table notification_outbox alter column user_id drop not null`;
+      await sql`alter table notification_outbox add column if not exists sender_user_id uuid references users(id)`;
+      await sql`alter table notification_outbox add column if not exists to_email text`;
+      await sql`alter table notification_outbox add column if not exists to_phone text`;
+      // Scheduled-drain support (D-066/D-067): claimed_at records when a row
+      // was atomically claimed by a drain invocation (observability only —
+      // the actual lease/reclaim mechanism reuses next_attempt_at, see
+      // api/comms/index.js); error_category distinguishes a permanent
+      // recipient/provider rejection from a transient one worth retrying,
+      // separate from the free-text last_error message.
+      await sql`alter table notification_outbox add column if not exists claimed_at timestamptz`;
+      await sql`alter table notification_outbox add column if not exists error_category text`;
+
+      // One row per reseller/owner — their comms preference, not a
+      // dedicated sending account. No per-tenant Twilio number or email
+      // domain: every platform-sent notice rides the platform's single
+      // shared Twilio number and SendGrid sender (see commsDelivery.js), only
+      // the message signature/Reply-To vary by tenant. `notify_mode`:
+      // 'platform' — the platform (or, if this tenant has a reseller, the
+      // reseller's own brand) sends design-approved/etc. notices to this
+      // tenant's clients on their behalf; 'self' — the tenant handles that
+      // themselves, manually or via their own automation against
+      // `settings.notification_webhook_url`. Defaults to 'self' so nothing
+      // changes for an existing tenant until they explicitly opt in.
+      await sql`
+        create table if not exists sender_identities (
+          id uuid primary key default gen_random_uuid(),
+          user_id uuid not null references users(id),
+          notify_mode text not null default 'self',
+          display_name text,
+          contact_email text,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+      `;
+      await sql`create unique index if not exists sender_identities_user_id_key on sender_identities (user_id)`;
+      await sql`
+        do $$ begin
+          alter table sender_identities add constraint sender_identities_notify_mode_check
+            check (notify_mode in ('platform', 'self'));
+        exception when duplicate_object then null;
+        end $$
+      `;
 
       await sql`
         create table if not exists projects (
@@ -121,6 +183,12 @@ export function ensureSchema() {
       // already there.
       await sql`alter table projects add column if not exists approved_at timestamptz`;
       await sql`alter table projects add column if not exists approved_by_name text`;
+      // Optional customer contact, entered in the House/Project panel —
+      // lets the design.approved event notify the customer directly (via
+      // the owning tenant's own sender identity), not just the owner's
+      // configured webhook. Blank/absent just skips that notification.
+      await sql`alter table projects add column if not exists customer_email text`;
+      await sql`alter table projects add column if not exists customer_phone text`;
       // Multi-tenancy: which signed-up user this project belongs to. Nullable
       // so projects saved before accounts existed don't become orphaned by
       // the migration; ownerless rows just aren't returned by the
@@ -329,7 +397,7 @@ export function ensureSchema() {
       await sql`
         create table if not exists library_records (
           id uuid primary key,
-          record_type text not null check (record_type in ('product','profile','color','category','manufacturer','supplier','collection','catalog')),
+          record_type text not null check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog')),
           scope text not null check (scope in ('global','tenant')),
           tenant_id uuid references users(id),
           name text not null,
@@ -355,6 +423,13 @@ export function ensureSchema() {
           check ((scope = 'global' and tenant_id is null) or (scope = 'tenant' and tenant_id is not null))
         )
       `;
+      // Scanner asset-graph mapping (D-076): 'texture' joins the record-type
+      // vocabulary so a texture scan can publish as its own reusable Library
+      // asset instead of a generic 'product' — same drop-and-re-add pattern
+      // as capture_sessions_capture_type_check above, for tables created by
+      // an earlier stage's narrower CHECK.
+      await sql`alter table library_records drop constraint if exists library_records_record_type_check`;
+      await sql`alter table library_records add constraint library_records_record_type_check check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog'))`;
       await sql`create unique index if not exists library_record_code_scope_unique on library_records (record_type, scope, coalesce(tenant_id::text, ''), lower(code)) where code is not null`;
       await sql`create index if not exists library_records_search_idx on library_records (record_type, scope, lifecycle_status, review_status, quality_level, lower(name))`;
       await sql`
@@ -476,6 +551,193 @@ export function ensureSchema() {
         )
       `;
       await sql`create index if not exists attachments_project_id_idx on attachments (project_id)`;
+
+      // IronWrap Capture — additive only (Stage 1). Sessions carry the
+      // server-side state machine (client sync states never land here);
+      // client_ref makes draft creation idempotent across mobile retries.
+      // Image bytes never live in these tables — capture_assets stores Blob
+      // URLs and metadata only, matching the attachments precedent.
+      await sql`
+        create table if not exists capture_sessions (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid not null references users(id),
+          client_ref text,
+          capture_type text not null default 'guided_product'
+            check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish')),
+          category text check (category is null or category in ('roofing','siding','soffit','fascia','gutter','downspout','trim','accessory','other')),
+          title text,
+          status text not null default 'draft'
+            check (status in ('draft','submitted','in_review','changes_requested','approved','publishing','published','rejected','archived')),
+          current_step text,
+          completeness integer not null default 0,
+          submitted_snapshot jsonb,
+          published_record_id uuid references library_records(id),
+          published_version integer,
+          tags jsonb not null default '[]'::jsonb,
+          item_type text check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown')),
+          submitted_at timestamptz,
+          material_zone_state jsonb,
+          texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+          studio_validation jsonb,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+      `;
+      // R2.5: additive/nullable — existing sessions are unaffected.
+      await sql`alter table capture_sessions add column if not exists material_zone_state jsonb`;
+      await sql`alter table capture_sessions add column if not exists texture_direction text`;
+      await sql`alter table capture_sessions drop constraint if exists capture_sessions_texture_direction_check`;
+      await sql`alter table capture_sessions add constraint capture_sessions_texture_direction_check
+        check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable'))`;
+      await sql`alter table capture_sessions add column if not exists studio_validation jsonb`;
+      await sql`create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null`;
+      await sql`create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status)`;
+      // Flexible classification (flexible-tags slice, deferred by D-035):
+      // additive, nullable — existing sessions default to an empty tag list
+      // and no item type. Fixes up capture_sessions rows created before
+      // these columns existed; the create-table literal above already
+      // carries them for fresh databases.
+      await sql`alter table capture_sessions add column if not exists tags jsonb not null default '[]'::jsonb`;
+      await sql`alter table capture_sessions add column if not exists item_type text
+        check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown'))`;
+
+      await sql`
+        create table if not exists capture_assets (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          owner_id uuid not null references users(id),
+          purpose text not null,
+          classification text not null default 'source' check (classification in ('source','derived')),
+          source_asset_id uuid references capture_assets(id),
+          url text not null,
+          checksum text,
+          mime_type text,
+          size_bytes bigint not null default 0,
+          width integer,
+          height integer,
+          capture_metadata jsonb not null default '{}'::jsonb,
+          upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+          superseded_by uuid references capture_assets(id),
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_assets_session_id_idx on capture_assets (session_id)`;
+      // R2.2: an accepted source image is never overwritten. Replacing it
+      // inserts a fresh immutable asset and points the OLD row at the new
+      // one via this column — additive metadata only, every other column on
+      // the superseded row (url/checksum/capture_metadata/timestamps) stays
+      // exactly as originally accepted (decision D-039).
+      await sql`alter table capture_assets add column if not exists superseded_by uuid references capture_assets(id)`;
+
+      await sql`
+        create table if not exists capture_fields (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          field_key text not null,
+          value jsonb,
+          source text not null default 'manual' check (source in ('manual','barcode','ocr','ai','imported','reviewer')),
+          confidence numeric,
+          confirmed_by uuid references users(id),
+          confirmed_at timestamptz,
+          source_asset_id uuid references capture_assets(id),
+          updated_at timestamptz not null default now(),
+          unique (session_id, field_key)
+        )
+      `;
+
+      await sql`
+        create table if not exists capture_review_comments (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          author_id uuid not null references users(id),
+          body text not null,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id)`;
+
+      // Slice R1 widening: tables created by the Stage 1 shape carry the
+      // narrower CHECK lists, so drop and re-add with the current allowed
+      // values — same idempotent pattern as users_role_check above. The
+      // create-table literals above already carry the widened lists for
+      // fresh databases.
+      await sql`alter table capture_sessions drop constraint if exists capture_sessions_capture_type_check`;
+      await sql`alter table capture_sessions add constraint capture_sessions_capture_type_check check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish'))`;
+      // Flexible-tags slice: shot purpose/label becomes an open vocabulary
+      // (spec §18) — drop the closed-list CHECK entirely rather than
+      // widening it again. capturePolicy.js's normalizeAssetInput still
+      // bounds and sanitizes the value; tables created by earlier stages
+      // carry the old CHECK, so this drop fixes those in place.
+      await sql`alter table capture_assets drop constraint if exists capture_assets_purpose_check`;
+
+      // Real-world measurements with provenance (Slice R1; supersedes the
+      // JSON-blob dimensions approach for scan sessions — D-010 revisited).
+      // Values never live in Blob storage and images never live here.
+      await sql`
+        create table if not exists capture_measurements (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          owner_id uuid not null references users(id),
+          feature text not null,
+          axis text check (axis is null or axis in ('width','height','depth','length')),
+          value numeric not null,
+          unit text not null check (unit in ('mm','cm','in','ft')),
+          method text not null default 'manual' check (method in ('manual','ruler','marker','inferred')),
+          confidence numeric,
+          source_asset_id uuid references capture_assets(id),
+          confirmed_by uuid references users(id),
+          confirmed_at timestamptz,
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id)`;
+
+      // Claude adaptive-guidance attempts (R2.4, D-044) — one immutable,
+      // append-only row per attempt (success or not), kept in its own
+      // namespace: 'findings' only populated for status='advisory'
+      // (validated, policy-passed responses); every other status carries a
+      // non-sensitive 'diagnostic' instead. No image bytes ever stored here.
+      await sql`
+        create table if not exists capture_claude_analyses (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references capture_sessions(id) on delete cascade,
+          owner_id uuid not null references users(id),
+          status text not null check (status in
+            ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
+          model text,
+          prompt_version text,
+          schema_version integer,
+          source_asset_ids jsonb not null default '[]'::jsonb,
+          findings jsonb,
+          diagnostic jsonb not null default '{}'::jsonb,
+          fulfilled_asset_id uuid references capture_assets(id),
+          created_at timestamptz not null default now()
+        )
+      `;
+      await sql`create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id)`;
+      // Release-readiness fixup: 'configuration_error' added for the
+      // required-CAPTURE_CLAUDE_MODEL correction — widen the existing
+      // constraint for preview branches that already created this table
+      // with the narrower list (same drop-and-re-add idiom as D-035).
+      await sql`alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check`;
+      await sql`alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
+        ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'))`;
+
+      // Tenant-scoped tag vocabulary (flexible-tags slice, deferred by
+      // D-035): permissioned tag creation lives here; a session's own
+      // `tags` jsonb array (above) names which of these apply to it. No
+      // platform seed set in this slice — deferred, see decision log.
+      await sql`
+        create table if not exists capture_tags (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid not null references users(id),
+          tag text not null,
+          created_by uuid references users(id),
+          created_at timestamptz not null default now(),
+          unique (owner_id, tag)
+        )
+      `;
+      await sql`create index if not exists capture_tags_owner_id_idx on capture_tags (owner_id)`;
     })().catch((err) => {
       schemaReady = undefined;
       throw err;

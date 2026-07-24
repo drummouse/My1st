@@ -23,10 +23,10 @@ export async function changeAccountStatus({
       actorId: actor.id, action: `account.${nextStatus}`, targetId,
       reason: transition.reason, requestId, supportReference,
     });
-    const notifications = buildRestrictionNotifications(
+    const { notifications, skipped } = buildRestrictionNotifications(
       target, nextStatus, transition.reason, supportReference,
     );
     await store.insertNotifications(notifications);
-    return { user: updated, supportReference, notificationsQueued: notifications.length };
+    return { user: updated, supportReference, notificationsQueued: notifications.length, notificationsSkipped: skipped };
   });
 }

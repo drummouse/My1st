@@ -25,11 +25,12 @@ alter table users add column if not exists session_version integer not null defa
 alter table users add column if not exists must_change_password boolean not null default false;
 alter table users add column if not exists deleted_at timestamptz;
 alter table users add column if not exists purge_after timestamptz;
+alter table users add column if not exists reseller_id uuid references users(id);
+create index if not exists users_reseller_id_idx on users (reseller_id);
+alter table users add column if not exists plan text;
 
-do $$ begin
-  alter table users add constraint users_role_check check (role in ('owner', 'superadmin'));
-exception when duplicate_object then null;
-end $$;
+alter table users drop constraint if exists users_role_check;
+alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'));
 
 do $$ begin
   alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));
@@ -52,7 +53,7 @@ create table if not exists superadmin_audit_events (
 
 create table if not exists notification_outbox (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references users(id),
+  user_id uuid references users(id),
   channel text not null,
   template text not null,
   payload jsonb not null,
@@ -62,8 +63,28 @@ create table if not exists notification_outbox (
   last_error text,
   sent_at timestamptz,
   support_reference text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  sender_user_id uuid references users(id),
+  to_email text,
+  to_phone text,
+  claimed_at timestamptz,
+  error_category text
 );
+
+-- A reseller/owner's comms preference — not a dedicated sending account.
+-- 'platform' sends ride the platform's one shared Twilio number/Gmail
+-- account; only the message signature/Reply-To vary by tenant. See
+-- api/_lib/db.js's ensureSchema() for the full rationale.
+create table if not exists sender_identities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  notify_mode text not null default 'self' check (notify_mode in ('platform', 'self')),
+  display_name text,
+  contact_email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists sender_identities_user_id_key on sender_identities (user_id);
 
 create table if not exists projects (
   id uuid primary key default gen_random_uuid(),
@@ -78,6 +99,8 @@ create table if not exists projects (
 alter table projects add column if not exists approved_at timestamptz;
 alter table projects add column if not exists approved_by_name text;
 alter table projects add column if not exists owner_id uuid references users(id);
+alter table projects add column if not exists customer_email text;
+alter table projects add column if not exists customer_phone text;
 
 create index if not exists projects_updated_at_idx on projects (updated_at desc);
 create index if not exists projects_owner_id_idx on projects (owner_id);
@@ -151,7 +174,7 @@ alter table settings add column if not exists show_expert_mode boolean not null 
 -- colors remain the configurator runtime source during this release.
 create table if not exists library_records (
   id uuid primary key,
-  record_type text not null check (record_type in ('product','profile','color','category','manufacturer','supplier','collection','catalog')),
+  record_type text not null check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog')),
   scope text not null check (scope in ('global','tenant')),
   tenant_id uuid references users(id),
   name text not null,
@@ -252,6 +275,135 @@ create table if not exists library_import_batches (
   created_at timestamptz not null default now(),
   committed_at timestamptz
 );
+-- IronWrap Capture — additive only (Stage 1). Sessions carry the server-side
+-- state machine; client_ref makes draft creation idempotent. Image bytes
+-- never live in these tables — capture_assets stores Blob URLs and metadata.
+create table if not exists capture_sessions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id),
+  client_ref text,
+  capture_type text not null default 'guided_product'
+    check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish')),
+  category text check (category is null or category in ('roofing','siding','soffit','fascia','gutter','downspout','trim','accessory','other')),
+  title text,
+  status text not null default 'draft'
+    check (status in ('draft','submitted','in_review','changes_requested','approved','publishing','published','rejected','archived')),
+  current_step text,
+  completeness integer not null default 0,
+  submitted_snapshot jsonb,
+  published_record_id uuid references library_records(id),
+  published_version integer,
+  tags jsonb not null default '[]'::jsonb,
+  item_type text check (item_type is null or item_type in ('profile','commercial_product','custom_object','assembly','decorative','unknown')),
+  submitted_at timestamptz,
+  -- R2.5: material-ready schematic proof — additive/nullable.
+  material_zone_state jsonb,
+  texture_direction text check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable')),
+  studio_validation jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null;
+create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status);
+
+-- Shot purpose/label is an open vocabulary (flexible-tags slice, spec §18):
+-- no closed-list CHECK; api/_lib/capturePolicy.js bounds and sanitizes it.
+create table if not exists capture_assets (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  purpose text not null,
+  classification text not null default 'source' check (classification in ('source','derived')),
+  source_asset_id uuid references capture_assets(id),
+  url text not null,
+  checksum text,
+  mime_type text,
+  size_bytes bigint not null default 0,
+  width integer,
+  height integer,
+  capture_metadata jsonb not null default '{}'::jsonb,
+  upload_status text not null default 'complete' check (upload_status in ('pending','complete','failed')),
+  -- R2.2: points a superseded (replaced) source asset at its replacement.
+  -- The superseded row's other columns are never changed — see D-039.
+  superseded_by uuid references capture_assets(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_assets_session_id_idx on capture_assets (session_id);
+
+create table if not exists capture_fields (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  field_key text not null,
+  value jsonb,
+  source text not null default 'manual' check (source in ('manual','barcode','ocr','ai','imported','reviewer')),
+  confidence numeric,
+  confirmed_by uuid references users(id),
+  confirmed_at timestamptz,
+  source_asset_id uuid references capture_assets(id),
+  updated_at timestamptz not null default now(),
+  unique (session_id, field_key)
+);
+
+create table if not exists capture_review_comments (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  author_id uuid not null references users(id),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Real-world measurements with provenance (Scanner Slice R1).
+create table if not exists capture_measurements (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  feature text not null,
+  axis text check (axis is null or axis in ('width','height','depth','length')),
+  value numeric not null,
+  unit text not null check (unit in ('mm','cm','in','ft')),
+  method text not null default 'manual' check (method in ('manual','ruler','marker','inferred')),
+  confidence numeric,
+  source_asset_id uuid references capture_assets(id),
+  confirmed_by uuid references users(id),
+  confirmed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_measurements_session_id_idx on capture_measurements (session_id);
+
+-- Claude adaptive-guidance attempts (Scanner R2.4, D-044) — one immutable,
+-- append-only row per attempt. 'findings' only populated for
+-- status='advisory'; every other status carries a non-sensitive
+-- 'diagnostic' instead. No image bytes ever stored here.
+create table if not exists capture_claude_analyses (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references capture_sessions(id) on delete cascade,
+  owner_id uuid not null references users(id),
+  status text not null check (status in
+    ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid')),
+  model text,
+  prompt_version text,
+  schema_version integer,
+  source_asset_ids jsonb not null default '[]'::jsonb,
+  findings jsonb,
+  diagnostic jsonb not null default '{}'::jsonb,
+  fulfilled_asset_id uuid references capture_assets(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists capture_claude_analyses_session_id_idx on capture_claude_analyses (session_id);
+create index if not exists capture_review_comments_session_id_idx on capture_review_comments (session_id);
+
+-- Tenant-scoped tag vocabulary (Scanner flexible-tags slice). No platform
+-- seed set in this slice — deferred, see CAPTURE_DECISION_LOG.md.
+create table if not exists capture_tags (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id),
+  tag text not null,
+  created_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  unique (owner_id, tag)
+);
+create index if not exists capture_tags_owner_id_idx on capture_tags (owner_id);
+
 create table if not exists library_migrations (
   id uuid primary key,
   migration_key text not null,

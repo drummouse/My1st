@@ -1435,3 +1435,261 @@ body {
   border-color: var(--studio-action);
   color: var(--studio-critical);
 }
+
+/* Capture (Stage 1): draft list + status chips. Mobile-first — full-width
+   tap targets in one column; the shared .settings-panel wrapper already
+   handles page width/padding. */
+.capture-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.capture-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.capture-item:disabled { opacity: 0.6; cursor: default; }
+.capture-item-title { font-weight: 600; color: #1c1f24; }
+.capture-status {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+  vertical-align: middle;
+}
+.capture-status-draft { background: #fef3c7; color: #92400e; }
+.capture-status-submitted, .capture-status-in_review { background: #dbeafe; color: #1e40af; }
+.capture-status-changes_requested { background: #ffedd5; color: #9a3412; }
+.capture-status-approved, .capture-status-published { background: #dcfce7; color: #166534; }
+.capture-status-rejected { background: #fee2e2; color: #991b1b; }
+
+/* Capture (Stage 2): photo slots and guided camera. */
+.capture-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.capture-photo-slot {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.capture-photo-slot-title { font-weight: 600; font-size: 0.78rem; color: #1c1f24; }
+.capture-photo-thumb {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.capture-camera {
+  margin: 0.75rem 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+.capture-camera-view {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 6px;
+  background: #101418;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.capture-gallery-btn { display: inline-block; cursor: pointer; text-align: center; }
+
+/* Capture (Stage 3): metadata form details and completeness checklist. */
+.capture-dims-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.capture-color-input {
+  width: 64px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+/* Color & Finish scan: tap-to-sample source photo and result swatch. */
+.capture-color-sample-photo {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  cursor: crosshair;
+  margin: 0.4rem 0;
+}
+.capture-color-sample-result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+.capture-color-swatch {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  flex: 0 0 auto;
+}
+.capture-check-list {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+  font-size: 0.78rem;
+  color: #92400e;
+}
+.capture-check-list li { margin: 0.15rem 0; }
+.capture-check-errors { color: #991b1b; font-weight: 600; }
+
+/* Capture (Stage 4): review workspace — images beside metadata on desktop,
+   stacked on mobile; comment thread; color chip. */
+.capture-review-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+  margin: 0.5rem 0;
+}
+@media (max-width: 860px) {
+  .capture-review-layout { grid-template-columns: 1fr; }
+}
+.capture-review-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.capture-review-table th {
+  text-align: left;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem 0.25rem 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+.capture-review-table td { padding: 0.25rem 0; color: #1c1f24; }
+.capture-comment-list {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+.capture-comment-list li {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  background: #fff;
+}
+.capture-comment-author { font-weight: 600; }
+.capture-color-chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  margin-right: 0.35rem;
+  vertical-align: text-bottom;
+}
+
+/* Capture (Stage 5): published Library list thumbnail. */
+.capture-library-thumb {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+/* Scanner Slice R1: calibration confirm row and measured preview. */
+.capture-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #1c1f24;
+  margin: 0.6rem 0;
+}
+.capture-confirm-row input[type="checkbox"] { width: 1.3rem; height: 1.3rem; }
+.capture-preview-svg {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+  overflow-x: auto;
+}
+.capture-preview-svg svg { max-width: 100%; height: auto; display: block; }
+
+/* Flexible tags: chip picker on the guided-product editor. */
+.capture-tags { margin: 0.4rem 0 0.8rem; }
+.capture-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.capture-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--studio-surface-panel-muted);
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.15rem 0.3rem 0.15rem 0.65rem;
+  font-size: 0.78rem;
+}
+.capture-tag-chip button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+.capture-tag-input-row { display: flex; gap: 0.4rem; }
+.capture-tag-input-row input { flex: 1; }
+.capture-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.capture-tag-suggestion {
+  border: 1px dashed #d1d5db;
+  background: #fff;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.capture-tag-suggestion:hover { border-color: #6366f1; color: #3730a3; }

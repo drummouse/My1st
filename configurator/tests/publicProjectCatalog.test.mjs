@@ -219,8 +219,12 @@ test('authenticated ownerless project open preserves the full design through cla
     }
     if (/select owner_id from projects/.test(query)) return [{ owner_id: persisted.ownerId }];
     if (/update projects/.test(query)) {
-      persisted.design = JSON.parse(values[3]);
-      persisted.ownerId = values[4];
+      // Positional indices track the update's SET column order:
+      // job_number(0), customer_name(1), address(2), customer_email(3),
+      // customer_phone(4), design(5), owner_id(6). The customer_email/phone
+      // columns were added when client communications landed.
+      persisted.design = JSON.parse(values[5]);
+      persisted.ownerId = values[6];
       return [{ id: 'legacy-ownerless' }];
     }
     throw new Error(`Unexpected query: ${query}`);

@@ -50,3 +50,10 @@ test('settings migration replaces the legacy singleton key without losing rows',
     assert.match(source, /create unique index if not exists settings_owner_id_key on settings \(owner_id\)/i);
   }
 });
+
+test('runtime and reference schemas add the reseller role and scoping column', () => {
+  for (const source of [runtimeSchema, referenceSchema]) {
+    assert.match(source, /reseller_id uuid references users\(id\)/);
+    assert.match(source, /check \(role in \('owner', 'reseller', 'superadmin'\)\)/);
+  }
+});

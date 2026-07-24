@@ -62,6 +62,182 @@ for (const path of ['/api/superadmin/summary', '/api/superadmin/tenants', '/api/
     return true;
   });
 }
+await check('auth guard /api/capture/sessions', '/api/capture/sessions', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/capture/sessions create',
+  '/api/capture/sessions',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  },
+);
+await check(
+  'auth guard /api/capture asset finalize',
+  '/api/capture/sessions/smoke-test/assets',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  },
+);
+await check(
+  'auth guard /api/capture asset replace',
+  '/api/capture/sessions/smoke-test/assets/smoke-test/replace',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  },
+);
+await check(
+  'auth guard /api/capture asset blob',
+  '/api/capture/sessions/smoke-test/assets/smoke-test/blob',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+);
+await check(
+  'auth guard /api/capture submit',
+  '/api/capture/sessions/smoke-test/submit',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check('auth guard /api/capture/review', '/api/capture/review', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check('auth guard /api/capture evidence', '/api/capture/sessions/smoke-test/evidence', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/capture claude-guidance',
+  '/api/capture/sessions/smoke-test/claude-guidance',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check(
+  'auth guard /api/capture material-zone',
+  '/api/capture/sessions/smoke-test/material-zone',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check(
+  'auth guard /api/capture texture-direction',
+  '/api/capture/sessions/smoke-test/texture-direction',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check(
+  'auth guard /api/capture studio-validation',
+  '/api/capture/sessions/smoke-test/studio-validation',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check('auth guard /api/capture material-package dry-run', '/api/capture/sessions/smoke-test/material-package/dry-run', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check('auth guard /api/capture/tags', '/api/capture/tags', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/capture/tags create',
+  '/api/capture/tags',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+await check('auth guard /api/library/products', '/api/library/products', (response) => {
+  if (response.status !== 401) return `expected 401, received ${response.status}`;
+  return true;
+});
+await check(
+  'auth guard /api/comms identity',
+  '/api/comms/identity',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+);
+await check(
+  'auth guard /api/comms/drain (no session, no scheduler secret)',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
+// Deliberately wrong scheduler secret — proves the scheduler auth path
+// itself is live and rejects before any database/provider work, without
+// ever needing a valid secret (never send a real message from smoke).
+await check(
+  'scheduler auth guard /api/comms/drain (wrong secret)',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-comms-scheduler-secret': 'smoke-test-invalid-secret' },
+    body: JSON.stringify({}),
+  },
+);
+await check(
+  'scheduler auth guard /api/comms/drain rejects GET before checking the secret',
+  '/api/comms/drain',
+  (response) => {
+    if (response.status !== 405) return `expected 405, received ${response.status}`;
+    return true;
+  },
+  { method: 'GET', headers: { 'x-comms-scheduler-secret': 'smoke-test-invalid-secret' } },
+);
+await check(
+  'auth guard /api/capture publish',
+  '/api/capture/review/smoke-test/publish',
+  (response) => {
+    if (response.status !== 401) return `expected 401, received ${response.status}`;
+    return true;
+  },
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) },
+);
 await check(
   'auth guard /api/attachments write',
   '/api/attachments?projectId=smoke-test',

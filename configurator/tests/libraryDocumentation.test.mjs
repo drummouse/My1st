@@ -9,8 +9,15 @@ test('operations and Capture handoff document stable contracts', async () => {
   assert.match(operations, /dry run.*zero database mutations/is);
   assert.match(operations, /email.*SMS.*pending/is);
   assert.match(capture, /sourceType.*capture/s);
-  assert.match(capture, /reviewStatus.*pending_review/s);
+  assert.match(capture, /pending_review/);
   assert.match(capture, /captureConfidence/);
+  // R2.6 (D-047): corrected to describe actual behavior — publish is
+  // create-only straight to 'approved' (D-029), and pending_review is a
+  // proposed-target label used only by the side-effect-free dry-run, not
+  // a live intake-queue state. Pin the correction so it can't silently
+  // regress back to the stale description.
+  assert.match(capture, /side-effect-free/i);
+  assert.match(capture, /review_status\s*=\s*'approved'/);
 });
 
 test('milestone report records automated verification and deployment boundary', async () => {
