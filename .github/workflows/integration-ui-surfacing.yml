@@ -1,6 +1,7 @@
 name: Integration UI surfacing
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - integration/release-candidate
