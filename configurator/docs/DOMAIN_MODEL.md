@@ -6,83 +6,103 @@ re-litigate these terms in conversation or code — if the model needs to
 change, change it here first, with a dated note.
 
 Its purpose is to stop the terminology drift that keeps recurring
-("material vs product", "is finish separate", "what is texture") by fixing
-one vocabulary that the UI, the Library record types, the Capture flow, and
+("material vs product", "is finish separate", "what is texture", "is
+material a thing you store or a thing you assemble") by fixing one
+vocabulary that the UI, the Library record types, the Capture flow, and
 every future spec point back to.
 
 ## The model
 
+The two things you actually **maintain and pick from** are **Profiles** and
+**Colors**. "Material" is not a third catalog you curate — it is the
+**umbrella / folder term** for a bundle (a profile + a color + sku +
+manufacturer …), and/or the runtime *result* of picking a profile and a
+color on a surface.
+
 ```
 SERVICE   (has: price + unit)
    ├─ standalone                 e.g. driving, delivery, production
-   └─ service + MATERIAL         e.g. supply & install siding, manufacture,
+   └─ service + material         e.g. supply & install, manufacture,
                                       install a customer-supplied product
 
-MATERIAL   (has: name + price + unit)
-   ├─ PROFILE   (the geometry / cross-section)
-   │      └─ SIZE                a variant of the profile (Plank-6", Plank-8")
-   └─ COLOR     (the complete surface appearance)
-          ├─ hue                 the base color (e.g. RAL 9005)
-          └─ finish              the surface treatment (Wrinkle, IceCrystal,
+PROFILE   (the priced, geometric primitive — what you maintain)
+   name (e.g. SnapLock 12"), price, unit, applies-to (roof / wall)
+      └─ SIZE                    a variant of the profile (Plank-6", Plank-8")
+
+COLOR     (the surface primitive — what you maintain)
+   ├─ hue                        the base color (e.g. RAL 9005)
+   └─ finish                     the surface treatment (Wrinkle, IceCrystal,
                                  gloss, matte …). "Wrinkle 9005" and
                                  "IceCrystal 9005" are DIFFERENT colors.
-                                 └─ render map: an internal image asset the
-                                    3D engine uses to draw the finish
-                                    photoreal. Never chosen by anyone; it is
-                                    a display detail of the finish.
+                                 └─ render map: internal image the 3D engine
+                                    uses to draw the finish photoreal. Never
+                                    chosen by anyone.
 
-reserved for later: MANUFACTURER, SUPPLIER (real records already exist in
-the Library schema; not part of the V1 selection model).
+MATERIAL  (umbrella / folder term — NOT a maintained record)
+   a grouping/bundle of a profile + color (+ sku, manufacturer …), and the
+   word for the assembled result applied to a surface.
+
+reserved for later: SKU, MANUFACTURER, SUPPLIER (structured fields — Expert
+Mode; the Library schema already has manufacturer/supplier record types).
 ```
 
-## What a customer actually chooses
+## How it composes (the two logics the owner defined)
 
-On any material, the customer picks exactly two visual things:
+- **Visual:** apply a **Profile** onto a surface, then apply a **Color** over
+  that profile. That's the 3D appearance.
+- **Estimate:** a line item is **Service + Profile + Color**, all in one —
+  e.g. `Installation + SnapLock 12" + 9005 Wrinkle`. Service can stand alone
+  (labor only) or carry the profile+color (supply & install).
+
+For **V1 (the General Estimator)** this is the whole model. **Expert Mode**
+(later) adds the deeper adjustable options — structured size variants, sku,
+manufacturer, per-color price modifiers, takeoff math, etc.
+
+## What a customer chooses
+
+On any surface, the customer picks exactly two visual things:
 
 1. **Profile (+ size)** — the geometric form and its dimensional variant.
 2. **Color** — which quietly carries its **finish** (and the internal render
    map) along with it.
 
-Everything else (price, unit, manufacturer, supplier, the render map) is a
-property of the record, not a customer choice.
-
 ## Terminology decisions (binding)
 
 | Decision | Rationale |
 | --- | --- |
-| **"Material" = the code's `product`** | Same thing, two words. The roofing domain says "material"; the code/Library/Capture say `product`. When they diverge in UI copy, prefer **material** for customer-facing text. |
+| **"Material" is an umbrella / folder, not a maintained record** | You curate **Profiles** and **Colors**. "Material" groups them (a folder / bundle) and names the assembled result. Do not build a separate SKU-by-SKU "materials" list — that's a combinatorial explosion of profile×color. |
+| **"Profile" is the priced primitive** | A profile (SnapLock 12") carries the price, unit, and applies-to (roof/wall). A profile usually already implies its material type (Standing Seam ⇒ metal). |
 | **"Finish" is a property of Color, not a peer** | "Wrinkle 9005" vs "IceCrystal 9005" — same RAL number, different finish = a different selectable color. Finish never stands alone. |
-| **"Texture" is retired as a vocabulary word** | It was overloaded: it meant both the physical surface (= finish) and the render image. We now say **finish** for the surface the customer perceives, and **render map** for the internal display image. Do not reintroduce "texture" as a user-facing or model term. |
-| **"Size" is a variant of a Profile** | Not part of the material's top-level identity — it is a dropdown *under* a profile (a Plank profile offered in 6" and 8"). |
-| **Color availability is scoped per material** | A material offers a specific set of colors; "choose a color" is scoped to what that material offers, not a global list. |
+| **"Texture" is retired as a vocabulary word** | It was overloaded (physical surface = finish, vs the render image). Say **finish** for the surface the customer perceives, and **render map** for the internal display image. Do not reintroduce "texture" as a user-facing or model term. |
+| **"Size" is a variant of a Profile** | A dropdown *under* a profile (Plank-6", Plank-8"), not part of top-level identity. |
+| **Color availability is scoped per profile** | A profile offers a specific set of colors; "choose a color" is scoped to what that profile offers, not a global list. |
 
-## Where the code is simpler than this model (build gaps, not corrections)
+## Where the code is behind this model (build gaps, not corrections)
 
-This model is partly aspirational. As of 2026-07-24 the production code:
+As of 2026-07-24 the production code:
 
-- Represents **Profile** as a free-text label string on a material
-  (`profileLabel`) — there is **no structured Profile → Size relationship**.
-  "Plank-6" and "Plank-8" would be two unrelated strings today.
-- Treats **Color** as a flat list; **finish** rides in record metadata,
-  not as a structured, selectable sub-property.
-- Enforces **per-material color scoping** only partially (via `colorIds`).
-- Still carries a standalone `texture` **Library record type** (left over
-  from the Scanner work) that models a "reusable texture asset attachable to
-  many materials." That is a more advanced idea than this model. **For V1,
-  texture is a property of color (its render map), and the standalone
-  texture-record capability is deferred (advanced / Scanner V4 territory).**
-  Do not build toward the standalone-texture model by accident.
-
-Evolving the code toward this structure — especially the Profile → Size
-relationship — is part of V1 and later Expert-Mode work, tracked in the
-milestone plans, not here.
+- Has a **"Materials" tab with columns "Materials" and "Colors"** — but the
+  left column's record is `{ name, kind: roof/wall, pricePerSqft, profiles:
+  "<comma-string>", folderId }`. It muddles profile into a sub-string of
+  "material". **Per this model it should be "Profiles | Colors"**, each row a
+  single priced profile, with folders serving as the "material" grouping.
+  (This is V1 Slice 1 — see the V1 milestone plan.)
+- Represents a profile's **size** as part of a free-text label — there is no
+  structured Profile → Size relationship yet.
+- Treats **Color** as a flat list; **finish** rides in record metadata, not
+  as a structured selectable sub-property.
+- Enforces **per-profile color scoping** only partially (via `colorIds`).
+- Still carries a standalone `texture` **Library record type** (from the
+  Scanner work) — a "reusable texture asset" idea more advanced than this
+  model. For V1, texture is a color's render map; the standalone-texture
+  capability is deferred (Scanner V4). Do not build toward it by accident.
 
 ## Relationship to Library record types
 
 The Library's `RECORD_TYPES` are `product, profile, color, texture,
-category, manufacturer, supplier, collection, catalog`. Mapping to this
-model: `product` = Material, `profile` = Profile, `color` = Color (finish +
-render map live inside it), `manufacturer`/`supplier` = reserved. `texture`
-as a standalone record type is deferred (see above). `category`,
-`collection`, `catalog` are organizational groupings, out of scope for the
-core selection model.
+category, manufacturer, supplier, collection, catalog`. Mapping: `profile` =
+Profile (priced primitive), `color` = Color (finish + render map inside),
+`product` historically = the muddled "material" record (being split into
+profile + folder), `manufacturer`/`supplier` = reserved, standalone
+`texture` = deferred. `category`/`collection`/`catalog` are organizational
+groupings (folder-like), out of scope for the core selection model.
