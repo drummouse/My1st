@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import OptionalServiceRow from './OptionalServiceRow.jsx';
+import { adaptCustomServiceLine } from '../lib/designState.js';
 
 const UNITS = ['each', 'sqft', 'LF'];
 
@@ -91,13 +93,16 @@ export default function CustomServicesPanel({ onChanged }) {
         <div className="custom-services-existing-body">
           {services.length === 0 && <div className="control-sublabel">None defined yet — add one on the right.</div>}
           {services.map((s) => (
-            <div className="service-row" key={s.id}>
-              <label className="service-row-main"><span>{s.name}</span></label>
-              <span className="service-note">${Number(s.price).toFixed(2)}/{s.unit}</span>
-              {s.description && <span className="service-note">{s.description}</span>}
-              {s.link_url && <a href={s.link_url} target="_blank" rel="noreferrer" className="service-note">Link</a>}
-              <button type="button" className="layer-remove-btn" disabled={busy} onClick={() => handleRemove(s.id)} aria-label={`Remove ${s.name}`}>×</button>
-            </div>
+            <OptionalServiceRow
+              key={s.id}
+              service={adaptCustomServiceLine({ ...s, qty: 1, selected: true })}
+              linkUrl={s.link_url}
+              showSelection={false}
+              showQuantity={false}
+              showLock={false}
+              removeDisabled={busy}
+              onRemove={() => handleRemove(s.id)}
+            />
           ))}
         </div>
       </div>
@@ -107,6 +112,12 @@ export default function CustomServicesPanel({ onChanged }) {
         <div className="settings-row">
           <label htmlFor="cs-name">Name</label>
           <input id="cs-name" type="text" className="control-select" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        </div>
+        <div className="settings-row">
+          <label htmlFor="cs-pricing-method">Pricing method</label>
+          <select id="cs-pricing-method" className="control-select" value="per_unit" disabled>
+            <option value="per_unit">Per unit</option>
+          </select>
         </div>
         <div className="settings-row">
           <label htmlFor="cs-unit">Unit</label>

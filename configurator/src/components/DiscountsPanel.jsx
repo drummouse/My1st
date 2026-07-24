@@ -167,13 +167,14 @@ export default function DiscountsPanel({ onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountRules: rules }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const row = await res.json();
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      const row = body;
       setStatus('Saved.');
       onSaved?.(row);
     } catch (err) {
       console.error('Settings API error:', err);
-      setStatus('Could not save — the Settings database may not be reachable yet.');
+      setStatus(err.message || 'Could not save.');
     }
     setBusy(false);
     setTimeout(() => setStatus(''), 4000);

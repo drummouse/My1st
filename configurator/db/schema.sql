@@ -85,11 +85,12 @@ create index if not exists projects_owner_id_idx on projects (owner_id);
 -- Company-wide defaults (GST rate, package-deal percentages, and new-project
 -- defaults), separate from the per-project `design` JSONB since these apply
 -- across every project rather than describing one design. Originally a
--- single global row (`singleton` primary key); now one row per owner —
--- `singleton` is left in place rather than dropped (no destructive
--- migrations in this schema), just unused going forward.
+-- single global row keyed by `singleton`; now one row per owner. The
+-- migration keeps that legacy column/data but makes it inert and promotes
+-- the generated id to the primary key.
 create table if not exists settings (
-  singleton boolean primary key default true check (singleton),
+  id uuid primary key default gen_random_uuid(),
+  singleton boolean,
   gst_rate numeric not null default 0.05,
   full_wrap_discount_pct numeric not null default 0.07,
   soffit_fascia_discount_pct numeric not null default 0.5,
@@ -99,13 +100,52 @@ create table if not exists settings (
   default_accessory_colors jsonb,
   default_roof_color_id text,
   default_wall_color_id text,
+  default_catalog_items jsonb,
   report_footer_note text,
   updated_at timestamptz not null default now()
 );
 
 alter table settings add column if not exists id uuid default gen_random_uuid();
+do $$ declare legacy_constraint record;
+begin
+  for legacy_constraint in
+    select c.conname
+    from pg_constraint c
+    where c.conrelid = 'settings'::regclass
+      and (
+        (c.contype = 'p' and exists (
+          select 1
+          from unnest(c.conkey) as key(attnum)
+          join pg_attribute a on a.attrelid = c.conrelid and a.attnum = key.attnum
+          where a.attname = 'singleton'
+        ))
+        or (c.contype = 'c' and pg_get_constraintdef(c.oid) ilike '%singleton%')
+      )
+  loop
+    execute format('alter table settings drop constraint %I', legacy_constraint.conname);
+  end loop;
+end $$;
+alter table settings alter column singleton drop default;
+alter table settings alter column singleton drop not null;
+update settings set id = gen_random_uuid() where id is null;
+alter table settings alter column id set default gen_random_uuid();
+alter table settings alter column id set not null;
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'settings'::regclass and contype = 'p'
+  ) then
+    alter table settings add primary key (id);
+  end if;
+exception when duplicate_object then null;
+end $$;
 alter table settings add column if not exists owner_id uuid references users(id);
+alter table settings add column if not exists default_custom_service_ids jsonb;
+alter table settings add column if not exists default_catalog_items jsonb;
 create unique index if not exists settings_owner_id_key on settings (owner_id);
+alter table settings add column if not exists unit_system text not null default 'imperial' check (unit_system in ('imperial', 'metric'));
+alter table settings add column if not exists expert_mode_enabled boolean not null default false;
+alter table settings add column if not exists show_expert_mode boolean not null default false;
 
 -- Unified Library Core. These tables are additive; legacy materials and
 -- colors remain the configurator runtime source during this release.

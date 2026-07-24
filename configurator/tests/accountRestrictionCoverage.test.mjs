@@ -15,8 +15,17 @@ test('authenticated APIs do not use unverified session ids', () => {
 });
 
 test('public tenant resources enforce account restriction', () => {
-  for (const path of ['../api/materials/index.js', '../api/colors/index.js', '../api/_lib/folders.js']) {
-    assert.match(read(path), /requirePublicTenant/, path);
+  for (const path of ['../api/materials/index.js', '../api/colors/index.js']) {
+    const source = read(path);
+    assert.match(source, /requireUserId/, path);
+    assert.doesNotMatch(source, /requirePublicTenant|searchParams\.get\(['"]ownerId['"]\)/, path);
   }
+
+  assert.match(read('../api/_lib/folders.js'), /requirePublicTenant/);
   assert.match(read('../api/attachments/index.js'), /publicTenantAccess/);
+
+  const projects = read('../api/projects/index.js');
+  assert.match(projects, /sub === 'catalog'/);
+  assert.match(projects, /requirePublicProjectAccess/);
+  assert.match(projects, /publicTenantAccess/);
 });

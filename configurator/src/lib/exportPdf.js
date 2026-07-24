@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import { colorById } from '../data/colors.js';
 import { allRoofProducts, allWallProducts } from '../data/pricing.js';
 import { money, formatPct, buildFacetTable, ACCESSORY_LABELS, estimateHasItem } from './exportEstimate.js';
+import { displayMeasurement } from './units.js';
 
 const MARGIN = 40;
 const PAGE_W = 612; // Letter, points
@@ -166,7 +167,7 @@ function drawImageContained(doc, dataUrl, x, y, slotW, slotH) {
 
 function drawIsoAndSummaryPage(doc, {
   brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
-  estimate, accessoryColors,
+  estimate, accessoryColors, unitSystem,
 }) {
   doc.addPage();
   drawPageHeader(doc, brand, 'Renderings & Estimate Summary');
@@ -256,7 +257,8 @@ function drawIsoAndSummaryPage(doc, {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.2);
   estimate.lineItems.forEach((li) => {
-    doc.text(`${li.qty.toLocaleString()} ${li.unit}`, col.qty, y, { align: 'right' });
+    const quantity = displayMeasurement(li.qty, li.unit, unitSystem);
+    doc.text(`${quantity.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${quantity.unit}`, col.qty, y, { align: 'right' });
     doc.text(money(li.total), col.total, y, { align: 'right' });
     y = drawWrapped(doc, shortLabel(li.label), col.item, y, itemMaxWidth, 10);
     if (li.description) {
@@ -383,9 +385,11 @@ const LINE_TYPE_LABELS = {
 // gutters, downspouts, openings) that this app doesn't model as their own 3D
 // geometry, so there's no photorealistic "view" to render for them, only the
 // measurements themselves.
-function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
+function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs, unitSystem }) {
   let y = MARGIN;
   let pageOpen = false;
+  const dimensionUnit = displayMeasurement(0, 'ft', unitSystem).unit;
+  const areaDisplayUnit = displayMeasurement(0, 'sqft', unitSystem).unit;
   const ensureRoom = (needed, title) => {
     if (!pageOpen || y + needed > PAGE_H - MARGIN) {
       doc.addPage();
@@ -426,7 +430,7 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
     doc.text('Type', col.kind, y);
     doc.text('Width', col.width, y, { align: 'right' });
     doc.text('Height', col.height, y, { align: 'right' });
-    doc.text('Approx. Sqft', col.area, y, { align: 'right' });
+    doc.text(`Approx. ${areaDisplayUnit}`, col.area, y, { align: 'right' });
     doc.setTextColor(0);
     y += 5;
     doc.setDrawColor(200);
@@ -445,9 +449,12 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
         doc.text(String(o.label || ''), col.id, y);
         doc.text(String(o.faceId), col.wall, y);
         doc.text(kindLabel[o.kind] || 'Other', col.kind, y);
-        doc.text(`${o.widthFt.toFixed(1)} ft`, col.width, y, { align: 'right' });
-        doc.text(`${o.heightFt.toFixed(1)} ft`, col.height, y, { align: 'right' });
-        doc.text((o.widthFt * o.heightFt).toFixed(1), col.area, y, { align: 'right' });
+        const width = displayMeasurement(o.widthFt, 'ft', unitSystem);
+        const height = displayMeasurement(o.heightFt, 'ft', unitSystem);
+        const area = displayMeasurement(o.widthFt * o.heightFt, 'sqft', unitSystem);
+        doc.text(`${width.value.toFixed(unitSystem === 'metric' ? 2 : 1)} ${dimensionUnit}`, col.width, y, { align: 'right' });
+        doc.text(`${height.value.toFixed(unitSystem === 'metric' ? 2 : 1)} ${dimensionUnit}`, col.height, y, { align: 'right' });
+        doc.text(area.value.toFixed(unitSystem === 'metric' ? 2 : 1), col.area, y, { align: 'right' });
         y += 13;
       });
     y += 12;
@@ -455,7 +462,9 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
 
   const relevantTypes = Object.keys(lineTakeoffs || {}).filter((t) => LINE_TYPE_LABELS[t]);
   if (relevantTypes.length) {
-    const title = 'Linear Footage & Accessories Takeoff';
+    const title = unitSystem === 'metric'
+      ? 'Linear Measurements & Accessories Takeoff'
+      : 'Linear Footage & Accessories Takeoff';
     ensureRoom(60, title);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
@@ -473,7 +482,7 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
     doc.setFontSize(8.5);
     doc.setTextColor(110);
     doc.text('Component', col.label, y);
-    doc.text('Linear Feet', col.lf, y, { align: 'right' });
+    doc.text(unitSystem === 'metric' ? 'Length (m)' : 'Linear Feet', col.lf, y, { align: 'right' });
     doc.setTextColor(0);
     y += 5;
     doc.setDrawColor(200);
@@ -488,7 +497,8 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
         doc.setFontSize(8.5);
         doc.setTextColor(0);
         doc.text(LINE_TYPE_LABELS[type], col.label, y);
-        doc.text(`${lineTakeoffs[type].toFixed(1)} ft`, col.lf, y, { align: 'right' });
+        const length = displayMeasurement(lineTakeoffs[type], 'ft', unitSystem);
+        doc.text(`${length.value.toFixed(unitSystem === 'metric' ? 2 : 1)} ${length.unit}`, col.lf, y, { align: 'right' });
         y += 13;
       });
   }
@@ -496,7 +506,7 @@ function drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs }) {
 
 function drawFacetDetailPages(doc, {
   brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
-  roofFacesForPricing, wallFacesForPricing, facetLabels,
+  roofFacesForPricing, wallFacesForPricing, facetLabels, unitSystem,
 }) {
   let y = MARGIN;
   let pageOpen = false;
@@ -531,7 +541,7 @@ function drawFacetDetailPages(doc, {
     doc.text('Facet', facetCol.label, y);
     doc.text('Product', facetCol.product, y);
     doc.text('Color', facetCol.color, y);
-    doc.text('Sqft', facetCol.sqft, y, { align: 'right' });
+    doc.text(displayMeasurement(0, 'sqft', unitSystem).unit, facetCol.sqft, y, { align: 'right' });
     doc.setTextColor(0);
     y += 5;
     doc.setDrawColor(200);
@@ -555,7 +565,8 @@ function drawFacetDetailPages(doc, {
       doc.setDrawColor(180);
       doc.rect(facetCol.swatch, y - 7, 9, 9, 'FD');
       doc.text(`${row.color.code}`, facetCol.color, y, { maxWidth: facetCol.sqft - facetCol.color - 8 });
-      doc.text(row.sizeSf.toLocaleString(undefined, { maximumFractionDigits: 1 }), facetCol.sqft, y, { align: 'right' });
+      const area = displayMeasurement(row.sizeSf, 'sqft', unitSystem);
+      doc.text(area.value.toLocaleString(undefined, { maximumFractionDigits: 2 }), facetCol.sqft, y, { align: 'right' });
       y += 13;
     });
     doc.setFont('helvetica', 'normal');
@@ -659,6 +670,7 @@ export function buildEstimatePdf({
   accessoryColors, uniformFinish, facetOverrides,
   roofFacesForPricing, wallFacesForPricing, facetLabels, openingsSchedule, lineTakeoffs,
   qrDataUrl, shareUrl, reportFooterNote, logoDataUrl, attachmentFiles, attachmentPhotos, companyProfile,
+  unitSystem = 'imperial',
 }) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
@@ -666,16 +678,16 @@ export function buildEstimatePdf({
 
   drawIsoAndSummaryPage(doc, {
     brand, isoSnapshots, roofProduct, roofColorId, roofProfile, wallProduct, wallColorId, wallProfile,
-    estimate, accessoryColors,
+    estimate, accessoryColors, unitSystem,
   });
 
   drawElevationsPage(doc, { brand, elevationViews });
   drawRoofPlanPage(doc, { brand, roofPlanView });
-  drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs });
+  drawSchedulesPages(doc, { brand, openingsSchedule, lineTakeoffs, unitSystem });
 
   drawFacetDetailPages(doc, {
     brand, uniformFinish, facetOverrides, roofProduct, roofColorId, wallProduct, wallColorId,
-    roofFacesForPricing, wallFacesForPricing, facetLabels,
+    roofFacesForPricing, wallFacesForPricing, facetLabels, unitSystem,
   });
 
   drawAttachmentsPage(doc, { brand, attachmentFiles, attachmentPhotos });

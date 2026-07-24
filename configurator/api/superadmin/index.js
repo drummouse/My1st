@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { sql, ensureSchema } from '../_lib/db.js';
+import { readTenantExpertEntitlement, writeTenantExpertEntitlement } from '../_lib/auth.js';
 import { requireCapability } from '../_lib/access.js';
 import { assertAccountTransition, normalizeEmail } from '../_lib/superadminPolicy.js';
 import { createSupportReference } from '../_lib/accountAdministration.js';
@@ -8,6 +9,7 @@ import { buildRestrictionNotifications } from '../_lib/notifications.js';
 import { toAuditEvent, toNotification, toProjectDiagnostic, toTenantSummary } from '../_lib/superadminDto.js';
 import { handleLibraryAction } from '../_lib/libraryRoutes.js';
 import { LibraryValidationError } from '../_lib/libraryPolicy.js';
+import { TenantFeatureError } from '../_lib/tenantFeatures.js';
 
 const capabilityByAction = {
   summary: 'platform.diagnostics.read',
@@ -17,6 +19,7 @@ const capabilityByAction = {
   'password-reset': 'users.password.reset',
   audit: 'platform.audit.read',
   notifications: 'platform.audit.read',
+  'expert-mode': 'platform.diagnostics.read',
   'library.records': 'catalog.read',
   'library.record': 'catalog.write',
   'library.relationships': 'catalog.write',
@@ -189,6 +192,30 @@ async function handleNotifications(req, res, actor) {
   res.status(200).json({ ok: true, supportReference });
 }
 
+async function handleExpertMode(req, res, actor) {
+  const tenantId = String(req.query.id || '');
+  if (!tenantId) return res.status(400).json({ error: 'A tenant id is required' });
+  if (req.method === 'GET') {
+    const feature = await readTenantExpertEntitlement({ actor, tenantId });
+    return feature
+      ? res.status(200).json(feature)
+      : res.status(404).json({ error: 'Account not found' });
+  }
+  if (req.method !== 'PUT') return method(res, 'GET, PUT');
+  const supportReference = createSupportReference();
+  const feature = await writeTenantExpertEntitlement({
+    actor,
+    tenantId,
+    value: req.body?.EXPERT_MODE_VAR,
+    reason: req.body?.reason,
+    requestId: requestIdFor(req),
+    supportReference,
+  });
+  return feature
+    ? res.status(200).json({ ...feature, supportReference })
+    : res.status(404).json({ error: 'Account not found' });
+}
+
 export default async function handler(req, res) {
   const action = String(req.query.action || 'summary');
   const capability = capabilityByAction[action];
@@ -198,14 +225,19 @@ export default async function handler(req, res) {
     const actor = await requireCapability(req, res, capability);
     if (!actor) return;
     if (action.startsWith('library.')) return handleLibraryAction({ req, res, actor, action, requestId: requestIdFor(req) });
+    if (action === 'tenants' && req.query.sub === 'expert-mode') return handleExpertMode(req, res, actor);
     if (action === 'summary') return req.method === 'GET' ? handleSummary(res) : method(res, 'GET');
     if (action === 'tenants') return req.method === 'GET' ? handleTenants(req, res) : method(res, 'GET');
     if (action === 'users') return handleCreateUser(req, res, actor);
     if (action === 'status') return handleStatus(req, res, actor);
     if (action === 'password-reset') return handlePasswordReset(req, res, actor);
     if (action === 'audit') return req.method === 'GET' ? handleAudit(req, res) : method(res, 'GET');
+    if (action === 'expert-mode') return handleExpertMode(req, res, actor);
     return handleNotifications(req, res, actor);
   } catch (error) {
+    if (error instanceof TenantFeatureError) {
+      return res.status(error.status).json({ error: error.message, code: error.code });
+    }
     if (error instanceof LibraryValidationError) {
       const status = error.code === 'LIBRARY_RECORD_NOT_FOUND' ? 404 : error.code === 'LIBRARY_VERSION_CONFLICT' ? 409 : 400;
       return res.status(status).json({ error: { code: error.code, message: error.message, details: error.details || {} }, requestId: requestIdFor(req) });

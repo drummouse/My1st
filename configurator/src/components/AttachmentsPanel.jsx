@@ -82,9 +82,9 @@ export default function AttachmentsPanel({ projectId, isCustomerView, onChanged 
         </div>
       ))}
       {!isCustomerView && (
-        <label className="btn-secondary" style={{ display: 'inline-block', marginTop: '0.4rem', cursor: 'pointer' }}>
+        <label className="btn-secondary studio-file-control" style={{ marginTop: '0.4rem', cursor: 'pointer' }}>
           + Attach File
-          <input type="file" style={{ display: 'none' }} disabled={busy} onChange={(e) => handleUpload('file', e.target.files?.[0])} />
+          <input type="file" className="visually-hidden" disabled={busy} onChange={(e) => handleUpload('file', e.target.files?.[0])} />
         </label>
       )}
 
@@ -108,9 +108,9 @@ export default function AttachmentsPanel({ projectId, isCustomerView, onChanged 
         </div>
       )}
       {!isCustomerView && (
-        <label className="btn-secondary" style={{ display: 'inline-block', marginTop: '0.4rem', cursor: 'pointer' }}>
+        <label className="btn-secondary studio-file-control" style={{ marginTop: '0.4rem', cursor: 'pointer' }}>
           + Attach Photo
-          <input type="file" accept="image/*" style={{ display: 'none' }} disabled={busy} onChange={(e) => handleUpload('photo', e.target.files?.[0])} />
+          <input type="file" accept="image/*" className="visually-hidden" disabled={busy} onChange={(e) => handleUpload('photo', e.target.files?.[0])} />
         </label>
       )}
 

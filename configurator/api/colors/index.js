@@ -1,7 +1,6 @@
 import { sql, ensureSchema } from '../_lib/db.js';
 import { requireUserId } from '../_lib/auth.js';
 import { handleFolderList, handleFolderItem } from '../_lib/folders.js';
-import { requirePublicTenant } from '../_lib/publicTenant.js';
 
 // Merged list/create/update/delete into one function (id supplied as ?id= by
 // vercel.json's rewrites) — see api/auth/[action].js for why. Also carries this
@@ -26,15 +25,7 @@ export default async function handler(req, res) {
 
     if (!id) {
       if (req.method === 'GET') {
-        // A customer viewing a shared project link knows that project's
-        // owner_id (from its own, already-public project row) and passes it
-        // here to see the same custom colors the owner picked from — no
-        // login required, same "public single-project GET" precedent as
-        // api/projects/[[...id]].js. Otherwise this is the admin's own
-        // Colors Library management view, which needs a real session.
-        const { ownerId } = req.query;
-        if (ownerId && !(await requirePublicTenant(ownerId, res))) return;
-        const targetOwnerId = ownerId || (await requireUserId(req, res));
+        const targetOwnerId = await requireUserId(req, res);
         if (!targetOwnerId) return;
         const rows = await sql`select * from colors where owner_id = ${targetOwnerId} order by created_at asc`;
         if (!rows.length) {

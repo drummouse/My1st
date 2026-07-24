@@ -1,0 +1,487 @@
+.studio-shell {
+  background: var(--studio-surface-canvas);
+  color: var(--studio-text);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--studio-font-family);
+  height: 100%;
+  min-height: 0;
+}
+
+.studio-shell :is(button, [href], select, textarea, [role='button']) {
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+.studio-shell input:not(.visually-hidden) {
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+.studio-shell label.studio-file-control {
+  align-items: center;
+  display: inline-flex;
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+/* Keep the legacy icon-button override explicit: their old fixed 26–27px
+   dimensions must never shrink the Studio target below the shared minimum. */
+.studio-shell .layer-remove-btn {
+  min-height: var(--studio-control-min);
+  min-width: var(--studio-control-min);
+}
+
+.studio-shell :is(button, [href], input, select, textarea, [role='button']):focus-visible {
+  outline: 3px solid var(--studio-focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--studio-surface-control), 0 0 0 5px var(--studio-focus-ring);
+}
+
+.studio-shell .studio-shell-top-bar {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.studio-shell .studio-shell-top-bar .studio-top-bar {
+  align-items: center;
+  background: var(--studio-surface-frame);
+  border-bottom: var(--studio-border-width) solid var(--studio-border-on-frame);
+  color: var(--studio-text-on-frame);
+  display: grid;
+  gap: var(--studio-control-gap);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 64px;
+  padding: 0.5rem 1rem;
+}
+
+.studio-shell .studio-top-bar-brand {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.studio-shell .studio-top-bar-brand h1,
+.studio-shell .studio-top-bar-brand p {
+  margin: 0;
+}
+
+.studio-shell .studio-top-bar-brand h1 {
+  font-size: 1rem;
+}
+
+.studio-shell .studio-top-bar-brand p,
+.studio-shell .studio-top-bar-actions p {
+  color: var(--studio-text-on-frame-muted);
+  font-size: 0.8125rem;
+}
+
+.studio-shell .studio-top-bar-logo {
+  background: var(--studio-surface-control);
+  border-radius: var(--studio-radius-control);
+  height: 36px;
+  object-fit: contain;
+  padding: 0.25rem;
+  width: auto;
+}
+
+.studio-shell .studio-top-bar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--studio-control-gap);
+  justify-content: flex-end;
+}
+
+.studio-shell .studio-top-bar-actions p {
+  margin: 0;
+}
+
+.studio-shell .studio-top-bar-project {
+  display: grid;
+  justify-items: start;
+  line-height: 1.2;
+  max-width: min(18rem, 42vw);
+  overflow: hidden;
+}
+
+.studio-shell .studio-top-bar-project-menu {
+  position: relative;
+}
+
+.studio-shell .studio-top-bar-project > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-shell .studio-top-bar-project-status {
+  color: var(--studio-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.studio-shell .studio-top-bar-project-menu-popover {
+  background: var(--studio-surface-panel);
+  border: var(--studio-border-width) solid var(--studio-border);
+  border-radius: var(--studio-radius-control);
+  box-shadow: var(--studio-shadow-panel);
+  display: grid;
+  gap: 0.25rem;
+  min-width: min(18rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 30;
+}
+
+.studio-shell .studio-top-bar-project-menu-popover > button {
+  background: transparent;
+  border: 0;
+  border-radius: var(--studio-radius-control);
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.studio-shell .studio-top-bar-project-menu-popover > button:hover:not(:disabled) {
+  background: var(--studio-surface-panel-muted);
+}
+
+.studio-shell .studio-top-bar-project-menu-popover > button:disabled {
+  color: var(--studio-text-muted);
+  cursor: not-allowed;
+}
+
+[data-studio-skin='ironwrap'] .studio-top-bar-project-menu-popover > .studio-project-menu-primary:disabled {
+  background: var(--studio-action-disabled-surface);
+  color: var(--studio-action-disabled-text);
+}
+
+.studio-shell .studio-top-bar-project-menu-status {
+  border-top: var(--studio-border-width) solid var(--studio-border);
+  margin: 0.25rem 0 0;
+  max-width: 18rem;
+  padding: 0.65rem 0.75rem 0.25rem;
+}
+
+.studio-shell .studio-shell-layout {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-areas:
+    'steps viewer inspector'
+    'steps estimate inspector';
+  grid-template-columns: 168px minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.studio-shell .studio-shell-steps {
+  background: var(--studio-surface-frame);
+  border-right: var(--studio-border-width) solid var(--studio-border-on-frame);
+  grid-area: steps;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.studio-shell .guided-step-rail ol {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.studio-shell .guided-step-rail .studio-button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--studio-text-on-frame-muted);
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+}
+
+.studio-shell .guided-step-rail .studio-button:hover:not(:disabled) {
+  background: var(--studio-surface-frame-raised);
+  border-color: var(--studio-border-on-frame);
+  color: var(--studio-text-on-frame);
+}
+
+.studio-shell .guided-step-rail .is-active .studio-button {
+  background: var(--studio-action);
+  border-color: var(--studio-action);
+  color: var(--studio-action-text);
+  box-shadow: inset 4px 0 0 var(--studio-action-text);
+}
+
+.studio-shell .guided-step-rail .is-active .studio-button:hover:not(:disabled) {
+  background: var(--studio-action-hover);
+  border-color: var(--studio-action-hover);
+}
+
+.studio-shell .guided-step-rail .is-completed .studio-button {
+  background: var(--studio-surface-frame-raised);
+  border-color: var(--studio-action);
+  color: var(--studio-text-on-frame);
+}
+
+.studio-shell .studio-shell-viewer {
+  background: var(--studio-surface-canvas);
+  grid-area: viewer;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.studio-shell .studio-shell-viewer > .viewer-workspace {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+}
+
+.studio-shell .studio-shell-viewer .viewer-workspace-content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.studio-shell .viewer-workspace.viewer-maximized {
+  border-radius: 0;
+  height: 100dvh;
+  inset: 0;
+  position: fixed;
+  width: 100vw;
+  z-index: 100;
+}
+
+.studio-shell .studio-shell-auxiliary {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.studio-shell .studio-shell-auxiliary > * {
+  pointer-events: auto;
+}
+
+.studio-shell .studio-shell-inspector {
+  background: var(--studio-surface-panel);
+  border-left: var(--studio-border-width) solid var(--studio-border);
+  grid-area: inspector;
+  min-height: 0;
+  overflow: auto;
+}
+
+.studio-shell .context-inspector-heading {
+  align-items: center;
+  background: var(--studio-surface-panel-muted);
+  border-bottom: var(--studio-border-width) solid var(--studio-border);
+  display: flex;
+  gap: var(--studio-control-gap);
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+
+.studio-shell .context-inspector-heading h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.studio-shell .context-inspector-content {
+  padding: var(--studio-panel-padding);
+}
+
+.studio-shell .context-inspector-error {
+  background: color-mix(in srgb, var(--studio-action) 10%, var(--studio-surface-panel));
+  border-left: 3px solid var(--studio-action);
+  display: grid;
+  gap: var(--studio-control-gap);
+  margin-bottom: var(--studio-panel-padding);
+  padding: 0.75rem;
+}
+
+.studio-shell .context-inspector-error p {
+  margin: 0;
+}
+
+.studio-shell .studio-shell-estimate {
+  background: var(--studio-surface-panel);
+  border-top: var(--studio-border-width) solid var(--studio-border);
+  grid-area: estimate;
+  padding: 0.75rem;
+}
+
+.studio-shell .studio-shell-estimate .estimate-dock {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.studio-shell .estimate-dock-content strong {
+  color: var(--studio-critical);
+  font-size: 1.05rem;
+}
+
+.studio-shell .estimate-dock-navigation {
+  align-items: center;
+  display: grid;
+  gap: var(--studio-control-gap);
+  grid-template-columns: 1fr auto 1fr;
+  margin-top: var(--studio-control-gap);
+}
+
+.studio-shell .estimate-dock-navigation .studio-button:last-child {
+  justify-self: end;
+}
+
+.studio-shell .estimate-dock-active-step {
+  color: var(--studio-text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.studio-shell .studio-shell-platform {
+  background: var(--studio-surface-panel);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.studio-shell .studio-shell-notice {
+  background: var(--studio-surface-panel-muted);
+  border-bottom: var(--studio-border-width) solid var(--studio-border);
+  color: var(--studio-text);
+  padding: 0.75rem 1rem;
+}
+
+@media (min-width: 901px) {
+  .studio-shell .assembly-dock {
+    left: var(--viewer3d-left-control-lane);
+    width: 9.6rem;
+    max-width: calc(100% - var(--viewer3d-left-control-lane) - 0.6rem);
+    max-height: 13.6rem;
+    overflow: auto;
+  }
+
+  /* Desktop pointer controls stay compact inside the bounded overlay. The
+     mobile branch retains the shared 44px touch targets and steppers. */
+  .studio-shell .assembly-dock :is(button, input, select) {
+    min-height: 0;
+  }
+
+  .studio-shell .adjust-axis-actions {
+    grid-template-columns: 1.8rem minmax(0, 1fr) 1.8rem;
+  }
+
+  .studio-shell .adjust-major-action {
+    min-width: 0;
+  }
+
+  .studio-shell .viewer-direction-controls {
+    left: auto;
+    right: 0.6rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-shell .studio-shell-top-bar .studio-top-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .studio-shell .studio-top-bar-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .studio-shell .studio-shell-layout {
+    --studio-mobile-sheet-handle: calc(var(--studio-control-min) + 1rem + env(safe-area-inset-bottom));
+
+    grid-template-areas:
+      'progress'
+      'estimate'
+      'viewer';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: visible;
+    padding-bottom: var(--studio-mobile-sheet-handle);
+  }
+
+  .studio-shell .studio-shell-steps {
+    background: var(--studio-surface-frame);
+    border-bottom: var(--studio-border-width) solid var(--studio-border-on-frame);
+    border-right: 0;
+    grid-area: progress;
+    min-height: auto;
+    overflow-x: auto;
+    padding: 0.5rem;
+  }
+
+  .studio-shell .studio-shell-steps .guided-step-rail ol {
+    display: flex;
+    gap: 0.5rem;
+    width: max-content;
+  }
+
+  .studio-shell .studio-shell-steps .guided-step-rail .studio-button {
+    min-width: max-content;
+  }
+
+  .studio-shell .studio-shell-inspector {
+    bottom: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: fixed;
+    right: 0;
+    z-index: 10;
+  }
+
+  .studio-shell .studio-shell-inspector .context-inspector {
+    background: var(--studio-surface-panel);
+    border: var(--studio-border-width) solid var(--studio-border);
+    border-bottom: 0;
+    border-radius: var(--studio-radius-panel) var(--studio-radius-panel) 0 0;
+    box-shadow: var(--studio-shadow-panel);
+    max-height: min(70dvh, 36rem);
+    overflow: auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    pointer-events: auto;
+    transform: translateY(calc(100% - var(--studio-mobile-sheet-handle)));
+    transition: transform var(--studio-motion-fast) var(--studio-motion-easing);
+  }
+
+  .studio-shell .studio-shell-inspector .context-inspector.is-mobile-open {
+    transform: translateY(0);
+  }
+
+  .studio-shell .studio-shell-estimate {
+    grid-area: estimate;
+    padding: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-shell * {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+
+  .studio-shell .studio-shell-inspector .context-inspector {
+    transition: none;
+  }
+}
