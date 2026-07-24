@@ -8,6 +8,7 @@ import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES, ITEM_TYPES,
 import CaptureCamera from './CaptureCamera.jsx';
 import CaptureReview from './CaptureReview.jsx';
 import CaptureProfileScan from './CaptureProfileScan.jsx';
+import CaptureColorScan from './CaptureColorScan.jsx';
 
 const PHOTO_PURPOSES = [
   { id: 'main', label: 'Main photo', hint: 'The whole product, straight on' },
@@ -17,6 +18,7 @@ const PHOTO_PURPOSES = [
 
 const CAPTURE_TYPES = [
   { id: 'profile_geometry', label: 'Profile Geometry scan' },
+  { id: 'color_finish', label: 'Color & Finish scan' },
   { id: 'guided_product', label: 'Guided product capture' },
   { id: 'quick', label: 'Quick capture' },
 ];
@@ -429,6 +431,19 @@ export default function CapturePanel({ canReview = false }) {
   if (open && open.session.captureType === 'profile_geometry') {
     return (
       <CaptureProfileScan
+        detail={open}
+        onDetailChange={setOpen}
+        onExit={() => { setOpen(null); setForm(null); setStatus(''); load(); }}
+      />
+    );
+  }
+
+  // Color & Finish scans use their own dedicated flow (photo -> sample ->
+  // finish -> submit), producing a reusable color sample rather than a
+  // full guided-product record.
+  if (open && open.session.captureType === 'color_finish') {
+    return (
+      <CaptureColorScan
         detail={open}
         onDetailChange={setOpen}
         onExit={() => { setOpen(null); setForm(null); setStatus(''); load(); }}

@@ -1040,6 +1040,28 @@ body {
   background: #fff;
   cursor: pointer;
 }
+/* Color & Finish scan: tap-to-sample source photo and result swatch. */
+.capture-color-sample-photo {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  cursor: crosshair;
+  margin: 0.4rem 0;
+}
+.capture-color-sample-result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+.capture-color-swatch {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  flex: 0 0 auto;
+}
 .capture-check-list {
   margin: 0.4rem 0;
   padding-left: 1.2rem;
