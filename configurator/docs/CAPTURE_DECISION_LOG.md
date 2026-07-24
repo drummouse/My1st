@@ -5,6 +5,12 @@ is the canonical Capture decision log going forward. Format: one dated entry
 per material decision, newest first. Reversing a decision gets a new entry —
 old entries are never rewritten.
 
+## 2026-07-24 — Fix: phased scans' Review-phase completeness checked stale server state
+
+| # | Decision | Rationale | Alternatives considered |
+| --- | --- | --- | --- |
+| D-078 | Live browser verification of D-077's phased rewrite (PR #34) caught a real defect: on both components' Review phase, `validateCompleteness(detail)` read the last-*persisted* session/fields, not the contributor's current unsaved edits. Color & Finish's sample/finish/manufacturer/title exist only in local React state until Save Draft or Submit (no incremental save step, unlike Texture's calibration/zone/direction which do save immediately); Texture had the same gap for its `title` alone. Result: the Review screen showed "missing" errors for data already entered, and Submit stayed permanently disabled since it gates on `completeness.errors.length`. Fixed by folding current local state (title, and Color's derived sample) over `detail` before calling `validateCompleteness`, in both `CaptureColorScan.jsx` and `CaptureTextureScan.jsx`. | `validateCompleteness` is shared verbatim with the server (D-021) specifically so the UI can never show a completeness picture that disagrees with what submit will enforce — but that guarantee only holds if the client feeds it the data that's actually about to be saved, not whatever the last successful save happened to persist. The phased rewrite introduced a gap between "what's in local state" and "what `detail` says," which a flat single-screen form never had (its fields lived directly on the session object shape already). | Saving each field to the server immediately on entry, matching Texture's calibration/zone/direction pattern (rejected for Color: sampling a color is a pure client-side computation with no server round-trip needed until the user is done adjusting it — forcing a save-per-tap would add API calls with no benefit and slow down the "tap to try a different spot" interaction the Sample phase already supports). |
+
 ## 2026-07-24 — Scanner: phased, camera-first UX for Color & Finish and Texture scans
 
 | # | Decision | Rationale | Alternatives considered |

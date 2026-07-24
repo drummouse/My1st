@@ -56,13 +56,56 @@ complete action rather than a form field to fill in.
 | `npm run build` | Succeeds |
 | `git diff --check` | Clean |
 
+## Bug found and fixed during live verification
+
+The first live-verification pass caught a real defect: on both components'
+Review phase, `validateCompleteness(detail)` read the last-*persisted*
+session/fields. For Color & Finish, the sample/finish/manufacturer/title
+only exist in local React state until Save Draft or Submit is clicked
+(there's no incremental save step for color sampling, unlike Texture's
+calibration/zone/direction, which do save immediately). Texture had the
+same issue for its `title` field alone. Result: the Review screen showed
+"missing" errors for data the contributor had already entered, and Submit
+stayed permanently disabled since it gates on `completeness.errors.length`.
+
+Fixed by folding current local state (title, and for Color the derived
+sample) over `detail` before calling `validateCompleteness`, so the
+review screen and Submit's disabled check reflect exactly what's about
+to be saved — consistent with D-021's shared-pure-module idiom, which
+this check already followed server-side.
+
+## Live verification
+
+Playwright against the deployed preview
+(`ironwrap-estimator-git-claude-scanne-9ef3a1-drummouses-projects.vercel.app`),
+gallery-fallback photo upload, confirms both flows end to end:
+
+- **Color & Finish**: Photo → auto-advance to Sample color → tap-to-sample
+  → Finish (select + Continue) → Review (name it) → submit succeeds
+  ("Submitted for review with 2 warning(s)" — manufacturer identity is an
+  expected warning, not an error). Back-to-captures works.
+- **Texture**: Photo → auto-advance to Scale → calibration save/Continue →
+  Size save/Continue → Orientation (confirm face + direction)/Continue →
+  Preview (real WebGL flat-wall canvas renders)/Continue → Review (name
+  it) → submit succeeds ("Submitted for review with 1 warning(s)"). Back
+  navigation from Review correctly returns to Preview. Zero console
+  errors on this run.
+- `npm run smoke` (32/32) against the same preview: all green.
+
+A transient, pre-existing, out-of-scope issue was hit and worked around
+during verification, not fixed as part of this slice: this branch's Neon
+preview database had never been created before (see the two "Retry
+deployment" commits), so its first burst of concurrent cold-start
+requests raced non-transactional schema DDL in `ensureSchema()`
+(`db.js`) and threw transient 500s on unrelated endpoints (materials,
+settings, custom-services). This is a known category of race (each
+serverless instance re-confirms schema on its own first cold start) that
+settles once all instances' `ensureSchema()` calls resolve; it is not
+part of this PR's diff and is left as a separate, pre-existing hardening
+item.
+
 ## Honest gaps
 
-- Live browser verification of the new phased flows (both scan types, both
-  directions of navigation, submit still working end to end) is the
-  immediate next step before this can be reported complete — this is a
-  pure UI/UX change, so it needs the same rigor as any frontend change per
-  the project's standing rule.
 - The two scan types still don't share a single wizard abstraction (see
   D-077's alternatives-considered) — each owns its own `PHASES` array and
   phase-gating logic, matching `CaptureProfileScan.jsx`'s existing
