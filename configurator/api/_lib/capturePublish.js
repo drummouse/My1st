@@ -15,42 +15,109 @@ export function captureExternalReference(sessionId) {
 
 const fieldValue = (fields, key) => fields.find((f) => (f.fieldKey ?? f.field_key) === key)?.value ?? null;
 
+// Scan types whose flexible classification (§10) means they never carry a
+// category — evidence (calibration/coverage/a sampled value), not a
+// category, proves them complete. Publication must not demand a field
+// their own completeness gate never required.
+const EVIDENCE_DRIVEN_TYPES = ['profile_geometry', 'color_finish', 'texture'];
+
+const assetLineage = (assets) => assets.map((a) => ({
+  purpose: a.purpose,
+  classification: a.classification || 'source',
+  url: a.url,
+  checksum: a.checksum ?? null,
+  mimeType: a.mimeType ?? null,
+}));
+
+// Asset-graph mapping (D-076): a session's capture type decides which
+// reusable Library record type it becomes. `color_finish` -> 'color'
+// (library_color_details) and `texture` -> 'texture' (metadata only, no
+// dedicated details table yet — mirrors how category/manufacturer/supplier/
+// collection/catalog record types already have none). Every other capture
+// type keeps the original 'product' mapping, byte-for-byte unchanged.
 export function buildLibraryPublication({ session, fields, assets }) {
-  if (!session.title || !session.category) {
+  const evidenceDriven = EVIDENCE_DRIVEN_TYPES.includes(session.captureType);
+  if (!session.title || (!evidenceDriven && !session.category)) {
     throw new CaptureValidationError('CAPTURE_PUBLISH_INVALID', 'A publishable capture needs a title and category');
   }
   const mainSource = assets.find((a) => a.purpose === 'main' && (a.classification || 'source') === 'source');
   const mainThumb = mainSource
     && assets.find((a) => a.classification === 'derived' && a.sourceAssetId === mainSource.id);
+
+  const base = {
+    scope: 'tenant',
+    tenantId: session.ownerId,
+    name: session.title,
+    description: fieldValue(fields, 'description') || null,
+    lifecycleStatus: 'active',
+    reviewStatus: 'approved',
+    qualityLevel: 'standard',
+    sourceType: 'capture',
+    externalReference: captureExternalReference(session.id),
+    attribution: null,
+    thumbnailUrl: (mainThumb || mainSource)?.url || null,
+    textureUrl: null,
+    geometryUrl: null,
+  };
+  const scanner = {
+    schemaVersion: SCANNER_SCHEMA_VERSION,
+    captureSessionId: session.id,
+    captureType: session.captureType,
+    completenessScore: session.completeness ?? null,
+    submittedAt: session.submittedAt ?? null,
+  };
+
+  if (session.captureType === 'color_finish') {
+    const color = fieldValue(fields, 'color');
+    return {
+      record: {
+        ...base,
+        recordType: 'color',
+        code: color?.manufacturerCode || null,
+        metadata: { scanner, captureColor: color, captureAssets: assetLineage(assets) },
+      },
+      details: {
+        colorCode: color?.manufacturerCode || null,
+        hex: color?.hex || null,
+        series: null,
+        legacyColorId: null,
+      },
+    };
+  }
+
+  if (session.captureType === 'texture') {
+    return {
+      record: {
+        ...base,
+        recordType: 'texture',
+        code: null,
+        metadata: {
+          scanner,
+          captureTexture: {
+            textureDirection: session.textureDirection ?? null,
+            materialZoneState: session.materialZoneState ?? null,
+            studioValidation: session.studioValidation ?? null,
+          },
+          captureAssets: assetLineage(assets),
+        },
+      },
+      // No dedicated details table for 'texture' yet (matches category/
+      // manufacturer/supplier/collection/catalog) — every field lives in
+      // metadata.captureTexture above.
+      details: {},
+    };
+  }
+
   const dimensions = fieldValue(fields, 'dimensions') || {};
   const coverage = fieldValue(fields, 'coverage') || {};
   const color = fieldValue(fields, 'color');
-
   return {
     record: {
+      ...base,
       recordType: 'product',
-      scope: 'tenant',
-      tenantId: session.ownerId,
-      name: session.title,
       code: fieldValue(fields, 'sku') || null,
-      description: fieldValue(fields, 'description') || null,
-      lifecycleStatus: 'active',
-      reviewStatus: 'approved',
-      qualityLevel: 'standard',
-      sourceType: 'capture',
-      externalReference: captureExternalReference(session.id),
-      attribution: null,
-      thumbnailUrl: (mainThumb || mainSource)?.url || null,
-      textureUrl: null,
-      geometryUrl: null,
       metadata: {
-        scanner: {
-          schemaVersion: SCANNER_SCHEMA_VERSION,
-          captureSessionId: session.id,
-          captureType: session.captureType,
-          completenessScore: session.completeness ?? null,
-          submittedAt: session.submittedAt ?? null,
-        },
+        scanner,
         capture: {
           category: session.category,
           manufacturer: fieldValue(fields, 'manufacturer'),
@@ -58,13 +125,7 @@ export function buildLibraryPublication({ session, fields, assets }) {
           barcode: fieldValue(fields, 'barcode'),
           notes: fieldValue(fields, 'notes'),
           color,
-          assets: assets.map((a) => ({
-            purpose: a.purpose,
-            classification: a.classification || 'source',
-            url: a.url,
-            checksum: a.checksum ?? null,
-            mimeType: a.mimeType ?? null,
-          })),
+          assets: assetLineage(assets),
         },
       },
     },

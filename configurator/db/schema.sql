@@ -141,7 +141,7 @@ create unique index if not exists settings_owner_id_key on settings (owner_id);
 -- colors remain the configurator runtime source during this release.
 create table if not exists library_records (
   id uuid primary key,
-  record_type text not null check (record_type in ('product','profile','color','category','manufacturer','supplier','collection','catalog')),
+  record_type text not null check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog')),
   scope text not null check (scope in ('global','tenant')),
   tenant_id uuid references users(id),
   name text not null,

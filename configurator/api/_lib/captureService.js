@@ -761,27 +761,45 @@ export function createCaptureService({
 
       let record = await store.findLibraryRecordByReference(captureExternalReference(id));
       const finish = assertTransition(actor.role, 'publishing', 'published');
-      const result = await store.transaction(async () => {
-        if (!record) {
-          const publication = buildLibraryPublication(detail);
-          record = await store.insertLibraryPublication({
-            id: randomUUID(),
-            version: 1,
-            createdBy: actor.id,
-            ...publication.record,
-          }, publication.details);
+      let attemptedCode = null;
+      let result;
+      try {
+        result = await store.transaction(async () => {
+          if (!record) {
+            const publication = buildLibraryPublication(detail);
+            attemptedCode = publication.record.code;
+            record = await store.insertLibraryPublication({
+              id: randomUUID(),
+              version: 1,
+              createdBy: actor.id,
+              ...publication.record,
+            }, publication.details);
+          }
+          const recordVersion = Number(record.version || 1);
+          const updated = await store.updateSessionPublished(id, record.id, recordVersion);
+          await store.appendAudit(audit(actor, finish.audit, id, null, {
+            ...finish.metadata, recordId: record.id, recordVersion,
+          }));
+          return {
+            session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
+            product: toStudioProduct(record, record.details || {}),
+            alreadyPublished: false,
+          };
+        });
+      } catch (error) {
+        // A color/product record's code (manufacturer color code / SKU) is
+        // unique per tenant+record type (library_record_code_scope_unique).
+        // Two independent scans can plausibly share the same manufacturer
+        // code (e.g. re-scanning the same nominal color) — surface that as
+        // a clear, actionable validation error instead of letting the raw
+        // Postgres constraint violation propagate as an opaque 500.
+        if (error?.code === '23505' && error?.constraint === 'library_record_code_scope_unique') {
+          throw new CaptureValidationError('CAPTURE_PUBLISH_DUPLICATE_CODE',
+            `A Library record with the code "${attemptedCode}" already exists for your account. Use a different code, or edit the existing record instead of publishing a new one.`,
+            { code: attemptedCode });
         }
-        const recordVersion = Number(record.version || 1);
-        const updated = await store.updateSessionPublished(id, record.id, recordVersion);
-        await store.appendAudit(audit(actor, finish.audit, id, null, {
-          ...finish.metadata, recordId: record.id, recordVersion,
-        }));
-        return {
-          session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
-          product: toStudioProduct(record, record.details || {}),
-          alreadyPublished: false,
-        };
-      });
+        throw error;
+      }
       return result;
     },
 
@@ -952,10 +970,20 @@ export function createNeonCaptureStore(sql) {
     },
     async findLibraryRecordByReference(externalReference) {
       const [row] = await sql`select r.*,
-          (select row_to_json(d) from library_product_details d where d.record_id = r.id) as details
+          coalesce(
+            (select row_to_json(d) from library_product_details d where d.record_id = r.id),
+            (select row_to_json(d) from library_color_details d where d.record_id = r.id)
+          ) as details
         from library_records r where r.external_reference = ${externalReference}`;
       return row || null;
     },
+    // Asset-graph mapping (D-076): which details table a record gets is
+    // decided by its record_type — 'product' keeps the original
+    // library_product_details insert; 'color' writes library_color_details
+    // (mirroring libraryService.js's queueTypedDetails for manually-created
+    // Library records); 'texture' has no dedicated details table yet, so
+    // nothing is written beyond library_records itself (its fields all live
+    // in metadata.captureTexture).
     async insertLibraryPublication(change, details) {
       const query = sql`insert into library_records
         (id, record_type, scope, tenant_id, name, code, description, lifecycle_status, review_status,
@@ -965,17 +993,22 @@ export function createNeonCaptureStore(sql) {
                 ${change.qualityLevel}, ${change.version}, ${change.sourceType}, ${change.externalReference},
                 ${change.thumbnailUrl}, ${JSON.stringify(change.metadata || {})}::jsonb, ${change.createdBy}, ${change.createdBy})
         returning *`;
+      const detailsQuery = change.recordType === 'color'
+        ? sql`insert into library_color_details (record_id, color_code, hex, series, legacy_color_id)
+            values (${change.id}, ${details.colorCode ?? null}, ${details.hex ?? null}, ${details.series ?? null}, ${details.legacyColorId ?? null})
+            on conflict (record_id) do nothing`
+        : change.recordType === 'product'
+          ? sql`insert into library_product_details (record_id, unit, price, application_metadata)
+              values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
+              on conflict (record_id) do nothing`
+          : null;
       if (pendingQueries) {
         pendingQueries.push(query);
-        pendingQueries.push(sql`insert into library_product_details (record_id, unit, price, application_metadata)
-          values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
-          on conflict (record_id) do nothing`);
+        if (detailsQuery) pendingQueries.push(detailsQuery);
         return { ...change, details };
       }
       const row = await query;
-      await sql`insert into library_product_details (record_id, unit, price, application_metadata)
-        values (${change.id}, ${details.unit}, ${details.price}, ${JSON.stringify(details.applicationMetadata || {})}::jsonb)
-        on conflict (record_id) do nothing`;
+      if (detailsQuery) await detailsQuery;
       return { ...(row[0] || change), details };
     },
     async updateSessionPublished(id, recordId, recordVersion) {
