@@ -9,6 +9,7 @@ import PriceSummary from './components/PriceSummary.jsx';
 import PhotoOverlayControl from './components/PhotoOverlayControl.jsx';
 import AssemblyAdjustment from './components/AssemblyAdjustment.jsx';
 import LayersPanel from './components/LayersPanel.jsx';
+import CapturePanel from './components/CapturePanel.jsx';
 import ProjectsPanel from './components/ProjectsPanel.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import DiscountsPanel from './components/DiscountsPanel.jsx';
@@ -80,7 +81,7 @@ const NAV_SECTIONS = [
   { key: 'materials', label: 'Materials' },
 ];
 
-const ADMINISTRATIVE_SECTIONS = new Set(['settings', 'discounts', 'customServices', 'materials', 'platform']);
+const ADMINISTRATIVE_SECTIONS = new Set(['settings', 'discounts', 'customServices', 'materials', 'capture', 'platform']);
 export const isAdministrativeSection = (section) => ADMINISTRATIVE_SECTIONS.has(section);
 
 // Maps a materials-table row (snake_case, DB shape) to the plain
@@ -217,6 +218,7 @@ export default function App({ currentUser = null }) {
   const projectActionStatusTimeoutRef = useRef(null);
   const capabilities = currentUser?.capabilities || [];
   const canViewPlatform = capabilities.includes('platform.diagnostics.read');
+  const canCapture = capabilities.includes('capture.create');
   const [companySettings, setCompanySettings] = useState(null);
   const [companySettingsSettled, setCompanySettingsSettled] = useState(false);
   const [designRuntime, setDesignRuntime] = useState(() => (
@@ -1477,6 +1479,9 @@ export default function App({ currentUser = null }) {
           onMaterialsChanged={applyMaterialsCatalog}
         />
       )}
+      {activeSection === 'capture' && canCapture && (
+        <CapturePanel canReview={capabilities.includes('capture.review')} />
+      )}
       {activeSection === 'platform' && canViewPlatform && (
         <PlatformConsole capabilities={capabilities} />
       )}
@@ -1755,6 +1760,15 @@ export default function App({ currentUser = null }) {
           {label}
         </button>
       ))}
+      {canCapture && (
+        <button
+          type="button"
+          aria-current={activeSection === 'capture' ? 'page' : undefined}
+          onClick={() => handleApplicationSectionChange('capture')}
+        >
+          Capture
+        </button>
+      )}
       {canViewPlatform && (
         <button
           type="button"
@@ -1885,7 +1899,8 @@ export default function App({ currentUser = null }) {
       {administrativeWorkspace ? (
         <div className="workspace-root admin-workspace" data-studio-skin="ironwrap">
           <AdminWorkspaceShell
-            title={NAV_SECTIONS.find(({ key }) => key === activeSection)?.label || 'Platform'}
+            title={NAV_SECTIONS.find(({ key }) => key === activeSection)?.label
+              || (activeSection === 'capture' ? 'Capture' : 'Platform')}
             onClose={handleCloseAdministration}
             topBar={applicationTopBar}
             onOpenNavigation={handleOpenAdminNavigation}

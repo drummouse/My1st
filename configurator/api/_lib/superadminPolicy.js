@@ -1,6 +1,39 @@
+// Reseller sits between superadmin and owner: full lifecycle control over
+// the owner accounts it creates (including delete) and its own library/skin
+// assignments, but never the platform-wide views (audit, diagnostics,
+// tenant transfer) or another reseller's/superadmin's data. Row-level
+// scoping (a reseller only ever touching accounts where reseller_id equals
+// its own id) is enforced in api/superadmin/index.js — this map only
+// controls which actions a role can attempt at all, not which rows.
 const ROLE_CAPABILITIES = {
-  owner: [],
+  // Capture: tenancy is single-seat (one login = one company), so the owner
+  // is both contributor and reviewer for its own tenant's captures — row
+  // scoping to the owner's records is enforced in captureService.js, not
+  // here. Global publication stays superadmin-only (catalog.publish).
+  owner: [
+    'capture.create',
+    'capture.review',
+    'capture.publish.tenant',
+    'library.read',
+    'comms.manage',
+  ],
+  reseller: [
+    'users.create',
+    'users.freeze',
+    'users.block',
+    'users.delete',
+    'users.restore',
+    'users.password.reset',
+    'catalog.read',
+    'catalog.write',
+    'skins.manage',
+    'comms.manage',
+  ],
   superadmin: [
+    'capture.create',
+    'capture.review',
+    'capture.publish.tenant',
+    'library.read',
     'users.create',
     'users.freeze',
     'users.block',
@@ -18,6 +51,8 @@ const ROLE_CAPABILITIES = {
     'skins.manage',
     'platform.audit.read',
     'platform.diagnostics.read',
+    'comms.manage',
+    'comms.operate',
   ],
 };
 

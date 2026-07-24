@@ -263,7 +263,7 @@ test('Materials administration updates React-owned color catalog state', async (
 test('administrative sections mount a full-screen shell outside the persistent viewer workspace', async () => {
   const app = await readApp();
 
-  assert.match(app, /const ADMINISTRATIVE_SECTIONS = new Set\(\['settings', 'discounts', 'customServices', 'materials', 'platform'\]\);/);
+  assert.match(app, /const ADMINISTRATIVE_SECTIONS = new Set\(\['settings', 'discounts', 'customServices', 'materials', 'capture', 'platform'\]\);/);
   assert.match(app, /export const isAdministrativeSection = \(section\) => ADMINISTRATIVE_SECTIONS\.has\(section\);/);
   assert.match(app, /const administrativeWorkspace = !isCustomerView && isAdministrativeSection\(activeSection\);/);
   assert.match(app, /administrativeWorkspace \? \([\s\S]*?<AdminWorkspaceShell[\s\S]*?\{administrativeContent\}[\s\S]*?<\/AdminWorkspaceShell>[\s\S]*?\) : \([\s\S]*?<AppWorkspace/s);

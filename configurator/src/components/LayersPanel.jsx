@@ -46,6 +46,25 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
       <label className="field-label" htmlFor="job-address">Address</label>
       <input id="job-address" className="control-select" value={house.address} onChange={(e) => onMetaChange({ address: e.target.value })} />
 
+      <label className="field-label" htmlFor="customer-email">Customer email (optional)</label>
+      <input
+        id="customer-email"
+        type="email"
+        className="control-select"
+        value={house.customerEmail || ''}
+        onChange={(e) => onMetaChange({ customerEmail: e.target.value })}
+      />
+      <div className="control-sublabel">Allows this project to send the customer a notice when they approve the design.</div>
+
+      <label className="field-label" htmlFor="customer-phone">Customer phone (optional)</label>
+      <input
+        id="customer-phone"
+        type="tel"
+        className="control-select"
+        value={house.customerPhone || ''}
+        onChange={(e) => onMetaChange({ customerPhone: e.target.value })}
+      />
+
       <div className="control-label" style={{ marginTop: '0.75rem' }}>Layers</div>
       <div className="control-sublabel">
         {readOnly

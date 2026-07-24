@@ -326,7 +326,7 @@ test('sequential legacy project restores always normalize against stable account
 test('complete custom-material snapshots preserve empty profiles through export and reopen', () => {
   const accountDefaults = captureDesignState({
     brandId: 'ironwrap',
-    house: { jobNumber: '', customerName: '', address: '', layers: [] },
+    house: { jobNumber: '', customerName: '', address: '', customerEmail: '', customerPhone: '', layers: [] },
     layerOffsets: { stale: { dx: 1, dy: 2, dz: 3 } },
     roofProductId: 'account-roof',
     roofProfile: 'account-roof-profile',
@@ -352,6 +352,8 @@ test('complete custom-material snapshots preserve empty profiles through export 
       jobNumber: 'CUSTOM-1',
       customerName: 'Custom Material Customer',
       address: '1 Profile Free Way',
+      customerEmail: '',
+      customerPhone: '',
       layers: [{ id: 'complete', name: 'Complete model', xml: '<xml />', visible: true }],
     },
     layerOffsets: {},

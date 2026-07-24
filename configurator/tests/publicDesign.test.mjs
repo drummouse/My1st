@@ -155,3 +155,29 @@ test('public design drops authenticated presentation controls and internal catal
     profiles: ['Public profile'], colorIds: ['public-color'],
   });
 });
+
+// Contact fields (customerEmail/customerPhone) are intentionally stored inside
+// design.house alongside customerName/address. The privacy guarantee for the
+// customer share path depends entirely on the public projection staying
+// allowlist-based — publicHouse() only projects jobNumber/customerName/address.
+// This locks that in: if anyone ever widens the house allowlist to leak
+// contact through /catalog or a standalone Share Design export, this fails.
+test('public design strips customer email and phone from the shared house', () => {
+  const projected = toPublicDesign({
+    version: 2,
+    house: {
+      jobNumber: 'JOB-1',
+      customerName: 'Customer',
+      address: '123 Street',
+      customerEmail: 'private@example.com',
+      customerPhone: '+17805551234',
+      layers: [],
+    },
+  });
+  assert.equal(projected.house.customerEmail, undefined);
+  assert.equal(projected.house.customerPhone, undefined);
+  // The allowlisted identity fields still come through.
+  assert.equal(projected.house.jobNumber, 'JOB-1');
+  assert.equal(projected.house.customerName, 'Customer');
+  assert.equal(projected.house.address, '123 Street');
+});

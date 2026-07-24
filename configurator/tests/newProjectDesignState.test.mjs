@@ -43,7 +43,7 @@ test('New Project uses current account defaults and catalog values without freez
   });
 
   assert.deepEqual(nextNewProject.house, {
-    jobNumber: '', customerName: '', address: '', layers: [],
+    jobNumber: '', customerName: '', address: '', customerEmail: '', customerPhone: '', layers: [],
   });
   assert.deepEqual(nextNewProject.layerOffsets, {});
   assert.deepEqual(nextNewProject.facetOverrides, {});

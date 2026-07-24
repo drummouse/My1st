@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { toProjectDiagnostic, toTenantSummary } from '../api/_lib/superadminDto.js';
+import { toProjectDiagnostic, toTenantSummary, toNotification } from '../api/_lib/superadminDto.js';
 
 test('project diagnostic excludes private customer and design content', () => {
   const dto = toProjectDiagnostic({
@@ -28,4 +28,27 @@ test('tenant summary exposes account metadata but not private profile fields', (
   assert.equal(dto.projectCount, 7);
   assert.equal('address' in dto, false);
   assert.equal(JSON.stringify(dto).includes('secret'), false);
+});
+
+test('notification DTO exposes operational status but never a recipient value', () => {
+  const dto = toNotification({
+    id: 'n1', user_id: 'u1', channel: 'sms', template: 'design-approved', status: 'permanently_failed',
+    attempt_count: 1, next_attempt_at: '2026-07-21T05:00:00Z', claimed_at: '2026-07-21T04:59:00Z',
+    error_category: 'validation', last_error: 'Recipient phone number failed E.164/NANP validation',
+    sent_at: null, support_reference: 'REF-1', created_at: '2026-07-21T04:58:00Z',
+    to_phone: '+15873777663', payload: { message: 'Dear Customer, your design is approved.' },
+  });
+  assert.equal(dto.provider, 'twilio');
+  assert.equal(dto.errorCategory, 'validation');
+  assert.equal(dto.claimedAt, '2026-07-21T04:59:00Z');
+  assert.equal('to_phone' in dto, false);
+  assert.equal('toPhone' in dto, false);
+  assert.equal('payload' in dto, false);
+  assert.equal(JSON.stringify(dto).includes('+15873777663'), false);
+  assert.equal(JSON.stringify(dto).includes('Dear Customer'), false);
+});
+
+test('notification DTO derives provider from channel, null for in_app', () => {
+  assert.equal(toNotification({ channel: 'email' }).provider, 'sendgrid');
+  assert.equal(toNotification({ channel: 'in_app' }).provider, null);
 });
