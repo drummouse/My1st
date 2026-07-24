@@ -4,12 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
-      - chatgpt/configurator-gpt-lab
-  push:
-    branches:
       - integration/release-candidate
-    paths:
-      - .github/workflows/integration-ui-surfacing.yml
 
 permissions:
   contents: write
