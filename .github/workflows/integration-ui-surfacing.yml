@@ -1,0 +1,73 @@
+name: Integration UI surfacing
+
+on:
+  push:
+    branches:
+      - integration/release-candidate
+    paths:
+      - .github/workflows/integration-ui-surfacing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/release-candidate
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: configurator/package-lock.json
+
+      - name: Install dependencies
+        working-directory: configurator
+        run: npm ci
+
+      - name: Add failing regression tests
+        run: node scripts/apply-integration-ui-items.mjs tests
+
+      - name: Verify tests fail before implementation
+        working-directory: configurator
+        shell: bash
+        run: |
+          set +e
+          node --test tests/integrationUiSurfacing.test.mjs > /tmp/red.log 2>&1
+          status=$?
+          cat /tmp/red.log
+          if [ "$status" -eq 0 ]; then
+            echo "Expected the new regression tests to fail before implementation."
+            exit 1
+          fi
+
+      - name: Apply UI implementation
+        run: node scripts/apply-integration-ui-items.mjs implementation
+
+      - name: Verify targeted regression tests
+        working-directory: configurator
+        run: node --test tests/integrationUiSurfacing.test.mjs
+
+      - name: Run complete test suite
+        working-directory: configurator
+        run: npm test
+
+      - name: Run production build
+        working-directory: configurator
+        run: npm run build
+
+      - name: Remove one-time automation
+        run: node scripts/apply-integration-ui-items.mjs cleanup
+
+      - name: Commit verified UI changes
+        shell: bash
+        run: |
+          git config user.name "Codex"
+          git config user.email "noreply@openai.com"
+          git add -A
+          git commit -m "Surface Capture and project customer contact UI"
+          git push origin HEAD:integration/release-candidate
