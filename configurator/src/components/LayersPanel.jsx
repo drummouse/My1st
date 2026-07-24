@@ -54,7 +54,7 @@ export default function LayersPanel({ house, onMetaChange, onAddLayer, onRemoveL
         value={house.customerEmail || ''}
         onChange={(e) => onMetaChange({ customerEmail: e.target.value })}
       />
-      <div className="control-sublabel">Lets this project send the customer their own design-approved notice.</div>
+      <div className="control-sublabel">Allows this project to send the customer a notice when they approve the design.</div>
 
       <label className="field-label" htmlFor="customer-phone">Customer phone (optional)</label>
       <input
