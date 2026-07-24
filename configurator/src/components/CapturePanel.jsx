@@ -4,7 +4,7 @@ import { uploadCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
 // Shared verbatim with the server's submit gate (pure ESM, D-021) — the
 // completeness the user sees is the completeness the server enforces.
-import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES } from '../../api/_lib/capturePolicy.js';
+import { validateCompleteness, DIMENSION_UNITS, EXPOSURE_CATEGORIES, ITEM_TYPES, MAX_TAG_LENGTH, MAX_TAGS_PER_SESSION } from '../../api/_lib/capturePolicy.js';
 import CaptureCamera from './CaptureCamera.jsx';
 import CaptureReview from './CaptureReview.jsx';
 import CaptureProfileScan from './CaptureProfileScan.jsx';
@@ -26,6 +26,15 @@ const CATEGORIES = [
   ['gutter', 'Gutter'], ['downspout', 'Downspout'], ['trim', 'Trim / Flashing'],
   ['accessory', 'Accessory'], ['other', 'Other'],
 ];
+
+const ITEM_TYPE_LABELS = {
+  profile: 'Profile (roll-formed / extruded)',
+  commercial_product: 'Commercial product',
+  custom_object: 'Custom object',
+  assembly: 'Assembly',
+  decorative: 'Decorative',
+  unknown: 'Not sure yet',
+};
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -49,6 +58,8 @@ const formFromDetail = (detail) => {
   return {
     title: detail.session.title || '',
     category: detail.session.category || '',
+    itemType: detail.session.itemType || '',
+    tags: detail.session.tags || [],
     description: field('description') || '',
     manufacturer: field('manufacturer') || '',
     supplier: field('supplier') || '',
@@ -68,6 +79,8 @@ const formFromDetail = (detail) => {
 const patchFromForm = (form) => ({
   title: form.title,
   category: form.category || null,
+  itemType: form.itemType || null,
+  tags: form.tags || [],
   fields: {
     description: form.description,
     manufacturer: form.manufacturer,
@@ -133,6 +146,100 @@ function LibraryProducts() {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// Flexible tags (D-053–D-056 shipped schema + CRUD only; this is the UI
+// that makes it usable). `tags` is this session's own array — validated
+// only for shape/count server-side (D-055), never checked against the
+// tenant's vocabulary — so it's fine for a session to carry a tag not
+// (yet) in `capture_tags`. Adding a genuinely new one also registers it in
+// the shared vocabulary (idempotent by (owner_id, tag), D-056) purely as a
+// convenience so it's suggested next time; that registration is
+// best-effort and never blocks tagging this capture if it fails.
+function TagPicker({ tags, onChange, disabled }) {
+  const [vocabulary, setVocabulary] = useState(null);
+  const [input, setInput] = useState('');
+
+  useEffect(() => {
+    captureApi.listTags()
+      .then(({ tags: rows }) => setVocabulary(rows))
+      .catch(() => setVocabulary([]));
+  }, []);
+
+  const addTag = async (raw) => {
+    const value = raw.trim().toLowerCase();
+    if (!value || tags.includes(value) || tags.length >= MAX_TAGS_PER_SESSION) {
+      setInput('');
+      return;
+    }
+    onChange([...tags, value]);
+    setInput('');
+    if (!vocabulary?.some((t) => t.tag === value)) {
+      try {
+        const { tag } = await captureApi.createTag(value);
+        setVocabulary((prev) => (prev?.some((t) => t.id === tag.id) ? prev : [...(prev || []), tag]));
+      } catch {
+        // Best-effort vocabulary registration — the tag is already on this
+        // session either way (see header comment).
+      }
+    }
+  };
+
+  const removeTag = (value) => onChange(tags.filter((t) => t !== value));
+  const suggestions = (vocabulary || []).filter((t) => !tags.includes(t.tag));
+
+  return (
+    <div className="capture-tags">
+      <div className="capture-tag-chips">
+        {tags.length === 0 && <span className="control-sublabel">No tags yet.</span>}
+        {tags.map((tag) => (
+          <span key={tag} className="capture-tag-chip">
+            {tag}
+            {!disabled && (
+              <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => removeTag(tag)}>×</button>
+            )}
+          </span>
+        ))}
+      </div>
+      {!disabled && (
+        <>
+          <div className="capture-tag-input-row">
+            <input
+              type="text"
+              className="control-select"
+              value={input}
+              placeholder={tags.length >= MAX_TAGS_PER_SESSION ? `Limit of ${MAX_TAGS_PER_SESSION} tags reached` : 'Add a tag…'}
+              maxLength={MAX_TAG_LENGTH}
+              disabled={tags.length >= MAX_TAGS_PER_SESSION}
+              list="capture-tag-suggestions"
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(input); } }}
+            />
+            <datalist id="capture-tag-suggestions">
+              {suggestions.map((t) => <option key={t.id} value={t.tag} />)}
+            </datalist>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => addTag(input)}
+              disabled={!input.trim() || tags.length >= MAX_TAGS_PER_SESSION}
+            >
+              Add
+            </button>
+          </div>
+          {suggestions.length > 0 && (
+            <div className="capture-tag-suggestions">
+              {suggestions.slice(0, 12).map((t) => (
+                <button key={t.id} type="button" className="capture-tag-suggestion" onClick={() => addTag(t.tag)}>
+                  + {t.tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -464,6 +571,19 @@ export default function CapturePanel({ canReview = false }) {
           <option value="">Choose a category…</option>
           {CATEGORIES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
+        <label className="field-label" htmlFor="capture-item-type">Item type</label>
+        <select
+          id="capture-item-type"
+          className="control-select"
+          value={form.itemType}
+          disabled={!editable || busy}
+          onChange={(e) => setForm({ ...form, itemType: e.target.value })}
+        >
+          <option value="">Not classified</option>
+          {ITEM_TYPES.map((id) => <option key={id} value={id}>{ITEM_TYPE_LABELS[id] || id}</option>)}
+        </select>
+        <div className="field-label">Tags</div>
+        <TagPicker tags={form.tags} onChange={(tags) => setForm({ ...form, tags })} disabled={!editable || busy} />
         <label className="field-label" htmlFor="capture-description">Description</label>
         <textarea
           id="capture-description"
