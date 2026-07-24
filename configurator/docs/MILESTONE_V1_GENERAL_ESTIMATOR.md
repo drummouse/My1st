@@ -1,101 +1,107 @@
 # Milestone V1 — General Estimator
 
-Status: Scoping (owner-driven, 2026-07-24)
+Status: Scoped (owner-driven, 2026-07-24)
 Success test (owner's words): *"me for now as patient zero, with the ability
 to test the product by others with hints and guidance from my end."*
-Depends on: `DOMAIN_MODEL.md` (canonical vocabulary — read it first).
+Read first: `DOMAIN_MODEL.md` (canonical vocabulary + the capture model).
 
 ## What V1 is
 
-A contractor can, on one converged production app:
+On the one converged production app:
 
-1. **Open XML** → a real-scale 3D model of the structure.
-2. **Apply a Profile** onto a surface, and a **Color** over that profile
-   (visual), building an **estimate** as `Service + Profile + Color` line
-   items.
-3. **Populate** the Profile/Color libraries — via admin entry now; capture
-   (photoshoot) is the differentiator and a fast-follow.
-4. **Share** the design/estimate with a client, who can **approve** or make
-   minor changes.
+**Open XML → apply profiles + colors to the 3D model → share the
+design/estimate with the client for approval / minor edits.**
 
-Expert Mode (structured sizes, sku, manufacturer, per-color pricing,
-material takeoff/allocation math) is explicitly **out of V1**.
+The bar is *commercial-grade* — the 3D must look like real material, not
+flat "SimCity" blocks. UI/UX refinement is a continuous track through
+V1–V2 (see the roadmap), not a separate milestone.
 
-## Already proven working (live, in production)
+## Already proven working (live, in production, by the owner)
 
-Verified by the owner using the app as patient zero (2026-07-24):
+Open XML → 3D · add a color (admin) → applyable · apply color on the model
+(renders) · Showroom presentation · PDF export. The *configure → present →
+export* spine is real.
 
-- Open XML → 3D model. ✅
-- Add a color (admin) → it becomes applyable. ✅
-- Apply color on the model (renders). ✅
-- Showroom presentation. ✅
-- PDF export. ✅
+## The two facts that shape V1
 
-So the *configure → present → export* spine is real. The remaining V1 work
-is about making the model/vocabulary correct and closing the population and
-share/approve edges.
+1. **The realism fix is a render-map, not geometry.** `buildScene.js`
+   already does `material.map = loadTexture(color.texture)` — the viewer
+   *already* applies real material textures. Built-in colors carry a
+   photographed swatch and look real; a color the owner adds is just a hex
+   value with no texture → `material.map = null` → flat SimCity shading.
+   So "make it look real" = **let user-added/captured colors carry a
+   render-map (a surface swatch).** The apply-side is done; the gap is
+   getting a texture onto a user color.
 
-## Known gaps (V1 scope)
+2. **Profile shape in V1 is parametric, not reconstructed.** A profile
+   must put *real shape* on the model (SnapLock ≠ corrugated), but arbitrary
+   photo-to-geometry reconstruction is hard (that's V2.1). The V1 path is a
+   **parametric profile** — pick a type (standing seam, corrugated, ribbed,
+   plank/board&batten, shingle, flat) + coverage size → the app generates
+   3D relief at correct scale. Covers ~90% of real products; reliable; no
+   CV. Photo-reconstruction of exotic profiles is deferred to V2.1.
 
-| # | Gap | Notes |
+## The capture model (see DOMAIN_MODEL.md)
+
+Material = **Profile + Color**. The five capture tabs collapse to what the
+model needs:
+
+| Old tab | Becomes | Milestone |
 | --- | --- | --- |
-| G1 | The "Materials" tab muddles profile into a "material" record | Should be **Profiles \| Colors** — see Slice 1. |
-| G2 | Profiles can't be added as first-class priced primitives | Tied to G1; today profiles live as a comma-string on a "material". |
-| G3 | Captured **colors** don't surface into Studio | `listTenantLibraryOptions` filters to `record_type='product'`; Capture publishes `color`. Blocks the photoshoot→apply loop. |
-| G4 | Per-profile color scoping is only partial | `colorIds` exists but isn't enforced end-to-end. |
-| G5 | Interactive client share/approve beyond PDF | PDF export works; the interactive approve/edit flow needs a live pass. |
+| Quick capture | **Quick / parametric Profile scan** (few photos → similar shape) | **V1** |
+| Color & Finish | **Color** (+ render-map) | **V1** |
+| Texture | **Print & Pattern** (woodgrain/stone) | V2.1 |
+| Profile & Geometry | **Detailed profile reconstruction** (+ docs/drawings) | V2.1 |
+| Guided Product | — dropped (was profile capture, mislabeled) | — |
 
 ## Slices (ordered)
 
-### Slice 1 — Materials tab → **Profiles | Colors** (FIRST)
+### Slice 1 — Catalog vocabulary: "Materials" tab → **Profiles \| Colors**
+Shallow relabel: left column/form "Material" → **"Profile"** (each row one
+priced profile: name, roof/wall, price); drop the confusing multi-value
+`profiles` string; keep folders as the "material" grouping; Colors column
+unchanged. Also collapse the Capture tabs per the table above. Low-risk,
+proves the build→verify→promote pipeline on something small.
+*(Slice 1b, right after: make Profile the first-class primitive
+end-to-end — configurator picks a profile directly. Touches the
+estimate/design-state; real refactor.)*
 
-Make the catalog UI match the domain model. Scope kept shallow (V1, not a
-data-model overhaul):
+### Slice 2 — Colors that look real (the render-map / not-SimCity fix)
+Let a user-added/captured color carry a **surface swatch → render-map**, so
+`material.map` is set and the surface renders like real material. This is
+the core V1 realism value. Includes surfacing captured `color` records into
+Studio's picker (today `listTenantLibraryOptions` filters to `product`
+only).
 
-- Relabel the left column and its form from "Material" to **"Profile"**;
-  each row is **one** priced profile (`name`, applies-to roof/wall, price,
-  unit).
-- Drop/repurpose the confusing multi-value `profiles` **string** field (the
-  row name *is* the profile).
-- Keep **folders** as the "material" grouping (already built).
-- Keep **Colors** column as-is.
-- Rewire the configurator's profile dropdown to read profile rows directly
-  (it currently reads the material's `profiles` string).
+### Slice 3 — Parametric profile shapes
+A small library of parametric profile templates (standing seam, corrugated,
+ribbed, plank, shingle, flat) → pick type + coverage → generate 3D relief
+at real-world scale on the imported facets. Wire it to the **Quick /
+parametric Profile scan**. Photo-reconstruction stays V2.1.
 
-**Acceptance:**
-- The tab reads **Profiles | Colors**.
-- Owner adds a profile (e.g. `SnapLock 12"`, roof, $/sq ft) and a color;
-  both appear and persist.
-- In the configurator, that profile is selectable on a roof surface and the
-  color applies over it; the estimate line reflects `Service + Profile +
-  Color`.
-- Save → reopen → share preserves the selection.
-- Full test suite + build green; live smoke + a Playwright pass on the
-  deployed preview before any promotion.
+### Slice 4 — Interactive share / approve
+Live-verify client share → approve / minor-edit (distinct from PDF export).
 
-Deferred to Expert Mode: structured Profile → Size, sku, manufacturer,
-per-color price modifiers.
+### Continuous — UI/UX + usability
+Commercial-grade polish across all slices; not a discrete slice.
 
-### Slice 2 — Surface captured colors into Studio (closes G3)
+## Acceptance (V1 done)
 
-Extend `listTenantLibraryOptions` to include `color` records and map them
-into the color picker, so a photographed color becomes selectable.
+Owner (or a guided outside tester) can: open an XML → pick a parametric
+profile that shows real shape on the 3D → apply a color that renders like
+real material (not a flat block) → produce a correct estimate line
+(`Service + Profile + Color`) → export a PDF → share a link the client
+approves. Full test suite + build green; live smoke + Playwright on the
+deployed preview before promotion.
 
-### Slice 3 — Photoshoot → apply loop end-to-end (G3 + Capture)
+## Deferred out of V1 (recorded so it isn't rebuilt early)
 
-Color & Finish / Quick capture → published `color` → immediately usable in
-Slice 2's picker. Decide self-publish vs review-queue for a single-tenant
-contributor.
-
-### Slice 4 — Interactive share/approve pass (G5)
-
-Live-verify the client share → approve/minor-edit flow (distinct from PDF).
-
-Textures/profile-geometry reconstruction and other advanced Scanner outputs
-stay parked past V1 (Scanner V4).
+Detailed profile reconstruction + CAD docs, Print & Pattern, raised
+geometric relief beyond parametric, structured Profile→Size/sku/manufacturer
+(lives in the Capture/Materials evolution), photo-to-geometry CV.
 
 ## Promotion rule
 
-Every slice: build on a fresh branch from `main`, verify (tests + build +
-deployed-preview smoke + Playwright), open a held PR to `main`, and promote
-only on the owner's explicit go. `main` is production.
+Every slice: fresh branch from `main` → build → verify (tests + build +
+deployed-preview smoke + Playwright) → held PR to `main` → promote only on
+the owner's explicit go. `main` is production.
