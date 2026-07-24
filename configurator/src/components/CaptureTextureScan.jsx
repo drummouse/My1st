@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { captureApi, captureAssetBlobUrl } from '../lib/captureClient.js';
 import { uploadCaptureImage } from '../lib/captureUpload.js';
 import { createUploadQueue } from '../lib/captureUploadQueue.js';
@@ -18,18 +18,25 @@ const DIRECTION_LABELS = {
   not_applicable: 'Not applicable',
 };
 
-// Texture scan (first vertical slice of that scan type): a flat-surface
-// source photo, physical scale via the same calibration evidence Profile
-// Geometry uses, the same material-zone/texture-direction confirmation R2.5
-// built for its flat-wall technical-compatibility proof — except here those
-// ARE the scan's core evidence, not an optional extra. Ships albedo (the
-// source photo) + scale + direction only; perspective-corrected cropping
-// and normal/roughness/metallic/AO/height derivatives are staged for a
-// later slice, per the spec's own MVP framing for this scan type.
+const PHASES = [
+  ['photo', 'Photo'],
+  ['scale', 'Scale'],
+  ['size', 'Size'],
+  ['orientation', 'Orientation'],
+  ['preview', 'Preview'],
+  ['review', 'Review & submit'],
+];
+
+// Texture scan: a phased, camera-first flow — one screen, one action at a
+// time, matching the Profile Geometry scan's pattern — rather than a single
+// form with every field visible at once. Ships albedo (the source photo) +
+// scale + direction only; perspective-corrected cropping and normal/
+// roughness/metallic/AO/height derivatives are staged for a later slice.
 export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
   const session = detail.session;
   const editable = session.status === 'draft' || session.status === 'changes_requested';
 
+  const [phase, setPhase] = useState('photo');
   const [title, setTitle] = useState(session.title || '');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,6 +72,12 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
     && !(a.supersededBy ?? a.superseded_by));
   const completeness = validateCompleteness(detail);
   const materialZoneConfirmed = session.materialZoneState?.zones?.[0]?.confirmed === true;
+  const photoUploading = queueItems.some((item) => item.status !== 'done');
+
+  useEffect(() => {
+    if (phase === 'photo' && mainAsset && !photoUploading) setPhase('scale');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainAsset, photoUploading]);
 
   const refresh = async () => {
     const next = await captureApi.get(session.id);
@@ -135,38 +148,274 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
 
   return (
     <div className="settings-panel">
-      <div className="control-label">Texture scan</div>
-      <div className="control-sublabel">
-        Capture a flat, square-on surface, confirm its real-world scale and direction, and submit a
-        reusable texture asset — not a product record.
+      <div className="control-label">
+        Texture scan
+        <span className="capture-status">{session.status}</span>
+      </div>
+      <div className="control-sublabel" role="status">
+        {PHASES.map(([id, label]) => (phase === id ? `● ${label}` : label)).join(' · ')}
       </div>
 
-      <label className="field-label" htmlFor="texture-scan-title">Name</label>
-      <input
-        id="texture-scan-title"
-        type="text"
-        className="control-select"
-        value={title}
-        disabled={!editable || busy}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="e.g. Driftwood woodgrain texture"
-      />
+      {phase === 'photo' && (
+        <>
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            Point your camera at a flat, square-on surface.
+          </div>
+          {mainAsset ? (
+            <img
+              src={captureAssetBlobUrl(session.id, mainAsset.id)}
+              alt="Flat-surface texture source"
+              className="capture-color-sample-photo"
+            />
+          ) : null}
+          {photoUploading && <div className="control-sublabel">Uploading photo…</div>}
+          {editable && (
+            <button type="button" className="btn-primary" onClick={() => setCameraOpen(true)} disabled={busy}>
+              {mainAsset ? 'Retake Photo' : 'Take Photo'}
+            </button>
+          )}
+          {mainAsset && !photoUploading && editable && (
+            <div className="export-buttons">
+              <button type="button" className="btn-primary" onClick={() => setPhase('scale')}>Continue</button>
+            </div>
+          )}
+        </>
+      )}
 
-      <div className="control-label" style={{ marginTop: '0.75rem' }}>Source photo</div>
-      {mainAsset ? (
-        <img
-          src={captureAssetBlobUrl(session.id, mainAsset.id)}
-          alt="Flat-surface texture source"
-          className="capture-color-sample-photo"
-        />
-      ) : (
-        <div className="control-sublabel">No source photo yet.</div>
+      {phase === 'scale' && (
+        <>
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            Place a ruler beside or touching the surface, then tell us one measurement you know
+            (e.g. a plank's width) so we can work out its real-world scale.
+          </div>
+          <label className="field-label" htmlFor="texture-cal-units">Units</label>
+          <select
+            id="texture-cal-units"
+            className="control-select"
+            value={calibrationForm.units}
+            disabled={!editable || busy}
+            onChange={(e) => setCalibrationForm({ ...calibrationForm, units: e.target.value })}
+          >
+            {DIMENSION_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+          </select>
+          <label className="field-label" htmlFor="texture-cal-feature">Which feature?</label>
+          <input
+            id="texture-cal-feature"
+            type="text"
+            className="control-select"
+            value={calibrationForm.knownFeature}
+            disabled={!editable || busy}
+            onChange={(e) => setCalibrationForm({ ...calibrationForm, knownFeature: e.target.value })}
+          />
+          <label className="field-label" htmlFor="texture-cal-value">Its measurement ({calibrationForm.units})</label>
+          <input
+            id="texture-cal-value"
+            type="number"
+            min="0"
+            step="any"
+            className="control-select"
+            value={calibrationForm.knownValue}
+            disabled={!editable || busy}
+            onChange={(e) => setCalibrationForm({ ...calibrationForm, knownValue: e.target.value })}
+          />
+          <label className="capture-confirm-row">
+            <input
+              type="checkbox"
+              checked={calibrationForm.rulerConfirmed}
+              disabled={!editable || busy}
+              onChange={(e) => setCalibrationForm({ ...calibrationForm, rulerConfirmed: e.target.checked })}
+            />
+            The ruler is beside or touching the surface
+          </label>
+          {calibration ? (
+            <div className="control-sublabel" role="status">
+              Set: {calibration.knownMeasurement.feature} = {calibration.knownMeasurement.value} {calibration.units}
+            </div>
+          ) : editable && (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={busy || !calibrationForm.rulerConfirmed || !Number(calibrationForm.knownValue)}
+              onClick={handleSaveCalibration}
+            >
+              Save
+            </button>
+          )}
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={() => setPhase('photo')} disabled={busy}>Back</button>
+            <button type="button" className="btn-primary" onClick={() => setPhase('size')} disabled={!calibration}>
+              Continue
+            </button>
+          </div>
+        </>
       )}
-      {editable && (
-        <button type="button" className="btn-secondary" onClick={() => setCameraOpen(true)} disabled={busy}>
-          {mainAsset ? 'Retake photo' : 'Take photo'}
-        </button>
+
+      {phase === 'size' && (
+        <>
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            What's the overall width and height of the surface ({calibration?.units || 'mm'})?
+          </div>
+          <div className="capture-dims-row">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              className="control-select"
+              placeholder="Width"
+              value={widthValue}
+              disabled={!editable || busy}
+              onChange={(e) => setWidthValue(e.target.value)}
+            />
+            <input
+              type="number"
+              min="0"
+              step="any"
+              className="control-select"
+              placeholder="Height"
+              value={heightValue}
+              disabled={!editable || busy}
+              onChange={(e) => setHeightValue(e.target.value)}
+            />
+          </div>
+          {editable && (
+            <button type="button" className="btn-primary" onClick={handleSaveDimensions} disabled={busy}>
+              Save
+            </button>
+          )}
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={() => setPhase('scale')} disabled={busy}>Back</button>
+            <button type="button" className="btn-primary" onClick={() => setPhase('orientation')}>Continue</button>
+          </div>
+        </>
       )}
+
+      {phase === 'orientation' && (
+        <>
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            Confirm this photo shows the visible, install-facing side.
+          </div>
+          {materialZoneConfirmed ? (
+            <div className="control-sublabel" role="status">Confirmed.</div>
+          ) : editable && (
+            <button type="button" className="btn-primary" disabled={busy} onClick={handleConfirmMaterialZone}>
+              Yes, this is the visible face
+            </button>
+          )}
+
+          <label className="field-label" htmlFor="texture-direction">Which way does the pattern run?</label>
+          <select
+            id="texture-direction"
+            className="control-select"
+            value={session.textureDirection || ''}
+            disabled={!editable || busy}
+            onChange={(e) => e.target.value && handleTextureDirection(e.target.value)}
+          >
+            <option value="" disabled>Choose a direction…</option>
+            {TEXTURE_DIRECTIONS.map((id) => <option key={id} value={id}>{DIRECTION_LABELS[id] || id}</option>)}
+          </select>
+
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={() => setPhase('size')} disabled={busy}>Back</button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setPhase('preview')}
+              disabled={!materialZoneConfirmed || !session.textureDirection}
+            >
+              Continue
+            </button>
+          </div>
+        </>
+      )}
+
+      {phase === 'preview' && (
+        <>
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            See how this will look once installed — a rough proof, not a finished render.
+          </div>
+          {session.studioValidation ? (
+            <>
+              <div className="control-sublabel" role="status">
+                {session.studioValidation.status === 'ready' ? 'Preview ready.' : 'Needs attention:'}
+              </div>
+              {session.studioValidation.issues.length > 0 && (
+                <ul className="capture-check-list">
+                  {session.studioValidation.issues.map((issue) => <li key={issue.code}>{issue.message}</li>)}
+                </ul>
+              )}
+              {session.studioValidation.status === 'ready' && (
+                <CaptureFlatWallPreview
+                  widthMm={toMm(widthMeasurement)}
+                  heightMm={toMm(heightMeasurement)}
+                  textureDirection={session.textureDirection}
+                />
+              )}
+            </>
+          ) : (
+            <div className="control-sublabel">Not yet checked.</div>
+          )}
+          {editable && (
+            <button type="button" className="btn-primary" disabled={busy} onClick={handleRunValidation}>
+              Show Preview
+            </button>
+          )}
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={() => setPhase('orientation')} disabled={busy}>Back</button>
+            <button type="button" className="btn-primary" onClick={() => setPhase('review')}>Continue</button>
+          </div>
+        </>
+      )}
+
+      {phase === 'review' && (
+        <>
+          <label className="field-label" htmlFor="texture-scan-title">Name this texture</label>
+          <input
+            id="texture-scan-title"
+            type="text"
+            className="control-select"
+            value={title}
+            disabled={!editable || busy}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Driftwood woodgrain texture"
+          />
+
+          <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
+            Ships the source photo, its real-world scale, and direction only — perspective-corrected cropping
+            and normal/roughness/metallic/AO/height derivatives are a later slice.
+          </div>
+
+          {completeness.errors.length > 0 && (
+            <ul className="capture-check-list capture-check-errors">
+              {completeness.errors.map((e) => <li key={e.code}>{e.message}</li>)}
+            </ul>
+          )}
+          {completeness.warnings.length > 0 && (
+            <ul className="capture-check-list">
+              {completeness.warnings.map((w) => <li key={w.code}>{w.message}</li>)}
+            </ul>
+          )}
+
+          {status && <div className="control-sublabel" role="status">{status}</div>}
+
+          <div className="export-buttons">
+            <button type="button" className="btn-secondary" onClick={() => setPhase('preview')} disabled={busy}>Back</button>
+            {editable && (
+              <>
+                <button type="button" className="btn-secondary" onClick={handleSave} disabled={busy}>Save Draft</button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSubmit}
+                  disabled={busy || completeness.errors.length > 0}
+                >
+                  Submit for review
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
       {cameraOpen && (
         <CaptureCamera
           purposeLabel="Flat-surface texture source"
@@ -177,178 +426,10 @@ export default function CaptureTextureScan({ detail, onDetailChange, onExit }) {
           onClose={() => setCameraOpen(false)}
         />
       )}
-      {queueItems.some((item) => item.status !== 'done') && (
-        <div className="control-sublabel">Uploading photo…</div>
-      )}
 
-      <div className="field-label">Calibration (physical scale)</div>
-      <div className="control-sublabel">
-        Place a ruler beside or touching the surface, then confirm one measurement you know.
-      </div>
-      <label className="field-label" htmlFor="texture-cal-units">Units</label>
-      <select
-        id="texture-cal-units"
-        className="control-select"
-        value={calibrationForm.units}
-        disabled={!editable || busy}
-        onChange={(e) => setCalibrationForm({ ...calibrationForm, units: e.target.value })}
-      >
-        {DIMENSION_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
-      </select>
-      <label className="field-label" htmlFor="texture-cal-feature">Known measurement — which feature?</label>
-      <input
-        id="texture-cal-feature"
-        type="text"
-        className="control-select"
-        value={calibrationForm.knownFeature}
-        disabled={!editable || busy}
-        onChange={(e) => setCalibrationForm({ ...calibrationForm, knownFeature: e.target.value })}
-      />
-      <label className="field-label" htmlFor="texture-cal-value">Known value ({calibrationForm.units})</label>
-      <input
-        id="texture-cal-value"
-        type="number"
-        min="0"
-        step="any"
-        className="control-select"
-        value={calibrationForm.knownValue}
-        disabled={!editable || busy}
-        onChange={(e) => setCalibrationForm({ ...calibrationForm, knownValue: e.target.value })}
-      />
-      <label className="capture-confirm-row">
-        <input
-          type="checkbox"
-          checked={calibrationForm.rulerConfirmed}
-          disabled={!editable || busy}
-          onChange={(e) => setCalibrationForm({ ...calibrationForm, rulerConfirmed: e.target.checked })}
-        />
-        The ruler is beside or touching the surface
-      </label>
-      {calibration ? (
-        <div className="control-sublabel" role="status">
-          Calibrated: {calibration.knownMeasurement.feature} = {calibration.knownMeasurement.value} {calibration.units}
-        </div>
-      ) : editable && (
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={busy || !calibrationForm.rulerConfirmed || !Number(calibrationForm.knownValue)}
-          onClick={handleSaveCalibration}
-        >
-          Save Calibration
-        </button>
-      )}
-
-      <div className="field-label">Width &amp; height ({calibration?.units || 'mm'})</div>
-      <div className="capture-dims-row">
-        <input
-          type="number"
-          min="0"
-          step="any"
-          className="control-select"
-          placeholder="Width"
-          value={widthValue}
-          disabled={!editable || busy}
-          onChange={(e) => setWidthValue(e.target.value)}
-        />
-        <input
-          type="number"
-          min="0"
-          step="any"
-          className="control-select"
-          placeholder="Height"
-          value={heightValue}
-          disabled={!editable || busy}
-          onChange={(e) => setHeightValue(e.target.value)}
-        />
-      </div>
-      {editable && (
-        <button type="button" className="btn-secondary" onClick={handleSaveDimensions} disabled={busy}>
-          Save Width &amp; Height
-        </button>
-      )}
-
-      <div className="field-label">Material zone</div>
-      {materialZoneConfirmed ? (
-        <div className="control-sublabel" role="status">Main visible face confirmed.</div>
-      ) : editable && (
-        <button type="button" className="btn-secondary" disabled={busy} onClick={handleConfirmMaterialZone}>
-          Confirm Main Visible Face
-        </button>
-      )}
-
-      <label className="field-label" htmlFor="texture-direction">Texture direction</label>
-      <select
-        id="texture-direction"
-        className="control-select"
-        value={session.textureDirection || ''}
-        disabled={!editable || busy}
-        onChange={(e) => e.target.value && handleTextureDirection(e.target.value)}
-      >
-        <option value="" disabled>Choose a direction…</option>
-        {TEXTURE_DIRECTIONS.map((id) => <option key={id} value={id}>{DIRECTION_LABELS[id] || id}</option>)}
-      </select>
-
-      <div className="field-label">Repeat / technical compatibility preview</div>
-      {session.studioValidation ? (
-        <>
-          <div className="control-sublabel" role="status">
-            Status: {session.studioValidation.status === 'ready' ? 'Ready' : 'Needs attention'}
-          </div>
-          {session.studioValidation.issues.length > 0 && (
-            <ul className="capture-check-list">
-              {session.studioValidation.issues.map((issue) => <li key={issue.code}>{issue.message}</li>)}
-            </ul>
-          )}
-          {session.studioValidation.status === 'ready' && (
-            <CaptureFlatWallPreview
-              widthMm={toMm(widthMeasurement)}
-              heightMm={toMm(heightMeasurement)}
-              textureDirection={session.textureDirection}
-            />
-          )}
-        </>
-      ) : (
-        <div className="control-sublabel">Not yet checked.</div>
-      )}
-      {editable && (
-        <button type="button" className="btn-secondary" disabled={busy} onClick={handleRunValidation}>
-          Run Technical Compatibility Check
-        </button>
-      )}
-
-      <div className="control-sublabel" style={{ marginTop: '0.5rem' }}>
-        Ships the source photo, its real-world scale, and direction only — perspective-corrected cropping
-        and normal/roughness/metallic/AO/height derivatives are a later slice.
-      </div>
-
-      {completeness.errors.length > 0 && (
-        <ul className="capture-check-list capture-check-errors">
-          {completeness.errors.map((e) => <li key={e.code}>{e.message}</li>)}
-        </ul>
-      )}
-      {completeness.warnings.length > 0 && (
-        <ul className="capture-check-list">
-          {completeness.warnings.map((w) => <li key={w.code}>{w.message}</li>)}
-        </ul>
-      )}
-
-      {status && <div className="control-sublabel" role="status">{status}</div>}
-
-      {editable && (
-        <div className="export-buttons">
-          <button type="button" className="btn-secondary" onClick={handleSave} disabled={busy}>Save Draft</button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleSubmit}
-            disabled={busy || completeness.errors.length > 0}
-          >
-            Submit for review
-          </button>
-        </div>
-      )}
-      <button type="button" className="btn-secondary" onClick={onExit}>Back to captures</button>
+      <button type="button" className="btn-secondary" onClick={onExit} style={{ marginTop: '0.75rem' }}>
+        Back to captures
+      </button>
     </div>
   );
 }
