@@ -44,11 +44,30 @@ build → verify → promote pipeline end to end.
 
 ## Verification
 
+Preview: `ironwrap-estimator` PR #35 →
+`https://ironwrap-estimator-git-claude-ironwr-325765-drummouses-projects.vercel.app`
+(commit `5eca65d`, Vercel state DEPLOYED).
+
 - `npm test` — **653/653 pass** (local).
 - `npm run build` — clean.
-- Deployed-preview smoke (`npm run smoke` against the PR preview) — _pending
-  preview build; results appended after the Vercel preview is live._
-- Live Playwright pass on the preview — _pending; results appended._
+- Deployed-preview smoke (`npm run smoke`) — **all 33 checks PASS** against the
+  live preview.
+- Deployed-bundle string check (served `/assets/index-*.js`) — all six new
+  user-facing strings present (`Profiles & Colors`, `Add Profile`,
+  `Add a profile`, `All Profiles`, `Quick Profile scan`,
+  `Color & Finish scan`); all four retired strings absent (`Add Material`,
+  `Add a material`, `Quick capture`, `Profiles (comma-separated`).
+- Live Playwright pass — preview boots at HTTP 200, title
+  "IronWrap 3D Configurator", login gate renders, **no runtime/render
+  errors** (the one console entry is the expected unauthenticated 401 API
+  probe, matching the smoke auth-guards).
+
+The relabels themselves live behind superadmin login; the deployed-bundle
+string check is the decisive proof they shipped. Owner (patient zero) can
+eyeball the authenticated view: the admin **"Profiles & Colors"** tab, its
+left **Profiles** column with an **Add Profile** form (no
+comma-separated profiles input), and Capture offering only **Quick Profile
+scan** + **Color & Finish scan**.
 
 ## Deferred (recorded so it isn't rebuilt early)
 
