@@ -3,7 +3,7 @@
 Date: 2026-07-23
 Branch: `claude/scanner-texture-scan` (stacked on `claude/scanner-color-finish-scan`
 → `claude/development`; both draft PRs still open — see note below)
-Authorization: "do next step" after Color & Finish scan (D-073) shipped — the
+Authorization: "do next step" after Color & Finish scan (D-074) shipped — the
 other remaining scan-type gap identified in the revised spec.
 
 ## Note on branch stacking
@@ -20,7 +20,7 @@ and should be merged after (or together with) PR #31, then re-targeted at
 
 ## Scope delivered
 
-Mirrors Slice R1's (Profile Geometry) and D-073's (Color & Finish)
+Mirrors Slice R1's (Profile Geometry) and D-074's (Color & Finish)
 precedent — a new scan type, its own dedicated flow, evidence-driven
 flexible classification, submit into the existing review pipeline,
 publication mapping explicitly deferred. Unlike Color & Finish, this slice
@@ -109,10 +109,10 @@ All steps passed. No real SMS/email was sent; no schema, historical rows,
   framing for this scan type. No perspective-corrected cropping (the source
   photo is used as-is; the contributor is expected to shoot flat and
   square-on) and no normal/roughness/metallic/AO/height derivatives — both
-  explicitly staged for a later slice, same honesty boundary R1 and D-073
+  explicitly staged for a later slice, same honesty boundary R1 and D-074
   kept ("deterministic, not CV" — no perspective-correction CV exists
   anywhere in Capture yet).
-- **Publication mapping is deferred**, exactly as R1 and D-073 deferred
+- **Publication mapping is deferred**, exactly as R1 and D-074 deferred
   their own asset-graph mapping. `buildLibraryPublication` still maps every
   capture type — including `texture` — to a generic Library `product`
   record. The session still submits, reviews, and publishes correctly end
