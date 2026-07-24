@@ -74,8 +74,14 @@ export function ensureSchema() {
       // A CHECK constraint can't be altered in place, so the existing one
       // (if any) is dropped and re-added with the current allowed set every
       // time — idempotent, and the only way to widen it as roles are added.
-      await sql`alter table users drop constraint if exists users_role_check`;
-      await sql`alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'))`;
+      // Drop+add in one DO block so the pair is a single transaction —
+      // concurrent cold-start ensureSchema() calls serialize on the table
+      // lock instead of interleaving (one instance's ADD racing another's
+      // and failing 42710 "constraint already exists").
+      await sql`do $$ begin
+        alter table users drop constraint if exists users_role_check;
+        alter table users add constraint users_role_check check (role in ('owner', 'reseller', 'superadmin'));
+      end $$`;
       await sql`
         do $$ begin
           alter table users add constraint users_status_check check (status in ('active', 'frozen', 'blocked', 'deleted'));
@@ -428,8 +434,10 @@ export function ensureSchema() {
       // asset instead of a generic 'product' — same drop-and-re-add pattern
       // as capture_sessions_capture_type_check above, for tables created by
       // an earlier stage's narrower CHECK.
-      await sql`alter table library_records drop constraint if exists library_records_record_type_check`;
-      await sql`alter table library_records add constraint library_records_record_type_check check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog'))`;
+      await sql`do $$ begin
+        alter table library_records drop constraint if exists library_records_record_type_check;
+        alter table library_records add constraint library_records_record_type_check check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog'));
+      end $$`;
       await sql`create unique index if not exists library_record_code_scope_unique on library_records (record_type, scope, coalesce(tenant_id::text, ''), lower(code)) where code is not null`;
       await sql`create index if not exists library_records_search_idx on library_records (record_type, scope, lifecycle_status, review_status, quality_level, lower(name))`;
       await sql`
@@ -586,9 +594,11 @@ export function ensureSchema() {
       // R2.5: additive/nullable — existing sessions are unaffected.
       await sql`alter table capture_sessions add column if not exists material_zone_state jsonb`;
       await sql`alter table capture_sessions add column if not exists texture_direction text`;
-      await sql`alter table capture_sessions drop constraint if exists capture_sessions_texture_direction_check`;
-      await sql`alter table capture_sessions add constraint capture_sessions_texture_direction_check
-        check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable'))`;
+      await sql`do $$ begin
+        alter table capture_sessions drop constraint if exists capture_sessions_texture_direction_check;
+        alter table capture_sessions add constraint capture_sessions_texture_direction_check
+          check (texture_direction is null or texture_direction in ('along_run','across_coverage','custom','not_applicable'));
+      end $$`;
       await sql`alter table capture_sessions add column if not exists studio_validation jsonb`;
       await sql`create unique index if not exists capture_sessions_owner_client_ref_key on capture_sessions (owner_id, client_ref) where client_ref is not null`;
       await sql`create index if not exists capture_sessions_owner_status_idx on capture_sessions (owner_id, status)`;
@@ -661,8 +671,10 @@ export function ensureSchema() {
       // values — same idempotent pattern as users_role_check above. The
       // create-table literals above already carry the widened lists for
       // fresh databases.
-      await sql`alter table capture_sessions drop constraint if exists capture_sessions_capture_type_check`;
-      await sql`alter table capture_sessions add constraint capture_sessions_capture_type_check check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish'))`;
+      await sql`do $$ begin
+        alter table capture_sessions drop constraint if exists capture_sessions_capture_type_check;
+        alter table capture_sessions add constraint capture_sessions_capture_type_check check (capture_type in ('guided_product','quick','texture','color','profile','label','profile_geometry','color_finish'));
+      end $$`;
       // Flexible-tags slice: shot purpose/label becomes an open vocabulary
       // (spec §18) — drop the closed-list CHECK entirely rather than
       // widening it again. capturePolicy.js's normalizeAssetInput still
@@ -719,9 +731,11 @@ export function ensureSchema() {
       // required-CAPTURE_CLAUDE_MODEL correction — widen the existing
       // constraint for preview branches that already created this table
       // with the narrower list (same drop-and-re-add idiom as D-035).
-      await sql`alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check`;
-      await sql`alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
-        ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'))`;
+      await sql`do $$ begin
+        alter table capture_claude_analyses drop constraint if exists capture_claude_analyses_status_check;
+        alter table capture_claude_analyses add constraint capture_claude_analyses_status_check check (status in
+          ('advisory','disabled','unavailable','configuration_error','no_images_available','timeout','error','invalid'));
+      end $$`;
 
       // Tenant-scoped tag vocabulary (flexible-tags slice, deferred by
       // D-035): permissioned tag creation lives here; a session's own
