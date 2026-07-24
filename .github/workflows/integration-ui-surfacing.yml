@@ -2,6 +2,9 @@ name: Integration UI surfacing
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - chatgpt/configurator-gpt-lab
   push:
     branches:
       - integration/release-candidate
