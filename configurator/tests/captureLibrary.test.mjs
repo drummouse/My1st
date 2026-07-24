@@ -173,6 +173,39 @@ test('publishing an approved capture creates the record, pins the session, and a
   assert.equal(store.state.audits[1].metadata.recordId, 'rec-1');
 });
 
+test('a duplicate Library code (manufacturer color code / SKU already used) surfaces as a clear validation error, not a raw 500', async () => {
+  const store = makeStore();
+  store.insertLibraryPublication = async () => {
+    const error = new Error('duplicate key value violates unique constraint "library_record_code_scope_unique"');
+    error.code = '23505';
+    error.constraint = 'library_record_code_scope_unique';
+    throw error;
+  };
+  await assert.rejects(
+    createCaptureService({ store }).publishSession(OWNER, 'sess-1'),
+    (error) => {
+      assert.equal(error.code, 'CAPTURE_PUBLISH_DUPLICATE_CODE');
+      assert.match(error.message, /SS-450/);
+      return true;
+    },
+  );
+  assert.equal(store.state.statusWrites.length, 1, 'the publishing transition still happened before the failed insert');
+  assert.equal(store.state.publishedWrites.length, 0, 'never marked published on failure');
+});
+
+test('an unrelated database error still propagates unchanged (not swallowed as a duplicate-code error)', async () => {
+  const store = makeStore();
+  store.insertLibraryPublication = async () => { throw new Error('connection reset'); };
+  await assert.rejects(
+    createCaptureService({ store }).publishSession(OWNER, 'sess-1'),
+    (error) => {
+      assert.equal(error.message, 'connection reset');
+      assert.notEqual(error.code, 'CAPTURE_PUBLISH_DUPLICATE_CODE');
+      return true;
+    },
+  );
+});
+
 test('a stuck publishing session retries safely and reuses the existing record', async () => {
   const store = makeStore({ id: 'sess-1', owner_id: 'user-a', status: 'publishing', capture_type: 'guided_product', title: 'Panel', category: 'roofing' });
   store.state.record = { id: 'rec-existing', version: 2, name: 'Panel', scope: 'tenant', tenant_id: 'user-a', metadata: {}, details: {} };

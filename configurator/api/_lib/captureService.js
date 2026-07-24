@@ -761,27 +761,45 @@ export function createCaptureService({
 
       let record = await store.findLibraryRecordByReference(captureExternalReference(id));
       const finish = assertTransition(actor.role, 'publishing', 'published');
-      const result = await store.transaction(async () => {
-        if (!record) {
-          const publication = buildLibraryPublication(detail);
-          record = await store.insertLibraryPublication({
-            id: randomUUID(),
-            version: 1,
-            createdBy: actor.id,
-            ...publication.record,
-          }, publication.details);
+      let attemptedCode = null;
+      let result;
+      try {
+        result = await store.transaction(async () => {
+          if (!record) {
+            const publication = buildLibraryPublication(detail);
+            attemptedCode = publication.record.code;
+            record = await store.insertLibraryPublication({
+              id: randomUUID(),
+              version: 1,
+              createdBy: actor.id,
+              ...publication.record,
+            }, publication.details);
+          }
+          const recordVersion = Number(record.version || 1);
+          const updated = await store.updateSessionPublished(id, record.id, recordVersion);
+          await store.appendAudit(audit(actor, finish.audit, id, null, {
+            ...finish.metadata, recordId: record.id, recordVersion,
+          }));
+          return {
+            session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
+            product: toStudioProduct(record, record.details || {}),
+            alreadyPublished: false,
+          };
+        });
+      } catch (error) {
+        // A color/product record's code (manufacturer color code / SKU) is
+        // unique per tenant+record type (library_record_code_scope_unique).
+        // Two independent scans can plausibly share the same manufacturer
+        // code (e.g. re-scanning the same nominal color) — surface that as
+        // a clear, actionable validation error instead of letting the raw
+        // Postgres constraint violation propagate as an opaque 500.
+        if (error?.code === '23505' && error?.constraint === 'library_record_code_scope_unique') {
+          throw new CaptureValidationError('CAPTURE_PUBLISH_DUPLICATE_CODE',
+            `A Library record with the code "${attemptedCode}" already exists for your account. Use a different code, or edit the existing record instead of publishing a new one.`,
+            { code: attemptedCode });
         }
-        const recordVersion = Number(record.version || 1);
-        const updated = await store.updateSessionPublished(id, record.id, recordVersion);
-        await store.appendAudit(audit(actor, finish.audit, id, null, {
-          ...finish.metadata, recordId: record.id, recordVersion,
-        }));
-        return {
-          session: toCaptureSession(updated ?? { ...row, status: 'published', published_record_id: record.id, published_version: recordVersion }),
-          product: toStudioProduct(record, record.details || {}),
-          alreadyPublished: false,
-        };
-      });
+        throw error;
+      }
       return result;
     },
 
