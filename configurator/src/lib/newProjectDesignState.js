@@ -34,6 +34,8 @@ export function createBlankHouse() {
     jobNumber: '',
     customerName: '',
     address: '',
+    customerEmail: '',
+    customerPhone: '',
     layers: [],
     measurements: { ...BLANK_MEASUREMENTS },
   };
