@@ -78,7 +78,7 @@ const NAV_SECTIONS = [
   { key: 'settings', label: 'Settings' },
   { key: 'discounts', label: 'Discounts' },
   { key: 'customServices', label: 'Custom Services' },
-  { key: 'materials', label: 'Materials' },
+  { key: 'materials', label: 'Profiles & Colors' },
 ];
 
 const ADMINISTRATIVE_SECTIONS = new Set(['settings', 'discounts', 'customServices', 'materials', 'capture', 'platform']);

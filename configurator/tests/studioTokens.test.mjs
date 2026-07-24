@@ -75,7 +75,7 @@ test('scoped legacy primary buttons override disabled opacity and hover with the
   assert.match(legacyDisabledRule, /color:\s*var\(--studio-action-disabled-text\)/);
   assert.match(legacyDisabledRule, /opacity:\s*1/);
   assert.match(settingsPanel, /className="btn-primary"[^>]*disabled=\{busy\}[^>]*>[\s\S]*?Save Settings/);
-  assert.match(materialsPanel, /className="btn-primary"[^>]*disabled=\{busy\}[^>]*>Add Material/);
+  assert.match(materialsPanel, /className="btn-primary"[^>]*disabled=\{busy\}[^>]*>Add Profile/);
   assert.match(materialsPanel, /className="btn-primary"[^>]*disabled=\{busy\}[^>]*>Add Color/);
   assert.match(platformConsole, /className="btn-primary"[^>]*disabled=\{busy\}[^>]*>Create user/);
   assert.match(projectsPanel, /className="btn-primary"[^>]*disabled=\{busy \|\| operationBusy \|\| !canSave\}[^>]*>[\s\S]*?Download/);
