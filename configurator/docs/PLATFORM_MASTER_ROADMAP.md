@@ -54,87 +54,95 @@ running code; V2–V7 are the owner's intended sequence and have not yet
 been individually audited — that happens when each becomes the active
 delivery plan.
 
-### V1 — Active Delivery Plan (current)
+### V1 — General Estimator (Active Delivery Plan)
 
-1. Open XML files (existing capability).
-2. Apply materials/profiles/colors from Library to the 3D model — either
-   pick an existing Library item, **or**, if it's missing, capture it via
-   a quick photoshoot (not the full multi-field Passport — a fast path).
-3. Share the design/estimate with the client; client can approve or make
-   minor changes.
+Open XML → apply profiles + colors to the 3D model → share the
+design/estimate with the client for approval / minor edits.
 
-Commercial-grade UI is part of the acceptance bar, not a separate item —
-the existing flow is functional but not release-quality.
+Full scope and slices live in `MILESTONE_V1_GENERAL_ESTIMATOR.md`; the
+model behind it in `DOMAIN_MODEL.md`. In brief, V1 includes:
 
-**Confirmed gap, audited against code, not assumption:** step 2's "apply
-from Library" half does not exist. `ProductSelector.jsx` reads a static
-prop list; nothing in Studio calls `/api/library/products`. This is the
-single largest blocker to closing V1 and is where Claude/Codex work must
-converge (see Domain ownership below).
+1. **Open XML** → real-scale 3D model (existing capability).
+2. **Colors that look real** — a user-added/captured color carries a
+   photographed **render-map**, so surfaces render like real material
+   instead of flat SimCity blocks (the render-*apply* side already works;
+   the gap is letting user colors carry a texture).
+3. **Parametric profile shapes** — the **Quick / parametric** profile
+   scan: pick a profile type (standing seam, corrugated, plank …) + size →
+   real 3D relief at correct scale, so SnapLock looks like SnapLock. No
+   photo-reconstruction (that's V2.1).
+4. **Catalog vocabulary fixed** — the "Materials" tab becomes
+   **Profiles | Colors**; the Capture tabs collapse from five to the two
+   that matter (Quick/parametric Profile + Color & Finish), with Print &
+   Pattern and Detailed reconstruction deferred to V2.1.
+5. **Share / approve** — client approves or makes minor edits.
+
+Commercial-grade UI is part of the acceptance bar (see the continuous
+UI/UX track below), not a separate item.
 
 ### V2
 
-- PDF report generation — ongoing/expanding effort on top of existing
-  jsPDF/QR/snapshot tooling, not a from-scratch build. Needs a defined
-  report-template structure.
-- Multi-tenant — **confirmed done**: tenant row-scoping enforced in SQL,
-  roles, tenant settings/branding, superadmin cross-tenant support.
-- Communications (email/SMS) — **confirmed done**: live-verified Twilio
-  and SendGrid delivery, scheduled draining, transient-failure handling.
-- Showroom mode — exists on the Codex/`chatgpt/*` side
-  (`chatgpt/ui-foundation-design`, `chatgpt/configurator-gpt-lab`),
-  unmerged into `claude/development`. Not yet verified against
-  `main`/`claude/development`.
-- API hub (QuickBooks, JobNimbus, etc.) — not started.
+- PDF report generation — structured report templates on the existing
+  jsPDF/QR/snapshot tooling.
+- Multi-tenant — **confirmed done**.
+- Communications (email/SMS) — **confirmed done**.
+- Showroom mode — exists (merged to production), needs polish.
+- API hub — QuickBooks, JobNimbus, GoHighLevel, etc. through one
+  integration layer.
 
-### V2.1
+### V2.1 — Scanner upgrade (finish the Scanner to full completion)
 
-Environment/surroundings rendering around the 3D model (currently
-renders in empty space).
+- **Print & Pattern** capture — woodgrain / stone / marble, i.e.
+  directional repeating prints (renamed from the old "Texture" scan).
+- **Detailed profile reconstruction** — the full/advanced tier of profile
+  capture: real geometry with all parameters, plus generated drawings,
+  specs, and CAD docs (fabrication-grade). V1 ships only the
+  Quick/parametric profile tier; this completes it.
 
-### V2.2
+### V3 — Visual Enhancement, Stage 1
 
-Free-floating camera — reposition/orbit beyond the current single-pivot
-rotation.
+- AI 3D model polisher (realism).
+- 3D engine imports additional file formats.
+- Environment / surroundings around the 3D model (it currently floats in
+  empty space).
 
-### V3
+### V4 — Studio Expert Mode (a major project on its own)
 
-- AI 3D model polisher for configurator-generated geometry realism.
-- 3D engine support for importing additional file formats.
-- Studio Expert Mode — flagged as a major project on its own, not a V3
-  sub-item in practice.
+- Free-floating camera / reposition — part of the Expert Mode interface;
+  the viewer currently orbits a single fixed point.
+- The advanced estimating / configuration depth Expert Mode adds over the
+  General Estimator.
 
-### V3.1
+### V4.1 — Material takeoff & quantity calculation engine
 
-Material takeoff and quantity calculation engine.
+### V4.2 — Panel / material allocation proposition engine
 
-### V3.2
+### V5 — Library
 
-Panel/material allocation proposition engine.
+- Library Knowledge Base — full Product Passport, CV-assisted capture,
+  GLB/DXF/PBR asset generation.
+- Library Community Hub.
 
-### V4
+### V6 — Visual Enhancement, Stage 2
 
-Remaining advanced Scanner/Capture features (Field Pro mode, full
-Product Passport, CV-assisted evidence capture, GLB/DXF/PBR asset
-generation — the items explicitly deferred out of V1).
+Google Earth + customer-photo integration — a photorealistic 3D model of
+the customer's *actual* house from real-world imagery.
 
-Library Knowledge Base.
+### V7 — Visual Enhancement, Stage 3
 
-### V5
+Cinematic client experience — rendering engine + Library + Google Earth +
+drone/photos, with real-time product application in high resolution.
 
-Library Community Hub.
+## Cross-cutting tracks (not milestone-shaped)
 
-### V6
-
-Google Earth and customer-photo integration — present materials/profiles
-on a photorealistic 3D model of the customer's actual house from
-real-world imagery.
-
-### V7
-
-Cinematic-quality client experience combining the rendering engine,
-Library, Google Earth/drone imagery, and real-time product application
-on the customer's own house.
+- **UI/UX + usability refinement** runs continuously through **V1–V2** —
+  this is how "commercial-grade UI" actually gets built; it is not a
+  separate milestone.
+- **Closed Alpha testing** ("ready for others") begins **after V2** — the
+  point where people beyond the owner start using it, and where the
+  platform-hardening work becomes required: versioned schema migrations
+  (replacing runtime bootstrap), a security review of the public
+  share/approval endpoints + tenant isolation, and data durability.
 
 ## Domain ownership (draft — needs Codex agreement)
 
