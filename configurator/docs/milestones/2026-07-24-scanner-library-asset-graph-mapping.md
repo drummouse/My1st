@@ -52,9 +52,53 @@ asset-graph model actually wants.
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 334/334 pass (331 baseline + 3 new in `captureLibrary.test.mjs`, plus 1 extended assertion in `librarySchema.test.mjs`) |
+| `npm test` | 336/336 pass (334 + 2 new for the duplicate-code fix) |
 | `npm run build` | Succeeds |
 | `git diff --check` | Clean |
+| `npm run smoke` against the deployed preview | 32/32 pass |
+
+## A real bug found and fixed by live verification
+
+The first live-publish attempt for a `color_finish` session hit a genuine,
+previously-unreachable failure: `library_record_code_scope_unique` rejected
+the insert with a raw `NeonDbError`, surfacing to the client as an opaque
+`"Capture operation failed"` 500. Root cause: a manufacturer color code
+(e.g. `"RAL 7024"`) is far more likely to collide across two independent
+scans than a product SKU ever was — the uniqueness constraint itself is
+correct and pre-existing, but nothing translated a violation of it into an
+actionable error for the caller. Fixed in `captureService.js`'s
+`publishSession`: catches that specific constraint violation (`code
+'23505'`, `constraint 'library_record_code_scope_unique'`) and throws a
+typed `CaptureValidationError('CAPTURE_PUBLISH_DUPLICATE_CODE', ...)` naming
+the colliding code, which the existing route handler already maps to a
+clean `400`. Any other database error still propagates unchanged (verified
+with a dedicated test).
+
+## Live functional verification (2026-07-24)
+
+Run against the deployed preview
+(`ironwrap-estimator-git-claude-scanne-0d1932-drummouses-projects.vercel.app`,
+READY) — this is a backend/data-mapping change, so verification drove the
+real flow (UI session creation with a genuine Blob-uploaded photo → API
+calls for review/approve/publish → direct inspection of the actual
+`library_records` row via the superadmin `library.record` action, not a
+mock), using the real `info@iroofalberta.ca` superadmin tenant:
+
+| Check | Result |
+| --- | --- |
+| Create + submit a `color_finish` session (real photo, sampled color, finish, manufacturer name/code) | Submitted |
+| Review → approve → publish via the API | All three succeed (200) |
+| Inspect the resulting `library_records` row directly | `recordType: 'color'`, `code` = the manufacturer code, `metadata.captureColor` fully populated (hex/rgb/lab/finish/manufacturerName/confidenceGrade) |
+| Create + submit a `texture` session (real photo, calibration, material zone, texture direction) | Submitted |
+| Review → approve → publish via the API | All three succeed (200) |
+| Inspect the resulting `library_records` row directly | `recordType: 'texture'`, `code: null`, `metadata.captureTexture` fully populated (`textureDirection: 'along_run'`, confirmed material zone) |
+| Both records excluded from `GET /api/library/products` (the Studio product list) | Confirmed — 0 matches, as designed |
+| Publish a second `color_finish` session reusing the first's manufacturer code | Fails cleanly with `400 CAPTURE_PUBLISH_DUPLICATE_CODE` and the exact colliding code named in the message — not a raw 500 |
+
+All checks passed. Test data (3 published Library records, their capture
+sessions and Blob assets) was left on this PR's isolated Neon preview
+branch — harmless, tenant-scoped, and never touching production; consistent
+with this session's established data-isolation practice.
 
 ## Honest gaps
 
@@ -72,8 +116,14 @@ asset-graph model actually wants.
   record directly (e.g. as a material assigned to a product, not a product
   itself), that's a separate DTO/relationship-modeling decision, out of
   scope here.
-- **Live functional verification pending** — this is a backend/data-mapping
-  change (create → submit → review → approve → publish → inspect the
-  actual `library_records`/`library_color_details` rows), not a UI change,
-  so verification will be a direct authenticated API + database check
-  against the deployed preview rather than a Playwright browser run.
+- No `library_color_details` row inspection — the live verification confirmed
+  `library_records.metadata.captureColor` (which carries the same hex/code
+  values) rather than querying `library_color_details` directly, since the
+  available superadmin `library.record` action reads only `library_records`.
+  The real `insertLibraryPublication`'s SQL branching (as opposed to
+  `buildLibraryPublication`'s pure output shape, which IS unit-tested) isn't
+  directly unit-tested — this repo's convention is to leave real Neon-store
+  SQL untested at the unit level and rely on live verification instead,
+  same as every other store method in this file. The successful live
+  publish (200, correct `recordType`/`code`/`metadata` on read-back) is the
+  evidence that path works, not a unit test.
