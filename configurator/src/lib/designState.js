@@ -111,8 +111,6 @@ export function captureDesignState(state) {
       jobNumber: state.house.jobNumber,
       customerName: state.house.customerName,
       address: state.house.address,
-      customerEmail: state.house.customerEmail,
-      customerPhone: state.house.customerPhone,
       layers: state.house.layers,
     },
     layerOffsets: state.layerOffsets,
