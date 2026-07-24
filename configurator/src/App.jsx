@@ -1899,7 +1899,8 @@ export default function App({ currentUser = null }) {
       {administrativeWorkspace ? (
         <div className="workspace-root admin-workspace" data-studio-skin="ironwrap">
           <AdminWorkspaceShell
-            title={NAV_SECTIONS.find(({ key }) => key === activeSection)?.label || 'Platform'}
+            title={NAV_SECTIONS.find(({ key }) => key === activeSection)?.label
+              || (activeSection === 'capture' ? 'Capture' : 'Platform')}
             onClose={handleCloseAdministration}
             topBar={applicationTopBar}
             onOpenNavigation={handleOpenAdminNavigation}
