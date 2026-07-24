@@ -361,7 +361,7 @@ export function ensureSchema() {
       await sql`
         create table if not exists library_records (
           id uuid primary key,
-          record_type text not null check (record_type in ('product','profile','color','category','manufacturer','supplier','collection','catalog')),
+          record_type text not null check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog')),
           scope text not null check (scope in ('global','tenant')),
           tenant_id uuid references users(id),
           name text not null,
@@ -387,6 +387,13 @@ export function ensureSchema() {
           check ((scope = 'global' and tenant_id is null) or (scope = 'tenant' and tenant_id is not null))
         )
       `;
+      // Scanner asset-graph mapping (D-076): 'texture' joins the record-type
+      // vocabulary so a texture scan can publish as its own reusable Library
+      // asset instead of a generic 'product' — same drop-and-re-add pattern
+      // as capture_sessions_capture_type_check above, for tables created by
+      // an earlier stage's narrower CHECK.
+      await sql`alter table library_records drop constraint if exists library_records_record_type_check`;
+      await sql`alter table library_records add constraint library_records_record_type_check check (record_type in ('product','profile','color','texture','category','manufacturer','supplier','collection','catalog'))`;
       await sql`create unique index if not exists library_record_code_scope_unique on library_records (record_type, scope, coalesce(tenant_id::text, ''), lower(code)) where code is not null`;
       await sql`create index if not exists library_records_search_idx on library_records (record_type, scope, lifecycle_status, review_status, quality_level, lower(name))`;
       await sql`

@@ -1,4 +1,4 @@
-export const RECORD_TYPES = Object.freeze(['product', 'profile', 'color', 'category', 'manufacturer', 'supplier', 'collection', 'catalog']);
+export const RECORD_TYPES = Object.freeze(['product', 'profile', 'color', 'texture', 'category', 'manufacturer', 'supplier', 'collection', 'catalog']);
 export const SCOPES = Object.freeze(['global', 'tenant']);
 export const LIFECYCLE_STATUSES = Object.freeze(['active', 'archived']);
 export const REVIEW_STATUSES = Object.freeze(['draft', 'pending_review', 'approved', 'rejected']);

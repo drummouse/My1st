@@ -62,6 +62,57 @@ test('publication refuses a capture without title or category', () => {
   );
 });
 
+// D-076: asset-graph mapping — color_finish and texture sessions publish as
+// their own reusable Library record type instead of a generic 'product',
+// and (like profile_geometry) never require a category, matching their own
+// flexible-classification completeness gate.
+test('a color_finish session publishes as a Library color record, not a product', () => {
+  const colorSample = {
+    schemaVersion: 1, rgb: { r: 51, g: 51, b: 51 }, hex: '#333333', lab: { l: 21, a: 0, b: 0 },
+    finish: 'matte', manufacturerName: 'Driftwood Co', manufacturerCode: 'RAL 7024', confidenceGrade: 'visual-grade',
+  };
+  const { record, details } = buildLibraryPublication({
+    session: sessionDto({ captureType: 'color_finish', category: null, title: 'Driftwood sample' }),
+    fields: [{ fieldKey: 'color', value: colorSample }],
+    assets: assetsDto(),
+  });
+  assert.equal(record.recordType, 'color');
+  assert.equal(record.code, 'RAL 7024');
+  assert.equal(record.name, 'Driftwood sample');
+  assert.deepEqual(record.metadata.captureColor, colorSample);
+  assert.equal(record.metadata.captureAssets.length, 3);
+  assert.equal(details.colorCode, 'RAL 7024');
+  assert.equal(details.hex, '#333333');
+});
+
+test('a texture session publishes as a Library texture record with no details table', () => {
+  const { record, details } = buildLibraryPublication({
+    session: sessionDto({
+      captureType: 'texture', category: null, title: 'Woodgrain texture',
+      textureDirection: 'along_run',
+      materialZoneState: { zones: [{ zoneId: 'main_visible_face', confirmed: true }] },
+      studioValidation: { status: 'ready', issues: [] },
+    }),
+    fields: [],
+    assets: assetsDto(),
+  });
+  assert.equal(record.recordType, 'texture');
+  assert.equal(record.code, null);
+  assert.equal(record.metadata.captureTexture.textureDirection, 'along_run');
+  assert.equal(record.metadata.captureTexture.studioValidation.status, 'ready');
+  assert.equal(record.metadata.captureAssets.length, 3);
+  assert.deepEqual(details, {});
+});
+
+test('profile_geometry (an evidence-driven type, like color_finish/texture) also never requires a category', () => {
+  const { record } = buildLibraryPublication({
+    session: sessionDto({ captureType: 'profile_geometry', category: null, title: 'Standing seam 450' }),
+    fields: [],
+    assets: assetsDto(),
+  });
+  assert.equal(record.recordType, 'product', 'profile_geometry keeps the original product mapping — only its category requirement is relaxed');
+});
+
 function makeStore(session) {
   const state = {
     session: session === undefined
