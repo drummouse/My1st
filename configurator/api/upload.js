@@ -17,6 +17,14 @@ const LIMITS = {
     allowedContentTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'],
     maximumSizeInBytes: 5 * 1024 * 1024,
   },
+  // A material-surface swatch for a tenant Color — a photo of the finish
+  // that becomes the color's 3D render-map (material.map) so it renders like
+  // real material instead of a flat block. Same public direct-upload flow as
+  // the others; the caller stores the blob URL in colors.thumbnail_url.
+  swatch: {
+    allowedContentTypes: ['image/png', 'image/jpeg', 'image/webp'],
+    maximumSizeInBytes: 10 * 1024 * 1024,
+  },
   photo: {
     allowedContentTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'],
     maximumSizeInBytes: 15 * 1024 * 1024,

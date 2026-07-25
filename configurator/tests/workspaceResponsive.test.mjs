@@ -58,7 +58,7 @@ test('all three modes mount one compact responsive header and one viewer', () =>
     assert.match(html, new RegExp(`data-workspace-mode="${mode}"`));
   }
 
-  assert.match(sales, /Roof[\s\S]*Materials &amp; Colors/);
+  assert.match(sales, /Roof[\s\S]*Profiles &amp; Colors/);
   assert.match(expert, /Select Surface/);
   assert.match(showroom, /Explore your design/);
 });

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 
-const blankColorForm = () => ({ name: '', code: '', hex: '#888888', series: 'Custom', folderId: '' });
-const blankMaterialForm = () => ({ name: '', kind: 'roof', pricePerSqft: '0', profiles: '', folderId: '' });
+const blankColorForm = () => ({ name: '', code: '', hex: '#888888', series: 'Custom', folderId: '', thumbnailUrl: '' });
+const blankMaterialForm = () => ({ name: '', kind: 'roof', pricePerSqft: '0', folderId: '' });
 
 // Flat name list is enough for now — folders nest via parent_id, but this
 // picker doesn't indent/tree them; a folder's full path isn't needed to
@@ -49,6 +50,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
   const [materialFolders, setMaterialFolders] = useState([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [swatchBusy, setSwatchBusy] = useState(false);
   const [colorForm, setColorForm] = useState(blankColorForm());
   const [materialForm, setMaterialForm] = useState(blankMaterialForm());
   const [newColorFolderName, setNewColorFolderName] = useState('');
@@ -88,7 +90,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
   if (!colors || !materials) {
     return (
       <div className="settings-panel">
-        <div className="control-label">Materials &amp; Colors</div>
+        <div className="control-label">Profiles &amp; Colors</div>
         <div className="control-sublabel">{status || 'Loading library…'}</div>
       </div>
     );
@@ -127,6 +129,29 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
       flash('Could not remove folder.');
     }
     setBusy(false);
+  };
+
+  // Uploads a material-surface photo straight to Blob (direct client upload,
+  // same flow as the company logo — see api/upload.js `swatch` kind) and
+  // stores the resulting public URL on the color form. That URL becomes the
+  // color's 3D render-map (App.jsx toColorEntry maps thumbnail_url -> texture),
+  // so an added color renders like real material instead of a flat block.
+  const handleSwatchUpload = async (file) => {
+    if (!file) return;
+    setSwatchBusy(true);
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        clientPayload: JSON.stringify({ kind: 'swatch' }),
+      });
+      setColorForm((f) => ({ ...f, thumbnailUrl: blob.url }));
+      flash('Swatch uploaded — this color will render as real material on the 3D model.');
+    } catch (err) {
+      console.error('Swatch upload error:', err);
+      flash('Could not upload the swatch — use a PNG/JPG/WebP image under 10 MB.');
+    }
+    setSwatchBusy(false);
   };
 
   const handleAddColor = async () => {
@@ -227,17 +252,16 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
   };
 
   const handleAddMaterial = async () => {
-    if (!materialForm.name.trim()) { flash('Material name is required.'); return; }
+    if (!materialForm.name.trim()) { flash('Profile name is required.'); return; }
     setBusy(true);
     try {
-      const profiles = materialForm.profiles.split(',').map((p) => p.trim()).filter(Boolean);
       const res = await fetch('/api/materials', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: materialForm.name, kind: materialForm.kind, pricePerSqft: Number(materialForm.pricePerSqft) || 0, profiles, folderId: materialForm.folderId || null }),
+        body: JSON.stringify({ name: materialForm.name, kind: materialForm.kind, pricePerSqft: Number(materialForm.pricePerSqft) || 0, folderId: materialForm.folderId || null }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setMaterialForm(blankMaterialForm());
-      flash('Material added.');
+      flash('Profile added.');
       await loadMaterials();
     } catch (err) {
       console.error('Materials API error:', err);
@@ -286,17 +310,17 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
 
   return (
     <div className="settings-panel materials-colors-panel">
-      <div className="control-label">Materials &amp; Colors</div>
+      <div className="control-label">Profiles &amp; Colors</div>
       <div className="control-sublabel">
-        Custom entries layered on top of IronWrap's standard roof/wall products and Wrinkle/
-        Icecrystal/Printech Woodgrain colors. Materials (left) and Colors (right) are two separate
-        libraries — a material declares which colors from the Color Library apply to it, not the
+        Custom entries layered on top of IronWrap's standard roof/wall profiles and Wrinkle/
+        Icecrystal/Printech Woodgrain colors. Profiles (left) and Colors (right) are two separate
+        libraries — a profile declares which colors from the Color Library apply to it, not the
         other way around. Each library's folder tree sits at the outer edge of its side.
       </div>
 
       <div className="materials-colors-layout">
         <section className="materials-colors-section materials-section">
-          <div className="materials-colors-section-header">Materials</div>
+          <div className="materials-colors-section-header">Profiles</div>
           <div className="materials-colors-section-body">
             <div className="folder-tree-dock">
               <FolderTree
@@ -304,7 +328,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
                 activeId={materialFolderFilter}
                 onSelect={setMaterialFolderFilter}
                 onRemove={handleRemoveMaterialFolder}
-                allLabel="All Materials" allCount={materials.length}
+                allLabel="All Profiles" allCount={materials.length}
                 countFor={(fid) => materials.filter((m) => m.folder_id === fid).length}
                 busy={busy}
               />
@@ -315,7 +339,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
             </div>
 
             <div className="materials-colors-main">
-              <div className="field-label">Materials{materialFolderFilter ? ` — ${materialFolders.find((f) => f.id === materialFolderFilter)?.name}` : ''}</div>
+              <div className="field-label">Profiles{materialFolderFilter ? ` — ${materialFolders.find((f) => f.id === materialFolderFilter)?.name}` : ''}</div>
               {visibleMaterials.map((m) => (
                 <div key={m.id}>
                   <div className="service-row">
@@ -351,7 +375,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
               ))}
 
               <div className="control-block" style={{ marginTop: '0.75rem' }}>
-                <div className="field-label">Add a material</div>
+                <div className="field-label">Add a profile</div>
                 <div className="settings-row">
                   <label htmlFor="material-name">Name</label>
                   <input id="material-name" type="text" className="control-select" value={materialForm.name} onChange={(e) => setMaterialForm((f) => ({ ...f, name: e.target.value }))} />
@@ -368,15 +392,11 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
                   <input id="material-price" type="number" min="0" step="0.01" className="control-select" value={materialForm.pricePerSqft} onChange={(e) => setMaterialForm((f) => ({ ...f, pricePerSqft: e.target.value }))} />
                 </div>
                 <div className="settings-row">
-                  <label htmlFor="material-profiles">Profiles (comma-separated, optional)</label>
-                  <input id="material-profiles" type="text" className="control-select" value={materialForm.profiles} onChange={(e) => setMaterialForm((f) => ({ ...f, profiles: e.target.value }))} />
-                </div>
-                <div className="settings-row">
                   <label htmlFor="material-folder">Folder</label>
                   <FolderSelect id="material-folder" folders={materialFolders} value={materialForm.folderId} onChange={(v) => setMaterialForm((f) => ({ ...f, folderId: v }))} />
                 </div>
                 <div className="export-buttons">
-                  <button type="button" className="btn-primary" onClick={handleAddMaterial} disabled={busy} style={{ width: '100%' }}>Add Material</button>
+                  <button type="button" className="btn-primary" onClick={handleAddMaterial} disabled={busy} style={{ width: '100%' }}>Add Profile</button>
                 </div>
               </div>
             </div>
@@ -430,6 +450,30 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
                   <label htmlFor="color-hex">Swatch color</label>
                   <input id="color-hex" type="color" className="control-select" value={colorForm.hex} onChange={(e) => setColorForm((f) => ({ ...f, hex: e.target.value }))} />
                 </div>
+                <div className="settings-row">
+                  <label htmlFor="color-swatch">Surface photo (optional)</label>
+                  <input
+                    id="color-swatch"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={busy || swatchBusy}
+                    onChange={(e) => { handleSwatchUpload(e.target.files?.[0]); e.target.value = ''; }}
+                  />
+                </div>
+                <div className="control-sublabel">
+                  {swatchBusy
+                    ? 'Uploading surface photo…'
+                    : colorForm.thumbnailUrl
+                      ? 'Surface photo attached — this color renders as real material (not a flat block) on the 3D model.'
+                      : 'A close-up photo of the material surface makes this color render realistically in 3D. Without one it shows as a flat color.'}
+                </div>
+                {colorForm.thumbnailUrl && (
+                  <img
+                    src={colorForm.thumbnailUrl}
+                    alt="Uploaded surface swatch preview"
+                    style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '4px', marginTop: '0.25rem' }}
+                  />
+                )}
                 <div className="settings-row">
                   <label htmlFor="color-series">Group (picker tab)</label>
                   <input id="color-series" type="text" className="control-select" value={colorForm.series} onChange={(e) => setColorForm((f) => ({ ...f, series: e.target.value }))} />

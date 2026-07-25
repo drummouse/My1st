@@ -2,8 +2,8 @@ import StudioButton from './ui/StudioButton.jsx';
 
 const STEP_DESCRIPTIONS = Object.freeze({
   project: 'Project Details',
-  roof: 'Materials & Colors',
-  siding: 'Materials & Colors',
+  roof: 'Profiles & Colors',
+  siding: 'Profiles & Colors',
   accents: 'Colors & Styles',
   services: 'Add-ons & Extras',
   review: 'Estimate & Proposal',

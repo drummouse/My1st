@@ -126,8 +126,8 @@ test('Option A rail names all six steps with descriptors and non-color state tex
 
   for (const [step, description] of [
     ['project', 'Project Details'],
-    ['roof', 'Materials & Colors'],
-    ['siding', 'Materials & Colors'],
+    ['roof', 'Profiles & Colors'],
+    ['siding', 'Profiles & Colors'],
     ['accents', 'Colors & Styles'],
     ['services', 'Add-ons & Extras'],
     ['review', 'Estimate & Proposal'],

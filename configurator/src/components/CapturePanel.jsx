@@ -22,8 +22,17 @@ const CAPTURE_TYPES = [
   { id: 'color_finish', label: 'Color & Finish scan' },
   { id: 'texture', label: 'Texture scan' },
   { id: 'guided_product', label: 'Guided product capture' },
-  { id: 'quick', label: 'Quick capture' },
+  { id: 'quick', label: 'Quick Profile scan' },
 ];
+
+// V1 (General Estimator) surfaces only the two capture types the milestone
+// needs — a quick parametric Profile scan and a Color & Finish scan
+// (DOMAIN_MODEL.md / MILESTONE_V1_GENERAL_ESTIMATOR.md). The other three
+// stay defined above so existing sessions of those types still open and
+// label correctly, but they are not offered as new-capture options until
+// their own milestones (Detailed profile reconstruction + Print & Pattern
+// in V2.1; Guided product dropped). Order here is the button order shown.
+const V1_CAPTURE_TYPE_IDS = ['quick', 'color_finish'];
 
 const CATEGORIES = [
   ['roofing', 'Roofing'], ['siding', 'Siding'], ['soffit', 'Soffit'], ['fascia', 'Fascia'],
@@ -775,11 +784,17 @@ export default function CapturePanel({ canReview = false }) {
       </div>
       {modeToggle}
       <div className="export-buttons">
-        {CAPTURE_TYPES.map(({ id, label }) => (
-          <button key={id} type="button" className="btn-primary" onClick={() => handleCreate(id)} disabled={busy}>
-            + {label}
-          </button>
-        ))}
+        {V1_CAPTURE_TYPE_IDS.map((id) => {
+          const label = CAPTURE_TYPES.find((t) => t.id === id)?.label || id;
+          return (
+            <button key={id} type="button" className="btn-primary" onClick={() => handleCreate(id)} disabled={busy}>
+              + {label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="control-sublabel">
+        Detailed profile reconstruction and print &amp; pattern scans arrive in a later version.
       </div>
       {status && <div className="control-sublabel" role="status">{status}</div>}
       {sessions.length === 0 ? (
