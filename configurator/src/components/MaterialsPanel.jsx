@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 
-const blankColorForm = () => ({ name: '', code: '', hex: '#888888', series: 'Custom', folderId: '' });
+const blankColorForm = () => ({ name: '', code: '', hex: '#888888', series: 'Custom', folderId: '', thumbnailUrl: '' });
 const blankMaterialForm = () => ({ name: '', kind: 'roof', pricePerSqft: '0', folderId: '' });
 
 // Flat name list is enough for now — folders nest via parent_id, but this
@@ -49,6 +50,7 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
   const [materialFolders, setMaterialFolders] = useState([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [swatchBusy, setSwatchBusy] = useState(false);
   const [colorForm, setColorForm] = useState(blankColorForm());
   const [materialForm, setMaterialForm] = useState(blankMaterialForm());
   const [newColorFolderName, setNewColorFolderName] = useState('');
@@ -127,6 +129,29 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
       flash('Could not remove folder.');
     }
     setBusy(false);
+  };
+
+  // Uploads a material-surface photo straight to Blob (direct client upload,
+  // same flow as the company logo — see api/upload.js `swatch` kind) and
+  // stores the resulting public URL on the color form. That URL becomes the
+  // color's 3D render-map (App.jsx toColorEntry maps thumbnail_url -> texture),
+  // so an added color renders like real material instead of a flat block.
+  const handleSwatchUpload = async (file) => {
+    if (!file) return;
+    setSwatchBusy(true);
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        clientPayload: JSON.stringify({ kind: 'swatch' }),
+      });
+      setColorForm((f) => ({ ...f, thumbnailUrl: blob.url }));
+      flash('Swatch uploaded — this color will render as real material on the 3D model.');
+    } catch (err) {
+      console.error('Swatch upload error:', err);
+      flash('Could not upload the swatch — use a PNG/JPG/WebP image under 10 MB.');
+    }
+    setSwatchBusy(false);
   };
 
   const handleAddColor = async () => {
@@ -425,6 +450,30 @@ export default function MaterialsPanel({ onColorsChanged, onMaterialsChanged }) 
                   <label htmlFor="color-hex">Swatch color</label>
                   <input id="color-hex" type="color" className="control-select" value={colorForm.hex} onChange={(e) => setColorForm((f) => ({ ...f, hex: e.target.value }))} />
                 </div>
+                <div className="settings-row">
+                  <label htmlFor="color-swatch">Surface photo (optional)</label>
+                  <input
+                    id="color-swatch"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={busy || swatchBusy}
+                    onChange={(e) => { handleSwatchUpload(e.target.files?.[0]); e.target.value = ''; }}
+                  />
+                </div>
+                <div className="control-sublabel">
+                  {swatchBusy
+                    ? 'Uploading surface photo…'
+                    : colorForm.thumbnailUrl
+                      ? 'Surface photo attached — this color renders as real material (not a flat block) on the 3D model.'
+                      : 'A close-up photo of the material surface makes this color render realistically in 3D. Without one it shows as a flat color.'}
+                </div>
+                {colorForm.thumbnailUrl && (
+                  <img
+                    src={colorForm.thumbnailUrl}
+                    alt="Uploaded surface swatch preview"
+                    style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '4px', marginTop: '0.25rem' }}
+                  />
+                )}
                 <div className="settings-row">
                   <label htmlFor="color-series">Group (picker tab)</label>
                   <input id="color-series" type="text" className="control-select" value={colorForm.series} onChange={(e) => setColorForm((f) => ({ ...f, series: e.target.value }))} />

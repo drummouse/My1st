@@ -93,11 +93,17 @@ function toMaterialProduct(m) {
 }
 
 // Maps a colors-table row (snake_case, DB shape) to the plain
-// {id, code, name, hex, series, thumbnail} shape RAL_COLORS already uses,
-// so allColors() in data/colors.js can treat a custom color exactly like a
-// baseline one everywhere it's looked up (swatch rendering, formatColorLabel).
+// {id, code, name, hex, series, thumbnail, texture} shape RAL_COLORS already
+// uses, so allColors() in data/colors.js can treat a custom color exactly
+// like a baseline one everywhere it's looked up (swatch rendering,
+// formatColorLabel). When the color carries an uploaded surface swatch, that
+// same image also becomes its 3D render-map (`texture`) — setMeshColor in
+// buildScene.js sets `material.map`, so the surface renders like real
+// material instead of a flat "SimCity" block. Built-in colors ship a
+// separate hi-res texture; a user swatch serves as both thumbnail and map.
 function toColorEntry(c) {
-  return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: c.thumbnail_url || c.thumbnail || undefined };
+  const swatch = c.thumbnail_url || c.thumbnail || undefined;
+  return { id: c.id, code: c.code || '', name: c.name, hex: c.hex, series: c.series, thumbnail: swatch, texture: swatch };
 }
 
 // Shared by every plain "fetch JSON, bail on non-2xx" call in this file —
