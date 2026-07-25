@@ -39,10 +39,18 @@ Preview: `ironwrap-estimator` PR #35 (see the deployed alias in the PR).
   `tests/colorRenderMap.test.mjs` lock the swatch kind, the `toColorEntry`
   texture mapping, the `setMeshColor` map branch, and the form's upload wiring).
 - `npm run build` — clean.
-- Deployed-preview smoke (`npm run smoke`) — _appended after preview build._
+- Deployed-preview smoke (`npm run smoke`) — **all checks PASS** against the
+  live preview (commit `84da324`, bundle `index-BIsV1o4y.js`).
+- Deployed client-bundle wiring check — the served bundle carries the new
+  **Surface photo** upload field and the `handleUploadUrl: '/api/upload'`
+  `swatch` upload call. The server-side `swatch` upload kind lives in
+  `api/upload.js` (serverless, not in the client bundle) and is locked by
+  `tests/colorRenderMap.test.mjs` + the clean build.
 - Live check (upload a swatch on the preview, apply the color, confirm the 3D
   surface renders the photo rather than a flat block) — _owner/patient-zero
-  eyeball; needs superadmin login._
+  eyeball; needs superadmin login. Watch for cross-origin texture load: the
+  Blob URL is public + CORS-enabled, so THREE's TextureLoader should apply it,
+  but it's the one thing only a logged-in render can confirm._
 
 ## Deferred (Slice 2b)
 
